@@ -37,9 +37,28 @@ type File struct {
 // ProgressCallback is a function type for progress updates with optional error
 type ProgressCallback func(page, progress int, err error)
 
+// Limiter paces a site's requests and slows them down on a 429
+// (ratelimit.Site). Wait blocks until a request may go out and returns its
+// generation; Hit records a 429 to a request of that generation and reports
+// whether to give up. Listed reports whether it has a pace of its own, which
+// replaces the site's PagePacer.
+type Limiter interface {
+	Wait(ctx context.Context) (uint64, error)
+	Hit(gen uint64, retryAfter time.Duration) (giveUp bool)
+	Listed() bool
+}
+
 // FetchChapter downloads all the pages of a chapter. Cancelling ctx cuts
 // short the waits between retries; requests already under way still finish.
 func FetchChapter(ctx context.Context, site grabber.Site, chapter *grabber.Chapter, onprogress ProgressCallback) ([]*File, error) {
+	return FetchChapterLimited(ctx, site, chapter, nil, onprogress)
+}
+
+// FetchChapterLimited is FetchChapter with lim pacing every page request,
+// in place of the site's own PagePacer once lim has a pace (Limiter). A page
+// that gets a 429 waits as lim says and is fetched again, as often as lim
+// allows, without using up its retries; the other pages are kept.
+func FetchChapterLimited(ctx context.Context, site grabber.Site, chapter *grabber.Chapter, lim Limiter, onprogress ProgressCallback) ([]*File, error) {
 	var pace func()
 	if p, ok := site.(grabber.PagePacer); ok {
 		pace = p.WaitPage
@@ -72,7 +91,7 @@ func FetchChapter(ctx context.Context, site grabber.Site, chapter *grabber.Chapt
 				Referer: referer,
 				Headers: page.Headers,
 				Accept:  http.ImageAccept,
-			}, uint(page.Number), site.GetRetries(), page.Transform, pace, page.RetryFlaky)
+			}, uint(page.Number), site.GetRetries(), page.Transform, pace, page.RetryFlaky, lim)
 
 			if err != nil {
 				select {
@@ -119,15 +138,23 @@ func FetchChapter(ctx context.Context, site grabber.Site, chapter *grabber.Chapt
 // non-nil, post-processes the downloaded bytes.
 // Cancelling ctx abandons the wait before a retry.
 func FetchFile(ctx context.Context, params http.RequestParams, page uint, retries uint8, transform func([]byte) ([]byte, error)) (*File, error) {
-	return fetchFile(ctx, params, page, retries, transform, nil, false)
+	return fetchFile(ctx, params, page, retries, transform, nil, false, nil)
 }
 
 // fetchFile is FetchFile with an optional pace, called before every attempt,
-// and retryFlaky (Page.RetryFlaky)
-func fetchFile(ctx context.Context, params http.RequestParams, page uint, retries uint8, transform func([]byte) ([]byte, error), pace func(), retryFlaky bool) (file *File, err error) {
+// retryFlaky (Page.RetryFlaky) and lim, which replaces pace once it has a pace
+// of its own and handles 429s: they're retried as long as lim allows, not
+// counting as attempts.
+func fetchFile(ctx context.Context, params http.RequestParams, page uint, retries uint8, transform func([]byte) ([]byte, error), pace func(), retryFlaky bool, lim Limiter) (file *File, err error) {
 	orig := params.URL
 	for attempt := uint8(0); ; attempt++ {
-		if pace != nil {
+		var gen uint64
+		if lim != nil {
+			if gen, err = lim.Wait(ctx); err != nil {
+				return nil, err
+			}
+		}
+		if pace != nil && (lim == nil || !lim.Listed()) {
 			pace()
 		}
 		var data []byte
@@ -150,6 +177,15 @@ func fetchFile(ctx context.Context, params http.RequestParams, page uint, retrie
 		}
 		if errors.Is(err, errHTMLPage) {
 			return nil, err
+		}
+		var se *http.StatusError
+		if lim != nil && errors.As(err, &se) && se.Code == stdhttp.StatusTooManyRequests {
+			if lim.Hit(gen, se.RetryAfter) {
+				return nil, err
+			}
+			// lim.Wait sits out the cooldown; a 429 isn't one of the retries
+			attempt--
+			continue
 		}
 
 		wait := retryWait(err, attempt)

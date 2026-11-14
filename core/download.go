@@ -9,8 +9,11 @@ import (
 
 	"github.com/elboletaire/manga-downloader/downloader"
 	"github.com/elboletaire/manga-downloader/grabber"
+	"github.com/elboletaire/manga-downloader/http"
+	"github.com/elboletaire/manga-downloader/notice"
 	"github.com/elboletaire/manga-downloader/packer"
 	"github.com/elboletaire/manga-downloader/ranges"
+	"github.com/elboletaire/manga-downloader/ratelimit"
 )
 
 // The progress bars split each page's step in two: DownloadWeight once the
@@ -305,6 +308,7 @@ func (s *Series) Download(ctx context.Context, chapters grabber.Filterables, ski
 	outDir := s.settings.OutputDir
 	skipExisting := s.settings.SkipExisting
 	format := s.Site.GetFormat()
+	lim := s.limiter(outDir)
 
 	// the volume each chapter goes into, nil when packed on its own
 	var volumeOf map[grabber.Filterable]*volumeRun
@@ -379,7 +383,7 @@ func (s *Series) Download(ctx context.Context, chapters grabber.Filterables, ski
 			if grabber.LockedOf(chap) {
 				continue
 			}
-			chapter, err := s.Site.FetchChapter(chap)
+			chapter, err := s.fetchChapter(ctx, lim, chap)
 			if err == nil && chapter != nil {
 				chapter.SkipPages(skip)
 				counted[chap] = int64(len(chapter.Pages))
@@ -457,7 +461,7 @@ loop:
 				return
 			}
 			ev.Fetching(chap)
-			chapter, err := s.Site.FetchChapter(chap)
+			chapter, err := s.fetchChapter(ctx, lim, chap)
 			if err != nil {
 				ev.FetchFailed(chap, err)
 				return
@@ -506,7 +510,7 @@ loop:
 				run.start(chap, len(chapter.Pages))
 			}
 
-			files, err := downloader.FetchChapter(ctx, s.Site, chapter, func(_ int, idx int, err error) {
+			files, err := downloader.FetchChapterLimited(ctx, s.Site, chapter, lim, func(_ int, idx int, err error) {
 				ev.Page(chapter, idx, err)
 				if run != nil && err == nil {
 					run.page(chap)
@@ -653,4 +657,39 @@ func (s *Series) packVolume(r *volumeRun, outDir string, ev Events) {
 		name, err = packer.PackVolume(outDir, s.Site, r.v.Number, volumeRangeText(s.Chapters, packed), dc, progress)
 	}
 	ev.VolumePacked(r.v, name, err)
+}
+
+// limiter returns the pacing of the series' site from the site-rate-limits
+// file of the download root (the folder picked, not a series folder in it;
+// outDir when it's the same), nil when the site has no host to go by
+func (s *Series) limiter(outDir string) downloader.Limiter {
+	key := ratelimit.SiteKey(s.Site.BaseUrl())
+	if key == "" {
+		return nil
+	}
+	root := s.limitsDir
+	if root == "" {
+		root = outDir
+	}
+	return ratelimit.Open(root, notice.Warn, notice.Info).Site(key)
+}
+
+// fetchChapter fetches chap's pages through lim: paced, and fetched again
+// after a 429 as long as lim allows
+func (s *Series) fetchChapter(ctx context.Context, lim downloader.Limiter, chap grabber.Filterable) (*grabber.Chapter, error) {
+	for {
+		var gen uint64
+		if lim != nil {
+			var err error
+			if gen, err = lim.Wait(ctx); err != nil {
+				return nil, err
+			}
+		}
+		chapter, err := s.Site.FetchChapter(chap)
+		var se *http.StatusError
+		if lim != nil && errors.As(err, &se) && se.Code == 429 && !lim.Hit(gen, se.RetryAfter) {
+			continue
+		}
+		return chapter, err
+	}
 }

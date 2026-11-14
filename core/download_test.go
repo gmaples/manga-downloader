@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/elboletaire/manga-downloader/grabber"
+	mangahttp "github.com/elboletaire/manga-downloader/http"
 	"github.com/elboletaire/manga-downloader/packer"
 	"github.com/elboletaire/manga-downloader/ranges"
 )
@@ -142,6 +143,10 @@ type fakeChapter struct {
 	laterPages int
 	// limited pages answer 429 with a 60s Retry-After
 	limited map[int]bool
+	// limitedOnce pages answer 429 to their first request only
+	limitedOnce map[int]bool
+	// limitFetch lists the FetchChapter calls (1-based) that answer a 429
+	limitFetch map[int]bool
 	// volume is the volume the listing gives the chapter, 0 for none
 	volume int
 	// part and group tell the chapter's release apart from its parts and
@@ -190,6 +195,9 @@ func (f *fakeSite) FetchChapter(l grabber.Filterable) (*grabber.Chapter, error) 
 		if c.failFetch[n] {
 			return nil, errors.New("fetch failed")
 		}
+		if c.limitFetch[n] {
+			return nil, &mangahttp.StatusError{Code: http.StatusTooManyRequests}
+		}
 
 		pages := c.pages
 		if n > 1 && c.laterPages > 0 {
@@ -215,6 +223,9 @@ func (f *fakeSite) FetchChapter(l grabber.Filterable) (*grabber.Chapter, error) 
 		for i := range chapter.Pages {
 			if c.limited[i] {
 				chapter.Pages[i].URL += "/429"
+			}
+			if c.limitedOnce[i] {
+				chapter.Pages[i].URL += "/429once"
 			}
 		}
 		if len(c.fail) > 0 {
@@ -247,7 +258,19 @@ func newFakeSite(t *testing.T, chapters ...fakeChapter) *fakeSite {
 		chapters: chapters,
 		served:   map[float64]int{},
 	}
+	limitedOnce := map[string]bool{}
+	var limitedMu sync.Mutex
 	site.server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/429once") {
+			limitedMu.Lock()
+			first := !limitedOnce[r.URL.Path]
+			limitedOnce[r.URL.Path] = true
+			limitedMu.Unlock()
+			if first {
+				http.Error(w, "slow down", http.StatusTooManyRequests)
+				return
+			}
+		}
 		if strings.HasSuffix(r.URL.Path, "/429") {
 			w.Header().Set("Retry-After", "60")
 			http.Error(w, "slow down", http.StatusTooManyRequests)

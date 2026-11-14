@@ -156,12 +156,16 @@ func (s *Series) OutputDir() string {
 
 // WithOutputDir returns a copy of the series that downloads into dir, with
 // its own copy of the settings, so the settings the series was opened with,
-// and the window that shows them, keep the folder the user picked.
+// and the window that shows them, keep the folder the user picked. The
+// site-rate-limits file stays in the folder picked, the download root.
 func (s *Series) WithOutputDir(dir string) *Series {
 	c := *s
 	settings := grabber.Settings{}
 	if s.settings != nil {
 		settings = *s.settings
+	}
+	if c.limitsDir == "" {
+		c.limitsDir = settings.OutputDir
 	}
 	settings.OutputDir = dir
 	c.settings = &settings

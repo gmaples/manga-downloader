@@ -297,6 +297,14 @@ folder up to date, run it from cron:
   <img alt="The command line downloading five chapters, then the same series with --skip-existing: the five are listed as skipped and three new ones are downloaded" src="../assets/demos/skip-existing-light.gif">
 </picture>
 
+## Rate limits
+
+When a site answers 429 Too Many Requests, the downloader slows down for that site and remembers it. It writes a line such as `mangalib.org: 1s` to `site-rate-limits.txt` in the download root (`--output-dir`). Every later request to that site, in this run and the next ones, waits at least that long after the previous one.
+
+After a 429, every download from that site pauses: 15s after the first one, then 1.5 times longer after each further one, up to 5m. Only the pages that got the 429 are fetched again, so the chapter's file is still complete. A site's time also grows 1.5 times on each 429, up to 5m. A page that still gets a 429 after the 5m pause fails, and so does its chapter.
+
+The file is plain text and can be edited: one `site: time` line per site, with times such as `500ms`, `15s` or `1m30s`, and `#` for comments. A site's line replaces any pacing built into the downloader for it. Because the file sits next to your series, it travels with the folder or card to another device.
+
 ## Environment variables
 
 | Variable                           | Description                                                   |

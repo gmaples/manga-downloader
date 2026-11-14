@@ -145,6 +145,9 @@ type Series struct {
 	Scanlators *grabber.FilterOptions
 
 	settings *grabber.Settings
+	// limitsDir is the folder of the site-rate-limits file, when it isn't the
+	// output folder (see WithOutputDir)
+	limitsDir string
 }
 
 // FilterOptionsOf returns the language and scanlation group options of a site,
