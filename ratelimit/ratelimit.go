@@ -105,6 +105,50 @@ func Open(dir string, warn, info func(format string, a ...any)) *Book {
 	return b
 }
 
+// shared holds the books downloads are using, by folder, so the downloads
+// running at once in one process (the app's groups) share one pace per site
+var (
+	sharedMu sync.Mutex
+	shared   = map[string]*sharedBook{}
+)
+
+// sharedBook is a book and how many downloads use it
+type sharedBook struct {
+	book  *Book
+	users int
+}
+
+// Share returns the book of dir that every download running in this process
+// shares, opening it (reading the file) when no download uses it yet. release
+// ends this use. Once the last user releases, the next Share reads the file
+// again, so an edit made between downloads is taken up. release is safe to call
+// more than once.
+func Share(dir string, warn, info func(format string, a ...any)) (b *Book, release func()) {
+	key := filepath.Clean(dir)
+	if abs, err := filepath.Abs(key); err == nil {
+		key = abs
+	}
+	sharedMu.Lock()
+	defer sharedMu.Unlock()
+	sb := shared[key]
+	if sb == nil {
+		sb = &sharedBook{book: Open(dir, warn, info)}
+		shared[key] = sb
+	}
+	sb.users++
+	var once sync.Once
+	return sb.book, func() {
+		once.Do(func() {
+			sharedMu.Lock()
+			defer sharedMu.Unlock()
+			sb.users--
+			if sb.users == 0 && shared[key] == sb {
+				delete(shared, key)
+			}
+		})
+	}
+}
+
 // parseLine reads one line: ok is false for a blank line or a comment
 func parseLine(line string) (key string, gap time.Duration, ok bool, err error) {
 	line = strings.TrimSpace(strings.TrimSuffix(line, "\r"))

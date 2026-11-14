@@ -292,3 +292,66 @@ func TestSaveFailureIsReported(t *testing.T) {
 		t.Error("the gap was lost with the file")
 	}
 }
+
+// Two downloads using one folder at once share its book, so a 429 one of them
+// gets paces the other; once both are done, the file is read again.
+func TestShareWhileInUse(t *testing.T) {
+	shrink(t, time.Second, time.Minute, time.Millisecond, time.Minute)
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, FileName), []byte("example.com: 2s\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	a, releaseA := Share(dir, nil, nil)
+	b, releaseB := Share(filepath.Join(dir, "."), nil, nil)
+	if a != b {
+		t.Fatal("two users of one folder got different books")
+	}
+	sa, sb := a.Site("example.com"), b.Site("example.com")
+	if sa != sb {
+		t.Fatal("two users of one folder got different paces for a site")
+	}
+	sa.Hit(0, 0)
+	if got := sb.gapNow(); got != 3*time.Second {
+		t.Fatalf("the other user's gap is %s, want 3s", got)
+	}
+
+	// a hand edit while the book is in use isn't read yet
+	if err := os.WriteFile(filepath.Join(dir, FileName), []byte("example.com: 7s\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	releaseA()
+	releaseA() // a second release changes nothing
+	c, releaseC := Share(dir, nil, nil)
+	if c != a {
+		t.Fatal("a book still in use was opened again")
+	}
+	releaseC()
+	releaseB()
+
+	d, releaseD := Share(dir, nil, nil)
+	defer releaseD()
+	if d == a {
+		t.Fatal("the book was kept after its last user released it")
+	}
+	if got := d.Site("example.com").gapNow(); got != 7*time.Second {
+		t.Fatalf("gap after reopening is %s, want the edited 7s", got)
+	}
+}
+
+// Downloads into different folders don't share
+func TestShareByFolder(t *testing.T) {
+	a, releaseA := Share(t.TempDir(), nil, nil)
+	defer releaseA()
+	b, releaseB := Share(t.TempDir(), nil, nil)
+	defer releaseB()
+	if a == b {
+		t.Fatal("two folders share one book")
+	}
+}
+
+// gapNow is the site's gap, read under its lock
+func (s *Site) gapNow() time.Duration {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.gap
+}

@@ -308,7 +308,8 @@ func (s *Series) Download(ctx context.Context, chapters grabber.Filterables, ski
 	outDir := s.settings.OutputDir
 	skipExisting := s.settings.SkipExisting
 	format := s.Site.GetFormat()
-	lim := s.limiter(outDir)
+	lim, release := s.limiter(outDir)
+	defer release()
 
 	// the volume each chapter goes into, nil when packed on its own
 	var volumeOf map[grabber.Filterable]*volumeRun
@@ -661,17 +662,20 @@ func (s *Series) packVolume(r *volumeRun, outDir string, ev Events) {
 
 // limiter returns the pacing of the series' site from the site-rate-limits
 // file of the download root (the folder picked, not a series folder in it;
-// outDir when it's the same), nil when the site has no host to go by
-func (s *Series) limiter(outDir string) downloader.Limiter {
+// outDir when it's the same), nil when the site has no host to go by. The
+// pacing is shared with the other downloads of the process using that root
+// (see ratelimit.Share) until release is called.
+func (s *Series) limiter(outDir string) (lim downloader.Limiter, release func()) {
 	key := ratelimit.SiteKey(s.Site.BaseUrl())
 	if key == "" {
-		return nil
+		return nil, func() {}
 	}
 	root := s.limitsDir
 	if root == "" {
 		root = outDir
 	}
-	return ratelimit.Open(root, notice.Warn, notice.Info).Site(key)
+	book, release := ratelimit.Share(root, notice.Warn, notice.Info)
+	return book.Site(key), release
 }
 
 // fetchChapter fetches chap's pages through lim: paced, and fetched again
