@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"text/template"
+	"unicode/utf8"
 
 	"github.com/elboletaire/manga-downloader/grabber"
 )
@@ -192,13 +193,104 @@ func paddedChapterNumber(number float64) string {
 	return fmt.Sprintf("%04d%s", intVal, fracPart)
 }
 
-// SanitizeFilename sanitizes a filename
+// SanitizeFilename sanitizes a filename: it replaces the characters Windows
+// refuses in a name (and the path separators) with ones it accepts, and the
+// control characters (0x00-0x1F, 0x7F) with "_"
 func SanitizeFilename(filename string) string {
 	sanitized := strings.Replace(filename, "/", "_", -1)
 	sanitized = strings.Replace(sanitized, "\\", "_", -1)
 	sanitized = strings.Replace(sanitized, ":", ";", -1)
 	sanitized = strings.Replace(sanitized, "?", "¿", -1)
 	sanitized = strings.Replace(sanitized, `"`, "'", -1)
+	sanitized = strings.Replace(sanitized, "<", "_", -1)
+	sanitized = strings.Replace(sanitized, ">", "_", -1)
+	sanitized = strings.Replace(sanitized, "|", "_", -1)
+	sanitized = strings.Replace(sanitized, "*", "_", -1)
+	sanitized = strings.Map(func(r rune) rune {
+		if r < 0x20 || r == 0x7f {
+			return '_'
+		}
+		return r
+	}, sanitized)
 
 	return sanitized
+}
+
+// windowsReserved are the device names Windows refuses as a file or folder
+// name, with or without an extension
+var windowsReserved = map[string]bool{
+	"CON": true, "PRN": true, "AUX": true, "NUL": true,
+	"COM1": true, "COM2": true, "COM3": true, "COM4": true, "COM5": true,
+	"COM6": true, "COM7": true, "COM8": true, "COM9": true,
+	"LPT1": true, "LPT2": true, "LPT3": true, "LPT4": true, "LPT5": true,
+	"LPT6": true, "LPT7": true, "LPT8": true, "LPT9": true,
+}
+
+// DirnameUntitled is the folder name SanitizeDirname gives a name with nothing usable left
+const DirnameUntitled = "Untitled"
+
+// MaxNameBytes is the longest file or folder name, in UTF-8 bytes, that every
+// target takes: ext4 and f2fs (Linux, Android) cap a name at 255 bytes, and
+// NTFS, APFS and exFAT at 255 UTF-16 units, which 255 bytes never exceed
+const MaxNameBytes = 255
+
+// nameTail is how many bytes of a name's end a shortened name keeps, so the
+// " v2" suffix and the end of the title survive
+const nameTail = 40
+
+// portableName makes name, already through SanitizeFilename, valid on Windows,
+// macOS, Linux and Android (whose shared storage follows FAT's rules):
+//
+//   - a leading dot becomes "_", as Linux, macOS and Android hide dot names
+//   - with trimEnd, trailing spaces and dots go, as Windows and FAT drop them
+//     (only a name without an extension ends there)
+//   - a reserved Windows device name (CON, NUL, COM1, …) gets "_" after its stem
+//   - over maxBytes, the middle is cut and marked "…", keeping the start and
+//     the last nameTail bytes, on rune boundaries
+//
+// It's deterministic, so a rerun gives the same name and skip-existing finds it.
+func portableName(name string, maxBytes int, trimEnd bool) string {
+	if trimEnd {
+		name = strings.TrimRight(name, " .")
+	}
+	if strings.HasPrefix(name, ".") {
+		name = "_" + name[1:]
+	}
+	stem := name
+	if i := strings.IndexByte(stem, '.'); i >= 0 {
+		stem = stem[:i]
+	}
+	if windowsReserved[strings.ToUpper(strings.TrimRight(stem, " "))] {
+		// after the stem, as Windows reads "CON.x_" as CON too
+		name = stem + "_" + name[len(stem):]
+	}
+	if len(name) > maxBytes {
+		const mark = "…"
+		tail := name[len(name)-nameTail:]
+		for !utf8.ValidString(tail) {
+			tail = tail[1:]
+		}
+		head := name[:maxBytes-len(mark)-len(tail)]
+		for !utf8.ValidString(head) {
+			head = head[:len(head)-1]
+		}
+		name = head + mark + tail
+	}
+
+	return name
+}
+
+// SanitizeDirname turns name into one folder name that is valid on Windows,
+// macOS, Linux and Android: SanitizeFilename's replacements, then
+// portableName's rules with trailing spaces and dots trimmed (so "." and ".."
+// can't remain), at most maxBytes long, and DirnameUntitled when nothing is
+// left. The result never holds a path separator, so it can't be absolute or
+// climb out of the folder it's joined to. Unicode text is kept.
+func SanitizeDirname(name string, maxBytes int) string {
+	sanitized := strings.TrimRight(SanitizeFilename(name), " .")
+	if sanitized == "" {
+		return DirnameUntitled
+	}
+
+	return portableName(sanitized, maxBytes, true)
 }

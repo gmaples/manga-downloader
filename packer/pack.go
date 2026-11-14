@@ -202,17 +202,20 @@ func renderName(template string, parts FilenameTemplateParts, attempt int) (stri
 }
 
 // outputName adds the extension of format to a filename: none for raw output,
-// which is a folder
+// which is a folder. The name is made valid on every target first: the
+// template's own text and a bundle's title go through SanitizeFilename too,
+// then portableName's rules apply, the length counting the extension.
 func outputName(format, filename string) string {
+	filename = SanitizeFilename(filename)
 	switch format {
 	case FormatRaw:
-		return filename
+		return portableName(filename, MaxNameBytes, true)
 	case FormatEPUB:
-		return filename + ".epub"
+		return portableName(filename, MaxNameBytes-len(".epub"), false) + ".epub"
 	case FormatCBR:
-		return filename + ".cbr"
+		return portableName(filename, MaxNameBytes-len(".cbr"), false) + ".cbr"
 	default:
-		return filename + ".cbz"
+		return portableName(filename, MaxNameBytes-len(".cbz"), false) + ".cbz"
 	}
 }
 

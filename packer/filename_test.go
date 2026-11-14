@@ -5,6 +5,7 @@ package packer
 import (
 	"strings"
 	"testing"
+	"unicode/utf8"
 
 	"github.com/elboletaire/manga-downloader/grabber"
 )
@@ -219,5 +220,129 @@ func TestTemplateWarning(t *testing.T) {
 		if got := TemplateWarning(templ) != ""; got != warn {
 			t.Errorf("TemplateWarning(%q) warns = %v, want %v", templ, got, warn)
 		}
+	}
+}
+
+func TestSanitizeFilenameWindowsCharacters(t *testing.T) {
+	tests := []struct {
+		in, want string
+	}{
+		// the replacements upstream already made are unchanged
+		{`a/b\c:d?e"f`, `a_b_c;d¿e'f`},
+		// the rest of the characters Windows refuses
+		{"a<b>c|d*e", "a_b_c_d_e"},
+		// control characters, tab and newline included, and DEL
+		{"a\x00b\x1fc\td\ne\x7ff", "a_b_c_d_e_f"},
+		// names without any of them stay byte for byte
+		{"One Piece 0001 [Group]", "One Piece 0001 [Group]"},
+		{"Ван-Пис 第1話 원피스", "Ван-Пис 第1話 원피스"},
+		// trailing dots and spaces are left to SanitizeDirname
+		{"Vol. 1...", "Vol. 1..."},
+	}
+	for _, tt := range tests {
+		if got := SanitizeFilename(tt.in); got != tt.want {
+			t.Errorf("SanitizeFilename(%q) = %q, want %q", tt.in, got, tt.want)
+		}
+	}
+}
+
+func TestSanitizeDirname(t *testing.T) {
+	tests := []struct {
+		in, want string
+	}{
+		{"One Piece", "One Piece"},
+		{"Ван-Пис", "Ван-Пис"},
+		{`What?: "Yes" <No> | *`, `What¿; 'Yes' _No_ _ _`},
+		// trailing dots and spaces go, leading ones and inner ones stay
+		{"The End. . ", "The End"},
+		{" Dr. Stone", " Dr. Stone"},
+		// nothing usable left
+		{"", DirnameUntitled},
+		{"   ", DirnameUntitled},
+		{".", DirnameUntitled},
+		{"..", DirnameUntitled},
+		// separators can't climb or make it absolute
+		{"../../etc", "_._.._etc"},
+		{`..\..\Windows`, "_._.._Windows"},
+		{"/abs/path", "_abs_path"},
+		{`C:\Users`, "C;_Users"},
+		// reserved device names, any case, with or without an extension
+		{"CON", "CON_"},
+		{"nul", "nul_"},
+		{"Com1", "Com1_"},
+		{"LPT9", "LPT9_"},
+		{"CON.txt", "CON_.txt"},
+		// a leading dot would hide the folder on Linux, macOS and Android
+		{".hack//Sign", "_hack__Sign"},
+		{"...Hidden", "_..Hidden"},
+		// not reserved
+		{"CONAN", "CONAN"},
+		{"COM10", "COM10"},
+		{"Console Wars", "Console Wars"},
+	}
+	for _, tt := range tests {
+		if got := SanitizeDirname(tt.in, MaxNameBytes); got != tt.want {
+			t.Errorf("SanitizeDirname(%q) = %q, want %q", tt.in, got, tt.want)
+		}
+	}
+}
+
+func TestSanitizeDirnameLength(t *testing.T) {
+	// 100 CJK runes are 300 UTF-8 bytes: too long for ext4/f2fs
+	long := strings.Repeat("話", 100)
+	got := SanitizeDirname(long, 240)
+	if len(got) > 240 || !utf8.ValidString(got) {
+		t.Fatalf("len %d, valid %v", len(got), utf8.ValidString(got))
+	}
+	if !strings.Contains(got, "…") || !strings.HasPrefix(got, "話") || !strings.HasSuffix(got, "話") {
+		t.Errorf("shortened to %q, want start…end", got)
+	}
+	if again := SanitizeDirname(long, 240); again != got {
+		t.Errorf("not deterministic: %q then %q", got, again)
+	}
+	if short := SanitizeDirname("One Piece", 240); short != "One Piece" {
+		t.Errorf("short name changed to %q", short)
+	}
+}
+
+func TestOutputNameIsPortable(t *testing.T) {
+	tests := []struct {
+		format, in, want string
+	}{
+		// unchanged when already fine
+		{FormatCBZ, "One Piece 1 - Chapter 1", "One Piece 1 - Chapter 1.cbz"},
+		{FormatEPUB, "One Piece 1 - Chapter 1", "One Piece 1 - Chapter 1.epub"},
+		// the template's own text and a bundle's title are sanitized too
+		{FormatCBZ, "Re:Zero <1-10> | bundle", "Re;Zero _1-10_ _ bundle.cbz"},
+		{FormatCBR, "a/b", "a_b.cbr"},
+		// a dot before the extension is fine, but a raw folder can't end in one
+		{FormatCBZ, "Dr. Stone Vol. 1.", "Dr. Stone Vol. 1..cbz"},
+		{FormatRaw, "Dr. Stone Vol. 1. ", "Dr. Stone Vol. 1"},
+		// hidden and reserved names
+		{FormatCBZ, ".hack 1 - Chapter 1", "_hack 1 - Chapter 1.cbz"},
+		{FormatCBZ, "CON", "CON_.cbz"},
+		{FormatRaw, "nul", "nul_"},
+	}
+	for _, tt := range tests {
+		if got := outputName(tt.format, tt.in); got != tt.want {
+			t.Errorf("outputName(%q, %q) = %q, want %q", tt.format, tt.in, got, tt.want)
+		}
+	}
+}
+
+func TestOutputNameLengthKeepsTheVersion(t *testing.T) {
+	long := strings.Repeat("長い題名", 30) // 360 bytes
+	first := outputName(FormatCBZ, "Series 12 - "+long)
+	second := outputName(FormatCBZ, "Series 12 - "+long+" v2")
+	for _, name := range []string{first, second} {
+		if len(name) > MaxNameBytes || !utf8.ValidString(name) || !strings.HasSuffix(name, ".cbz") {
+			t.Fatalf("%q: %d bytes, valid %v", name, len(name), utf8.ValidString(name))
+		}
+		if !strings.HasPrefix(name, "Series 12 - ") {
+			t.Errorf("%q lost the series and number", name)
+		}
+	}
+	if !strings.HasSuffix(second, " v2.cbz") || first == second {
+		t.Errorf("version suffix lost: %q vs %q", first, second)
 	}
 }
