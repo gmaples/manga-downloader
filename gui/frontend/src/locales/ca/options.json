@@ -15,7 +15,7 @@
   },
   "guessLanguage": {
     "label": "Endevina l'idioma",
-    "hint": "Afegeix l'idioma al nom de la carpeta de la sèrie, com [en] o [ru]: primer l'idioma dels capítols, després el filtre d'idioma i després l'escriptura dels títols. Diversos idiomes són [mul] i un de desconegut, [unk]. Cal Carpetes per sèrie."
+    "hint": "Afegeix l'idioma al nom de la carpeta de la sèrie, com [en] o [ru], només quan se sap: l'idioma dels capítols, el filtre d'idioma, l'únic idioma del lloc o una escriptura pròpia d'un sol idioma (lletres ucraïneses, kana, hangul). Diversos idiomes són [mul]; si no, no s'hi afegeix res. Cal Carpetes per sèrie."
   },
   "skipExisting": {
     "label": "Omet els fitxers existents",

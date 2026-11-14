@@ -13,13 +13,8 @@ import (
 	"github.com/elboletaire/manga-downloader/packer"
 )
 
-// The folder tags FolderLanguage gives when no single language applies
-const (
-	// LanguageMultiple tags a run whose chapters name more than one language
-	LanguageMultiple = "mul"
-	// LanguageUnknown tags a run whose language nothing tells
-	LanguageUnknown = "unk"
-)
+// LanguageMultiple tags a run whose chapters name more than one language
+const LanguageMultiple = "mul"
 
 // SeriesDir is the folder a run with series folders saves into: one folder
 // named after title (packer.SanitizeDirname, shortened so the whole name fits
@@ -40,14 +35,15 @@ type languaged interface {
 	GetLanguage() string
 }
 
-// FolderLanguage resolves the one language tag of a run's folder, first match wins:
+// FolderLanguage resolves the language tag of a run's folder, "" for none, first match wins:
 //
 //  1. the chapters' own languages: one known language is its tag, more than
 //     one is LanguageMultiple
 //  2. filter, the language filter in force, unless it's blank, "all" or "any"
 //  3. options, the site's language list, when it lists exactly one language
-//  4. the script of the chapter titles, then of title (see scriptLanguage)
-//  5. LanguageUnknown
+//  4. the script of the chapter titles, then of title, only when the script
+//     belongs to one language (see scriptLanguage)
+//  5. "": no tag, as nothing tells the language with confidence
 //
 // Values that don't parse as a language tag ("English", "raw") are skipped,
 // so they never end up in a folder name. Tags come out in their usual form
@@ -98,7 +94,7 @@ func FolderLanguage(chapters grabber.Filterables, filter string, options *grabbe
 		return tag
 	}
 
-	return LanguageUnknown
+	return ""
 }
 
 // languageTag returns v as a language tag in its usual form, and false when v
@@ -120,24 +116,21 @@ func languageTag(v string) (string, bool) {
 	return s, true
 }
 
-// scriptLanguage guesses a language from the script s is written in, "" when
-// it can't: Ukrainian-only letters are uk, kana ja, Hangul ko, other Cyrillic
-// ru and Han zh. It's a fallback that may be wrong (Belarusian reads as ru,
-// kanji-only Japanese as zh), and Latin text tells nothing, English included.
+// scriptLanguage returns the language of s when its script belongs to one
+// language only, "" otherwise: Ukrainian-only letters (Ї Є Ґ) are uk, kana ja
+// and Hangul ko. Cyrillic without those letters (Russian, Ukrainian without
+// them, Belarusian, Bulgarian, …), Han (Chinese or Japanese kanji) and Latin
+// text tell no single language, so they give no tag.
 func scriptLanguage(s string) string {
-	var ukrainian, kana, hangul, cyrillic, han bool
+	var ukrainian, kana, hangul bool
 	for _, r := range s {
 		switch {
-		case strings.ContainsRune("ІіЇїЄєҐґ", r):
+		case strings.ContainsRune("ЇїЄєҐґ", r):
 			ukrainian = true
 		case unicode.In(r, unicode.Hiragana, unicode.Katakana):
 			kana = true
 		case unicode.Is(unicode.Hangul, r):
 			hangul = true
-		case unicode.Is(unicode.Cyrillic, r):
-			cyrillic = true
-		case unicode.Is(unicode.Han, r):
-			han = true
 		}
 	}
 	switch {
@@ -147,10 +140,6 @@ func scriptLanguage(s string) string {
 		return "ja"
 	case hangul:
 		return "ko"
-	case cyrillic:
-		return "ru"
-	case han:
-		return "zh"
 	}
 
 	return ""

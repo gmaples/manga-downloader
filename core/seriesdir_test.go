@@ -31,7 +31,7 @@ func TestSeriesDir(t *testing.T) {
 		{"One Piece", "en", filepath.Join(root, "One Piece [en]")},
 		{"Ван-Пис", "ru", filepath.Join(root, "Ван-Пис [ru]")},
 		{"Re:Zero?", "mul", filepath.Join(root, "Re;Zero¿ [mul]")},
-		{"", "unk", filepath.Join(root, "Untitled [unk]")},
+		{"", "", filepath.Join(root, "Untitled")},
 		{"../../escape", "", filepath.Join(root, "_._.._escape")},
 		{"CON", "ja", filepath.Join(root, "CON_ [ja]")},
 		{".hack//Sign", "ja", filepath.Join(root, "_hack__Sign [ja]")},
@@ -76,25 +76,27 @@ func TestFolderLanguage(t *testing.T) {
 		{"unusable chapter values skipped", chaptersIn("English", "a", "xx", "b", "ja", "c"), "", nil, "", "ja"},
 		// 2. the filter
 		{"filter", chaptersIn("", "Chapter 1"), "fr", nil, "", "fr"},
-		{"filter all ignored", chaptersIn("", "Chapter 1"), "all", nil, "", LanguageUnknown},
-		{"filter any ignored", chaptersIn("", "Chapter 1"), "ANY", nil, "", LanguageUnknown},
+		{"filter all ignored", chaptersIn("", "Chapter 1"), "all", nil, "", ""},
+		{"filter any ignored", chaptersIn("", "Chapter 1"), "ANY", nil, "", ""},
 		{"unusable filter ignored", chaptersIn("", "Chapter 1"), "Español", one, "", "es"},
 		// 3. a site that lists one language
 		{"single site language", chaptersIn("", "Chapter 1"), "", one, "", "es"},
-		{"two site languages tell nothing", chaptersIn("", "Chapter 1"), "", two, "", LanguageUnknown},
+		{"two site languages tell nothing", chaptersIn("", "Chapter 1"), "", two, "", ""},
 		// 4. scripts, chapter titles before the series title
 		{"ukrainian letters", chaptersIn("", "Розділ 1: Їжак"), "", nil, "", "uk"},
+		{"і alone is not only ukrainian", chaptersIn("", "Розділ 1: Кінець"), "", nil, "", ""},
 		{"kana", chaptersIn("", "第1話 はじまり"), "", nil, "", "ja"},
 		{"hangul", chaptersIn("", "제1화"), "", nil, "", "ko"},
-		{"other cyrillic", chaptersIn("", "Глава 1"), "", nil, "", "ru"},
-		{"han only", chaptersIn("", "第一章"), "", nil, "", "zh"},
+		{"other cyrillic tells nothing", chaptersIn("", "Глава 1"), "", nil, "", ""},
+		{"han only tells nothing", chaptersIn("", "第一章"), "", nil, "", ""},
 		{"kana beats han and cyrillic", chaptersIn("", "第一章 Глава の"), "", nil, "", "ja"},
 		{"ukrainian beats kana", chaptersIn("", "の ї"), "", nil, "", "uk"},
-		{"chapter titles before the series title", chaptersIn("", "Глава 1"), "", nil, "第一章", "ru"},
-		{"series title when chapters say nothing", chaptersIn("", "Chapter 1"), "", nil, "Ван-Пис", "ru"},
+		{"chapter titles before the series title", chaptersIn("", "제1화"), "", nil, "はじまり", "ko"},
+		{"series title when chapters say nothing", chaptersIn("", "Chapter 1"), "", nil, "Єдиний", "uk"},
+		{"cyrillic series title tells nothing", chaptersIn("", "Chapter 1"), "", nil, "Ван-Пис", ""},
 		// 5. nothing tells
-		{"latin is not english", chaptersIn("", "Chapter 1"), "", nil, "One Piece", LanguageUnknown},
-		{"nothing at all", nil, "", nil, "", LanguageUnknown},
+		{"latin is not english", chaptersIn("", "Chapter 1"), "", nil, "One Piece", ""},
+		{"nothing at all", nil, "", nil, "", ""},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

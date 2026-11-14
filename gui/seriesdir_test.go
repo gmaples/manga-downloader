@@ -79,8 +79,9 @@ func TestSeriesFoldersSaveIntoTheSeriesFolder(t *testing.T) {
 		want  string
 	}{
 		{"without language", false, "Test Series"},
-		// the fake listing names no language and its titles are Latin
-		{"with language", true, "Test Series [unk]"},
+		// the fake listing names no language and its titles are Latin, so
+		// nothing tells the language with confidence: no tag
+		{"with language, none known", true, "Test Series"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -115,7 +116,7 @@ func TestSeriesFoldersSaveIntoTheSeriesFolder(t *testing.T) {
 // a rerun reuses the folder, and skip-existing finds the files in it
 func TestSeriesFoldersRerunSkipsExisting(t *testing.T) {
 	c, _, root := newTestController(t, false, nil, chapters(2, 1)...)
-	want := filepath.Join(root, "Test Series [unk]")
+	want := filepath.Join(root, "Test Series")
 	on := func(s *grabber.Settings) {
 		s.SeriesFolders, s.GuessLanguage, s.SkipExisting = true, true, true
 	}
@@ -129,6 +130,26 @@ func TestSeriesFoldersRerunSkipsExisting(t *testing.T) {
 	entries, _ := os.ReadDir(want)
 	if len(entries) != 2 {
 		t.Errorf("series folder holds %d entries after the rerun, want 2 (no nested folder, no copies)", len(entries))
+	}
+}
+
+// a known language tags the folder: here the language filter, set before the load
+func TestGuessLanguageTagsFromTheFilter(t *testing.T) {
+	c, _, root := newTestController(t, false, nil, chapters(2, 1)...)
+	if err := c.Configure(func(s *grabber.Settings) {
+		s.SeriesFolders, s.GuessLanguage, s.Language = true, true, "en"
+	}); err != nil {
+		t.Fatal(err)
+	}
+	want := filepath.Join(root, "Test Series [en]")
+
+	s := runTwoChapters(t, c, func(*grabber.Settings) {})
+
+	if s.Dir != want {
+		t.Errorf("summary dir %q, want %q", s.Dir, want)
+	}
+	if got := cbzNames(t, want); !slices.Equal(got, twoChapters) {
+		t.Errorf("files %q, want %q", got, twoChapters)
 	}
 }
 

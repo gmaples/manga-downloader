@@ -38,7 +38,9 @@ Resolve ONE folder-language tag for the selected run, in this order:
 4. Lightweight local script hints from chapter titles, then the series title:
    Ukrainian-specific letters -> uk; Japanese kana -> ja; Korean Hangul -> ko;
    otherwise Cyrillic -> ru; otherwise Han characters -> zh.
-5. If none applies, use `unk` (user decision 2026-11-14, instead of `und`).
+5. If none applies, add no tag (user decision 2026-11-14: tag only a
+ language known with confidence; no `und`/`unk`). Step 4 keeps only
+ scripts of one language: Ukrainian-only letters, kana, Hangul.
  Latin script alone does not establish English.
 
 Normalize known language names/codes to conventional tags such as en, ru,
@@ -102,7 +104,7 @@ If a pinned dependency/toolchain cannot be obtained, report the exact blocker;
 do not silently downgrade, upgrade, substitute a mock or omit the real build.
 
 Run the required Go/core and GUI checks, frontend tests/typecheck/build, and
-focused tests for both switches, persistence, language precedence/mul/unk,
+focused tests for both switches, persistence, language precedence/mul/no tag,
 safe directory names, reruns/skip-existing, and all existing packing modes.
 Use local fixtures, not the user's account, token, library or downloads.
 Verify a generated sample CBZ's integrity and image order. Cross-compile the

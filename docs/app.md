@@ -38,10 +38,10 @@ button, *Load* and *Settings*. (To open on the full window instead, turn off
 4. **Set the options** in the *Options* tab: the folder the files go to,
    *Series folders* (each series saved in its own folder, named after the
    series, inside that folder; reruns reuse it), *Guess language* (adds the
-   run's language to that folder's name, as `One Piece [en]`: the chapters'
-   own language, then the language filter, then the script of the titles;
-   mixed languages are `[mul]` and unknown ones `[unk]`; it needs *Series
-   folders*), *Skip existing files* (chapters already in the folder aren't
+   run's language to that folder's name, as `One Piece [en]`, only when it's
+   known: the chapters' own language, the language filter, the site's only
+   language, or a script used by one language alone; mixed languages are
+   `[mul]`, and otherwise no tag is added; it needs *Series folders*), *Skip existing files* (chapters already in the folder aren't
    downloaded again), the format (CBZ, CBR, Folder or EPUB; EPUB adds a *Reading
    direction*) and *Pack as*: *Chapters* (a file each), *Merged* (a chapter's
    parts in one file), *Volumes* (a file per volume) or *One file* (everything
