@@ -4,6 +4,8 @@ package packer
 
 import (
 	"archive/zip"
+	"bytes"
+	"io"
 	"path/filepath"
 	"testing"
 
@@ -196,6 +198,54 @@ func TestPackBundleEntryNames(t *testing.T) {
 	for i, n := range names {
 		if n != want[i] {
 			t.Errorf("entry %d = %q, want %q", i, n, want[i])
+		}
+	}
+}
+
+// TestArchiveCBZStoresPages checks pages are stored as they are, with their
+// CRC and sizes in the local header (no data descriptor, flag bit 3), and a
+// non-ASCII name flagged as UTF-8, and that they read back unchanged
+func TestArchiveCBZStoresPages(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "stored.cbz")
+	files := []File{
+		{Name: "000.jpg", Data: []byte{0xff, 0xd8, 0xff, 1, 2, 3}},
+		{Name: "Capítulo 0001/001.png", Data: []byte("\x89PNG\r\n\x1a\nrest")},
+	}
+	if err := ArchiveCBZ(path, files, func(int, int) {}); err != nil {
+		t.Fatal(err)
+	}
+	r, err := zip.OpenReader(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer r.Close()
+	if len(r.File) != len(files) {
+		t.Fatalf("got %d entries, want %d", len(r.File), len(files))
+	}
+	for i, f := range r.File {
+		if f.Name != files[i].Name {
+			t.Errorf("entry %d is %q, want %q", i, f.Name, files[i].Name)
+		}
+		if f.Method != zip.Store {
+			t.Errorf("%s: method %d, want Store", f.Name, f.Method)
+		}
+		if f.Flags&0x8 != 0 {
+			t.Errorf("%s: has a data descriptor", f.Name)
+		}
+		if utf8 := f.Flags&0x800 != 0; utf8 != (i == 1) {
+			t.Errorf("%s: UTF-8 flag %v", f.Name, utf8)
+		}
+		rc, err := f.Open()
+		if err != nil {
+			t.Fatal(err)
+		}
+		got, err := io.ReadAll(rc) // checks the CRC at EOF
+		rc.Close()
+		if err != nil {
+			t.Fatalf("%s: %v", f.Name, err)
+		}
+		if !bytes.Equal(got, files[i].Data) {
+			t.Errorf("%s: data changed", f.Name)
 		}
 	}
 }
