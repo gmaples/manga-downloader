@@ -12,12 +12,32 @@ import (
 	"github.com/elboletaire/manga-downloader/http"
 )
 
-// mangalibApi is the JSON api host for mangalib.me. The site itself
-// (mangalib.me) is a Vue/Nuxt SPA sitting behind a passive DDoS-Guard (it
-// just sets cookies, it doesn't challenge plain GETs), but both the chapters
-// list and the chapter pages are served anonymously by this separate api
-// host, no cloudflare/browser needed. A var so tests can point it at a server.
-var mangalibApi = "https://api2.mangalib.me/api"
+// mangalibApi is the JSON api host for MangaLib. The site (now mangalib.org,
+// formerly mangalib.me) is a Vue/Nuxt SPA, but the chapters list and the
+// chapter pages are served anonymously by this separate api host, no
+// browser needed. Checked 2026-11-14: api2.mangalib.me answers 403 to every
+// request, and this host (like api.lib.social) answers only with the
+// headers of mangalibApiParams, 404 without them. A var so tests can point
+// it at a server.
+var mangalibApi = "https://api.cdnrulib.link/api"
+
+// mangalibSite is the site the api expects requests to come from
+const mangalibSite = "https://mangalib.org"
+
+// mangalibSiteID is MangaLib's id on the shared api (slashlib is 2, hentailib 4)
+const mangalibSiteID = "1"
+
+// mangalibApiParams are the request params of an api call: the api answers
+// only to an Origin and a Referer of mangalibSite plus a Site-Id header,
+// whichever of the site's domains the series URL uses
+func mangalibApiParams(u string) http.RequestParams {
+	return http.RequestParams{
+		URL:     u,
+		Referer: mangalibSite + "/",
+		Origin:  mangalibSite,
+		Headers: map[string]string{"Site-Id": mangalibSiteID},
+	}
+}
 
 // mangalibImageServer is the CDN base url for page images (mangalib.me is
 // site id 1 on the api's /constants?fields[]=imageServers endpoint, whose
@@ -26,7 +46,7 @@ var mangalibApi = "https://api2.mangalib.me/api"
 // see http.RequestParams.Origin, which mangalib deliberately never sets.
 const mangalibImageServer = "https://img2.imglib.info"
 
-// Mangalib is a grabber for mangalib.me
+// Mangalib is a grabber for mangalib.org (and its former domain mangalib.me)
 type Mangalib struct {
 	*Grabber
 	title string
@@ -50,9 +70,9 @@ type MangalibChapter struct {
 	BranchID int
 }
 
-// Test returns true if the URL is a mangalib.me URL
+// Test returns true if the URL is a mangalib.org or mangalib.me URL
 func (m *Mangalib) Test() (bool, error) {
-	re := regexp.MustCompile(`mangalib\.me`)
+	re := regexp.MustCompile(`mangalib\.(me|org)`)
 	return re.MatchString(m.URL), nil
 }
 
@@ -67,10 +87,7 @@ func (m *Mangalib) FetchTitle() (string, error) {
 		return "", err
 	}
 
-	body, err := http.GetText(http.RequestParams{
-		URL:     mangalibApi + "/manga/" + slug,
-		Referer: m.BaseUrl(),
-	})
+	body, err := http.GetText(mangalibApiParams(mangalibApi + "/manga/" + slug))
 	if err != nil {
 		return "", err
 	}
@@ -101,10 +118,7 @@ func (m Mangalib) FetchChapters() (chapters Filterables, errs []error) {
 		return nil, []error{err}
 	}
 
-	body, err := http.GetText(http.RequestParams{
-		URL:     mangalibApi + "/manga/" + slug + "/chapters",
-		Referer: m.BaseUrl(),
-	})
+	body, err := http.GetText(mangalibApiParams(mangalibApi + "/manga/" + slug + "/chapters"))
 	if err != nil {
 		return nil, []error{err}
 	}
@@ -167,10 +181,7 @@ func (m Mangalib) FetchChapter(f Filterable) (*Chapter, error) {
 		params.Add("branch_id", strconv.Itoa(mchap.BranchID))
 	}
 
-	body, err := http.GetText(http.RequestParams{
-		URL:     fmt.Sprintf("%s/manga/%s/chapter?%s", mangalibApi, slug, params.Encode()),
-		Referer: m.BaseUrl(),
-	})
+	body, err := http.GetText(mangalibApiParams(fmt.Sprintf("%s/manga/%s/chapter?%s", mangalibApi, slug, params.Encode())))
 	if err != nil {
 		return nil, err
 	}

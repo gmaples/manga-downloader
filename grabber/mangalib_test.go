@@ -47,6 +47,8 @@ func TestMangalibTest(t *testing.T) {
 	}{
 		{"https://mangalib.me/ru/manga/206--one-piece", true},
 		{"https://mangalib.me/manga/one-piece", true},
+		{"https://mangalib.org/ru/manga/55134--sssgeubjasalheonteo", true},
+		{"https://mangalib.org/manga/one-piece", true},
 		{"https://mangadex.org/title/xyz", false},
 	}
 
@@ -71,7 +73,17 @@ func mangalibServer(t *testing.T) (*httptest.Server, *[]url.Values) {
 
 	var chapterQueries []url.Values
 	mux := http.NewServeMux()
-	mux.HandleFunc("/api/manga/gintama/chapters", func(w http.ResponseWriter, r *http.Request) {
+	// the real api answers 404 without these headers
+	withSiteHeaders := func(next http.HandlerFunc) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
+			if r.Header.Get("Site-Id") != "1" || r.Header.Get("Origin") != "https://mangalib.org" || r.Header.Get("Referer") != "https://mangalib.org/" {
+				http.NotFound(w, r)
+				return
+			}
+			next(w, r)
+		}
+	}
+	mux.HandleFunc("/api/manga/gintama/chapters", withSiteHeaders(func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, `{"data":[`+
 			// two branches, one of them with no team
 			`{"volume":"1","number":"1","name":"One","branches":[`+
@@ -83,11 +95,14 @@ func mangalibServer(t *testing.T) (*httptest.Server, *[]url.Values) {
 			// no branch listed at all
 			`{"volume":"1","number":"3","name":"Three","branches":[]}`+
 			`]}`)
-	})
-	mux.HandleFunc("/api/manga/gintama/chapter", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("/api/manga/gintama/chapter", withSiteHeaders(func(w http.ResponseWriter, r *http.Request) {
 		chapterQueries = append(chapterQueries, r.URL.Query())
 		fmt.Fprintf(w, `{"data":{"pages":[{"url":"//manga/gintama/%s.jpg"}]}}`, r.URL.Query().Get("branch_id"))
-	})
+	}))
+	mux.HandleFunc("/api/manga/gintama", withSiteHeaders(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, `{"data":{"name":"Gintama","rus_name":"Гинтама"}}`)
+	}))
 
 	server := httptest.NewServer(mux)
 	t.Cleanup(server.Close)
@@ -152,6 +167,28 @@ func TestMangalibFetchChapterRequestsBranch(t *testing.T) {
 	}
 	if _, ok := (*queries)[1]["branch_id"]; ok {
 		t.Errorf("query = %v, want no branch_id", (*queries)[1])
+	}
+}
+
+// a mangalib.org URL loads its title, chapters and pages, with the api's headers
+func TestMangalibOrgURL(t *testing.T) {
+	server, _ := mangalibServer(t)
+	defer setMangalibApi(server.URL + "/api")()
+	m := NewMangalib(&Grabber{URL: "https://mangalib.org/ru/manga/gintama", Settings: &Settings{}})
+
+	title, err := m.FetchTitle()
+	if err != nil || title != "Гинтама" {
+		t.Fatalf("FetchTitle() = %q, %v", title, err)
+	}
+	chapters, errs := m.FetchChapters()
+	if len(errs) > 0 || len(chapters) != 4 {
+		t.Fatalf("FetchChapters() = %d chapters, %v", len(chapters), errs)
+	}
+	if lang := chapters[0].(*MangalibChapter).Language; lang != "ru" {
+		t.Errorf("chapter language %q, want ru", lang)
+	}
+	if _, err := m.FetchChapter(chapters[0]); err != nil {
+		t.Fatalf("FetchChapter() error = %v", err)
 	}
 }
 

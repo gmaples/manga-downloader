@@ -632,7 +632,7 @@ environment variables.
 | [mangakimi.com](https://www.mangakimi.com) | Thai | 2026-11-02 |
 | [mangakulesi.com](https://mangakulesi.com) | Turkish | 2026-11-06 |
 | [mangalami.com](https://mangalami.com) | LamiManga, Thai | 2026-11-02 |
-| [mangalib.me](https://mangalib.me) | MangaLib | 2026-10-15 |
+| [mangalib.org](https://mangalib.org) (and mangalib.me) | MangaLib | 2026-11-14 |
 | [mangalivre.to](https://mangalivre.to) | Manga Livre, former mangalivre.tv/mangalivre.net | 2026-10-29 |
 | [mangalt.jp](https://mangalt.jp) | Japanese (Comici) | 2026-11-02 |
 | [mangamaniacs.org](https://mangamaniacs.org) | English, mostly NSFW, yaoi | 2026-11-02 |
