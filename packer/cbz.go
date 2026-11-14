@@ -46,8 +46,9 @@ func ArchiveCBZ(filename string, files []File, progress func(page, progress int)
 }
 
 // storedHeader is the header of a page stored as it is. Pages are JPEG, PNG,
-// WebP, AVIF or GIF, all compressed already, so Deflate only cost time: about
-// 60 times the time of storing for a 0.25% smaller file. The CRC and sizes go
+// WebP, AVIF or GIF, all compressed already, so Deflate only cost time: on
+// ten real MangaLib chapters it took about 40 times as long as storing, for
+// files 1.7% smaller. The CRC and sizes go
 // in the local header (CreateRaw), not in a data descriptor after the data,
 // because readers built on streaming zip parsers (Java's ZipInputStream, used
 // on Android) refuse a data descriptor on a stored entry. Names get the UTF-8
