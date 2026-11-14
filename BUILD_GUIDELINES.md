@@ -38,7 +38,8 @@ Resolve ONE folder-language tag for the selected run, in this order:
 4. Lightweight local script hints from chapter titles, then the series title:
    Ukrainian-specific letters -> uk; Japanese kana -> ja; Korean Hangul -> ko;
    otherwise Cyrillic -> ru; otherwise Han characters -> zh.
-5. If none applies, use `und`. Latin script alone does not establish English.
+5. If none applies, use `unk` (user decision 2026-11-14, instead of `und`).
+ Latin script alone does not establish English.
 
 Normalize known language names/codes to conventional tags such as en, ru,
 uk, ja, ko, zh, pt-BR or zh-Hant using existing facilities where practical.
@@ -61,6 +62,8 @@ language folders. This supersedes the earlier proposed automatic splitting.
   and completion paths, and Open folder. Repeated runs reuse that directory.
 - Preserve existing collision handling; never overwrite existing archives or
   move, rename, delete or reorganize previously downloaded files.
+- User decision 2026-11-14: the shared filename sanitizer also replaces
+  `< > | *` and control characters with `_`, so names holding them change.
 - Preserve current chapter filenames, number formatting, translation-group
   labels, archive metadata, image conversion and page order.
 - No new ComicInfo.xml generation or metadata changes in this build.
@@ -99,7 +102,7 @@ If a pinned dependency/toolchain cannot be obtained, report the exact blocker;
 do not silently downgrade, upgrade, substitute a mock or omit the real build.
 
 Run the required Go/core and GUI checks, frontend tests/typecheck/build, and
-focused tests for both switches, persistence, language precedence/mul/und,
+focused tests for both switches, persistence, language precedence/mul/unk,
 safe directory names, reruns/skip-existing, and all existing packing modes.
 Use local fixtures, not the user's account, token, library or downloads.
 Verify a generated sample CBZ's integrity and image order. Cross-compile the
