@@ -4,6 +4,7 @@
   "parserFailed": "l'analitzador del lloc ha fallat: {{reason}}",
   "unknownLanguage": "idioma desconegut \"{{language}}\"",
   "folderMissing": "la carpeta {{path}} no existeix",
+  "seriesFolder": "no s'ha pogut crear la carpeta de la sèrie {{path}}",
   "updateUnavailable": "l'actualització amb un clic no està disponible per a aquesta còpia",
   "updateBusy": "l'actualització ja és en curs",
   "updateWaitDownload": "espera que acabi la descàrrega, o cancel·la-la, abans d'actualitzar",

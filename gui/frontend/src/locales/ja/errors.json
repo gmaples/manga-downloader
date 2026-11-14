@@ -4,6 +4,7 @@
   "parserFailed": "サイトの解析に失敗しました: {{reason}}",
   "unknownLanguage": "不明な言語「{{language}}」",
   "folderMissing": "フォルダー{{path}}がありません",
+  "seriesFolder": "作品フォルダー{{path}}を作成できませんでした",
   "updateUnavailable": "この配布形式ではワンクリックのアップデートを利用できません",
   "updateBusy": "アップデートはすでに進行中です",
   "updateWaitDownload": "アップデートする前に、ダウンロードの完了を待つかキャンセルしてください",

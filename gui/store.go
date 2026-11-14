@@ -32,6 +32,10 @@ type OptionsDTO struct {
 	SkipExisting     bool   `json:"skipExisting"`
 	FilenameTemplate string `json:"filenameTemplate"`
 	BrowserVisible   bool   `json:"browserVisible"`
+	// SeriesFolders and GuessLanguage are app-only (no CLI flag): a folder per
+	// series inside OutputDir, and the run's language tag on its name
+	SeriesFolders bool `json:"seriesFolders"`
+	GuessLanguage bool `json:"guessLanguage"`
 }
 
 // PrefsDTO are the app-only preferences, which the CLI has no flag for, so they
@@ -156,6 +160,8 @@ func optionsOf(s grabber.Settings) OptionsDTO {
 		SkipExisting:     s.SkipExisting,
 		FilenameTemplate: s.FilenameTemplate,
 		BrowserVisible:   s.BrowserVisible,
+		SeriesFolders:    s.SeriesFolders,
+		GuessLanguage:    s.GuessLanguage,
 	}
 }
 
@@ -175,6 +181,8 @@ func applyOptions(s *grabber.Settings, o OptionsDTO) {
 	s.SkipExisting = o.SkipExisting
 	s.FilenameTemplate = o.FilenameTemplate
 	s.BrowserVisible = o.BrowserVisible
+	s.SeriesFolders = o.SeriesFolders
+	s.GuessLanguage = o.GuessLanguage
 }
 
 // guiConfigPath is where the options are saved, next to the Manga Plus secret

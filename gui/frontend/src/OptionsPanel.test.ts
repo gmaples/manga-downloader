@@ -127,6 +127,45 @@ describe('Skip existing files', () => {
   });
 });
 
+describe('Series folders and Guess language', () => {
+  // a switch's input, as rendered after its label
+  function input(markup: string, label: string): string {
+    const at = markup.indexOf(`>${label}<`);
+    return at < 0 ? '' : (markup.slice(at).match(/<input[^>]*>/) ?? [''])[0];
+  }
+
+  it('sit in the save group under the folder, before Skip existing files, both off by default', async () => {
+    const base = await createMockApi({ scenario: 'empty', freeze: true }).state();
+    const markup = options(base);
+    const folder = markup.indexOf('id="folder-label"');
+    const series = markup.indexOf('>Series folders<');
+    const guess = markup.indexOf('>Guess language<');
+    expect(folder).toBeGreaterThan(markup.indexOf('id="opt-save"'));
+    expect(series).toBeGreaterThan(folder);
+    expect(guess).toBeGreaterThan(series);
+    expect(guess).toBeLessThan(markup.indexOf('>Skip existing files<'));
+    expect(input(markup, 'Series folders')).not.toMatch(/checked=""/);
+    expect(input(markup, 'Guess language')).not.toMatch(/checked=""/);
+  });
+
+  it('greys out Guess language while Series folders is off, keeping its value', async () => {
+    const base = await createMockApi({ scenario: 'empty', freeze: true }).state();
+    const off: State = { ...base, options: { ...base.options, seriesFolders: false, guessLanguage: true } };
+    expect(input(options(off), 'Guess language')).toMatch(/disabled=""/);
+    expect(input(options(off), 'Guess language')).toMatch(/checked=""/);
+    const on: State = { ...off, options: { ...off.options, seriesFolders: true } };
+    expect(input(options(on), 'Series folders')).toMatch(/checked=""/);
+    expect(input(options(on), 'Guess language')).not.toMatch(/disabled=""/);
+  });
+
+  it('are locked while a run goes', async () => {
+    const base = await createMockApi({ scenario: 'empty', freeze: true }).state();
+    const running: State = { ...base, running: true, options: { ...base.options, seriesFolders: true } };
+    expect(input(options(running), 'Series folders')).toMatch(/disabled=""/);
+    expect(input(options(running), 'Guess language')).toMatch(/disabled=""/);
+  });
+});
+
 describe('Filename template', () => {
   it('offers the reset button only when the template differs from the default', async () => {
     const base = await createMockApi({ scenario: 'empty', freeze: true }).state();

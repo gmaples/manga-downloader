@@ -263,6 +263,8 @@ function defaultOptions(shot: boolean, epub: boolean): Options {
     skipExisting: false,
     filenameTemplate: TEMPLATE_DEFAULT,
     browserVisible: false,
+    seriesFolders: false,
+    guessLanguage: false,
   };
 }
 
@@ -574,6 +576,8 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
     filenameTemplateDefault: TEMPLATE_DEFAULT,
     filenameTemplateWarning:
       options.packAs === 'chapters' || options.packAs === 'parts' ? templateWarning(options.filenameTemplate) : '',
+    // the mock has no series folders: the dock falls back to outputDir
+    destination: '',
     // the wire omits uiLanguage when it follows the system, as gui.json does
     prefs:
       prefs.uiLanguage === ''

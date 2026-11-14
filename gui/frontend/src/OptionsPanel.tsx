@@ -86,6 +86,22 @@ export function OptionsPanel({ state, onOptions, onChooseFolder, onError }: Prop
         </div>
 
         <Switch
+          label={t('options.seriesFolders.label')}
+          description={t('options.seriesFolders.hint')}
+          checked={o.seriesFolders}
+          disabled={locked}
+          onChange={(seriesFolders) => set({ seriesFolders })}
+        />
+
+        <Switch
+          label={t('options.guessLanguage.label')}
+          description={t('options.guessLanguage.hint')}
+          checked={o.guessLanguage}
+          disabled={locked || !o.seriesFolders}
+          onChange={(guessLanguage) => set({ guessLanguage })}
+        />
+
+        <Switch
           label={t('options.skipExisting.label')}
           description={t('options.skipExisting.hint')}
           checked={o.skipExisting}

@@ -5,6 +5,7 @@ package main
 import (
 	"context"
 	"errors"
+	"os"
 	"sort"
 	"strings"
 	"sync"
@@ -1274,6 +1275,39 @@ func (c *Controller) Jobs() []Job {
 	return out
 }
 
+// runDir is the folder a run of chapters saves into: settings.OutputDir, or
+// with SeriesFolders the series' folder inside it, tagged with the run's
+// language when GuessLanguage is on too (see core.SeriesDir)
+func runDir(settings *grabber.Settings, series *core.Series, chapters grabber.Filterables) string {
+	if !settings.SeriesFolders || series == nil {
+		return settings.OutputDir
+	}
+	lang := ""
+	if settings.GuessLanguage {
+		lang = core.FolderLanguage(chapters, settings.Language, series.Languages, series.Title)
+	}
+
+	return core.SeriesDir(settings.OutputDir, series.Title, lang)
+}
+
+// Destination is the folder a run of the selected chapters would save into,
+// for the window to show before it starts; "" when no series is loaded
+func (c *Controller) Destination() string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.series == nil {
+		return ""
+	}
+	var chapters grabber.Filterables
+	for i, chap := range c.series.Chapters {
+		if i < len(c.selected) && c.selected[i] {
+			chapters = append(chapters, chap)
+		}
+	}
+
+	return runDir(c.settings, c.series, chapters)
+}
+
 // Summary returns the outcome of the last run, or nil while one runs or
 // before the first run
 func (c *Controller) Summary() *Summary {
@@ -1337,6 +1371,15 @@ func (c *Controller) Start() error {
 		c.mu.Unlock()
 		return uiErr("errors.selectOne", nil, nil)
 	}
+	// the run's folder: the picked one, or with series folders on, the
+	// series' folder inside it, made now, as the archivers make no folders
+	outDir := runDir(c.settings, c.series, chapters)
+	if outDir != c.settings.OutputDir {
+		if err := os.MkdirAll(outDir, 0o755); err != nil {
+			c.mu.Unlock()
+			return uiErr("errors.seriesFolder", map[string]any{"path": outDir}, err)
+		}
+	}
 	rows := len(chapters)
 	if c.settings.Bundle {
 		rows = 1
@@ -1376,6 +1419,10 @@ func (c *Controller) Start() error {
 		c.jobs = append(c.jobs, c.bundle)
 	}
 	series := c.series
+	if outDir != c.settings.OutputDir {
+		// a copy that saves there, so the picked folder stays the option
+		series = series.WithOutputDir(outDir)
+	}
 	settings := c.settings
 	rng := c.rng
 	c.appendMsgLocked(LogInfo, msg("log.downloading", map[string]any{"count": len(chapters), "title": series.Title}))
@@ -1405,7 +1452,7 @@ func (c *Controller) run(ctx context.Context, series *core.Series, settings *gra
 	}()
 
 	s := &Summary{
-		Dir:      settings.OutputDir,
+		Dir:      series.OutputDir(),
 		Bundled:  c.bundle != nil,
 		Saved:    c.stats.saved,
 		Volumes:  c.stats.volumes,

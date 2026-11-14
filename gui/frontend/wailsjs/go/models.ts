@@ -197,6 +197,8 @@ export namespace main {
 	    skipExisting: boolean;
 	    filenameTemplate: string;
 	    browserVisible: boolean;
+	    seriesFolders: boolean;
+	    guessLanguage: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new OptionsDTO(source);
@@ -217,6 +219,8 @@ export namespace main {
 	        this.skipExisting = source["skipExisting"];
 	        this.filenameTemplate = source["filenameTemplate"];
 	        this.browserVisible = source["browserVisible"];
+	        this.seriesFolders = source["seriesFolders"];
+	        this.guessLanguage = source["guessLanguage"];
 	    }
 	}
 	export class PrefsDTO {
@@ -369,6 +373,7 @@ export namespace main {
 	    browserAlertMsg?: Message;
 	    filenameTemplateDefault: string;
 	    filenameTemplateWarning: string;
+	    destination: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new State(source);
@@ -407,6 +412,7 @@ export namespace main {
 	        this.browserAlertMsg = this.convertValues(source["browserAlertMsg"], Message);
 	        this.filenameTemplateDefault = source["filenameTemplateDefault"];
 	        this.filenameTemplateWarning = source["filenameTemplateWarning"];
+	        this.destination = source["destination"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

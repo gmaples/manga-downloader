@@ -104,12 +104,14 @@ export function DownloadDock({ state, error, chapters, selected, onStart, onCanc
 
   const blocker = downloadBlocker(state, t);
   const o = state.options;
+  // the series folder when that option is on, so the folder shown is the one written to
+  const dir = state.destination || o.outputDir;
   return (
     <div className="dock">
-      <p className="dock-dest" title={o.outputDir}>
+      <p className="dock-dest" title={dir}>
         <T
           k="download.where"
-          values={{ what: destination(o, t), dir: o.outputDir || '…' }}
+          values={{ what: destination(o, t), dir: dir || '…' }}
           components={{
             dir: (children) => (
               <span className="mono">

@@ -246,6 +246,9 @@ type State struct {
 	// FilenameTemplateWarning what is wrong with the current one, "" when nothing
 	FilenameTemplateDefault string `json:"filenameTemplateDefault"`
 	FilenameTemplateWarning string `json:"filenameTemplateWarning"`
+	// Destination is the folder a run of the selection would save into, the
+	// series folder when that option is on; "" before a series is loaded
+	Destination string `json:"destination"`
 }
 
 // VolumesDTO is the Volumes box ("" for the site's own volumes), the site's
@@ -383,6 +386,7 @@ func (a *App) State() State {
 		Jobs:               []JobDTO{},
 		Summary:            summaryDTO(c.Summary()),
 		Options:            optionsOf(c.Settings()),
+		Destination:        c.Destination(),
 		Prefs:              c.Prefs(),
 		Version:            a.version,
 		ReleaseURL:         releaseURL(a.tag),
@@ -667,13 +671,12 @@ func existingDir(dir string) string {
 	return ""
 }
 
-// OpenFolder opens the folder of the last run's output, or the output folder
-// when no run has finished, in the system's file manager
+// OpenFolder opens the folder of the last run's output, or when no run has
+// finished, the folder the next run would save into if it's there already
+// (a series folder from an earlier session), else the output folder, in the
+// system's file manager
 func (a *App) OpenFolder() error {
-	dir := optionsOf(a.ctrl.Settings()).OutputDir
-	if s := a.ctrl.Summary(); s != nil && s.Dir != "" {
-		dir = s.Dir
-	}
+	dir := openFolderDir(optionsOf(a.ctrl.Settings()).OutputDir, a.ctrl.Destination(), a.ctrl.Summary())
 	abs, err := filepath.Abs(dir)
 	if err != nil {
 		return err
@@ -683,6 +686,21 @@ func (a *App) OpenFolder() error {
 	}
 
 	return openInFileManager(abs)
+}
+
+// openFolderDir picks the folder OpenFolder opens: the last run's, else the
+// destination when it exists, else the output folder
+func openFolderDir(outputDir, destination string, last *Summary) string {
+	if last != nil && last.Dir != "" {
+		return last.Dir
+	}
+	if destination != "" && destination != outputDir {
+		if fi, err := os.Stat(destination); err == nil && fi.IsDir() {
+			return destination
+		}
+	}
+
+	return outputDir
 }
 
 // openInFileManager starts the platform's file manager on dir without waiting

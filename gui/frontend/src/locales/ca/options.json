@@ -9,6 +9,14 @@
     "notSet": "Sense definir",
     "browse": "Examina…"
   },
+  "seriesFolders": {
+    "label": "Carpetes per sèrie",
+    "hint": "Desa cada sèrie a la seva pròpia carpeta, amb el nom de la sèrie, dins de la carpeta de dalt. Si tornes a descarregar, es fa servir la mateixa carpeta."
+  },
+  "guessLanguage": {
+    "label": "Endevina l'idioma",
+    "hint": "Afegeix l'idioma al nom de la carpeta de la sèrie, com [en] o [ru]: primer l'idioma dels capítols, després el filtre d'idioma i després l'escriptura dels títols. Diversos idiomes són [mul] i un de desconegut, [unk]. Cal Carpetes per sèrie."
+  },
   "skipExisting": {
     "label": "Omet els fitxers existents",
     "hint": "Els fitxers que ja són a la carpeta no es tornen a descarregar. Si vols tornar a descarregar un fitxer malmès, esborra'l primer."

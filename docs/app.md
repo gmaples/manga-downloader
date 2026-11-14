@@ -36,8 +36,13 @@ button, *Load* and *Settings*. (To open on the full window instead, turn off
    </picture>
 
 4. **Set the options** in the *Options* tab: the folder the files go to,
-   *Skip existing files* (chapters already in the folder aren't downloaded
-   again), the format (CBZ, CBR, Folder or EPUB; EPUB adds a *Reading
+   *Series folders* (each series saved in its own folder, named after the
+   series, inside that folder; reruns reuse it), *Guess language* (adds the
+   run's language to that folder's name, as `One Piece [en]`: the chapters'
+   own language, then the language filter, then the script of the titles;
+   mixed languages are `[mul]` and unknown ones `[unk]`; it needs *Series
+   folders*), *Skip existing files* (chapters already in the folder aren't
+   downloaded again), the format (CBZ, CBR, Folder or EPUB; EPUB adds a *Reading
    direction*) and *Pack as*: *Chapters* (a file each), *Merged* (a chapter's
    parts in one file), *Volumes* (a file per volume) or *One file* (everything
    together). Under *Pages*, *Convert to JPEG* ticks *AVIF* (on by default,
@@ -47,6 +52,8 @@ button, *Load* and *Settings*. (To open on the full window instead, turn off
    Under *Advanced* are the *Filename template*, the *JPEG quality* of every
    page saved as JPEG, and *Show the browser window*, which you rarely need: a
    site that needs the window opens it by itself.
+   *Series folders* and *Guess language* are app-only: the CLI has no flag
+   for them.
 
    <picture>
      <source media="(prefers-color-scheme: dark)" srcset="../assets/screenshots/06-options-dark.webp">

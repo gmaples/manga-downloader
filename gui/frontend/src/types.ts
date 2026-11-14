@@ -29,6 +29,10 @@ export interface Options {
   skipExisting: boolean;
   filenameTemplate: string;
   browserVisible: boolean;
+  /** Saves into a folder named after the series, inside outputDir. App-only: the CLI has no flag */
+  seriesFolders: boolean;
+  /** Adds the run's language tag to that folder's name ("Title [en]"); only read with seriesFolders */
+  guessLanguage: boolean;
 }
 
 export interface Run {
@@ -155,6 +159,8 @@ export interface State {
   filenameTemplateDefault: string;
   /** What is wrong with options.filenameTemplate; "" when nothing */
   filenameTemplateWarning: string;
+  /** The folder a run of the selection would save into (the series folder when that's on); "" before a load */
+  destination: string;
   prefs: Prefs;
 }
 

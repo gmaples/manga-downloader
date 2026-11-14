@@ -9,6 +9,14 @@
     "notSet": "Not set",
     "browse": "Browse…"
   },
+  "seriesFolders": {
+    "label": "Series folders",
+    "hint": "Saves each series in its own folder, named after the series, inside the folder above. Run it again and the same folder is used."
+  },
+  "guessLanguage": {
+    "label": "Guess language",
+    "hint": "Adds the language to the series folder's name, as [en] or [ru]: the chapters' own language first, then the language filter, then the script of the titles. Mixed languages are [mul], unknown ones [unk]. Needs Series folders."
+  },
   "skipExisting": {
     "label": "Skip existing files",
     "hint": "Files already in the folder aren't downloaded again. To download a broken file again, delete it first."

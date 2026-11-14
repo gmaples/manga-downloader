@@ -16,6 +16,8 @@ const base: Options = {
   skipExisting: false,
   filenameTemplate: '{{.Series}}',
   browserVisible: false,
+  seriesFolders: false,
+  guessLanguage: false,
 };
 
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));

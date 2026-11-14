@@ -4,6 +4,7 @@
   "parserFailed": "the site's parser failed: {{reason}}",
   "unknownLanguage": "unknown language \"{{language}}\"",
   "folderMissing": "the folder {{path}} doesn't exist",
+  "seriesFolder": "couldn't create the series folder {{path}}",
   "updateUnavailable": "one-click update isn't available for this copy",
   "updateBusy": "the update is already in progress",
   "updateWaitDownload": "wait for the download to finish, or cancel it, before updating",

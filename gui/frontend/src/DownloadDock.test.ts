@@ -28,6 +28,14 @@ describe('DownloadDock', () => {
     expect(ca).toContain('Fitxers CBZ a');
   });
 
+  it('shows the series folder a run would save into, else the picked folder', async () => {
+    const base = await createMockApi('loaded').state();
+    const picked = await render('en', { destination: '' });
+    expect(picked).toContain(base.options.outputDir);
+    const series = await render('en', { destination: '/home/reader/Downloads/One Piece [en]' });
+    expect(series).toContain('One Piece [en]');
+  });
+
   it('translates the running progress and the cancelling state', async () => {
     const running = { running: true, run: { chapters: 4, bundle: false, volumes: false, rows: 0 }, jobs: [] };
     const es = await render('es', { ...running, cancelling: true });

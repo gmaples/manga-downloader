@@ -4,6 +4,7 @@
   "parserFailed": "el analizador del sitio ha fallado: {{reason}}",
   "unknownLanguage": "idioma desconocido \"{{language}}\"",
   "folderMissing": "la carpeta {{path}} no existe",
+  "seriesFolder": "no se ha podido crear la carpeta de la serie {{path}}",
   "updateUnavailable": "la actualización con un clic no está disponible para esta copia",
   "updateBusy": "la actualización ya está en curso",
   "updateWaitDownload": "espera a que termine la descarga, o cancélala, antes de actualizar",

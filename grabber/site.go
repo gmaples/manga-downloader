@@ -69,6 +69,13 @@ type Settings struct {
 	SkipPages string
 	// OutputDir is the output directory for the downloaded files
 	OutputDir string
+	// SeriesFolders saves into a folder named after the series inside
+	// OutputDir (see core.SeriesDir). Desktop app only: the CLI has no flag.
+	SeriesFolders bool
+	// GuessLanguage adds the run's language tag to that folder's name, as
+	// "Title [en]" (see core.FolderLanguage). Only read with SeriesFolders.
+	// Desktop app only: the CLI has no flag.
+	GuessLanguage bool
 	// BrowserVisible shows the browser window for sites that need one, so
 	// interactive challenges (e.g. cloudflare) can be solved manually
 	BrowserVisible bool
