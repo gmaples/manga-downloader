@@ -1,0 +1,55 @@
+name: Fork macOS build
+
+# This fork only, never offered upstream (see CHANGELOG.md): builds the macOS
+# app the way release-gui.yaml's macos job does, but on demand and without a
+# GitHub Release, and keeps the zip as this run's artifact instead of uploading
+# it to a release. Run it from the Actions tab with the build number.
+on:
+  workflow_dispatch:
+    inputs:
+      build:
+        description: Build number N (tag v25.2.0-series-folders.N)
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  macos:
+    name: macOS universal
+    runs-on: macos-latest
+    env:
+      TAG: v25.2.0-series-folders.${{ inputs.build }}
+      PRODUCT_VERSION: 25.2.0.${{ inputs.build }}
+    steps:
+    - uses: actions/checkout@v7
+    - uses: actions/setup-go@v7
+      with:
+        go-version: "1.26"
+        check-latest: true
+        cache-dependency-path: |
+          go.sum
+          gui/go.sum
+    - uses: pnpm/action-setup@v6
+      with:
+        package_json_file: gui/frontend/package.json
+    - uses: actions/setup-node@v7
+      with:
+        node-version: 22
+        cache: pnpm
+        cache-dependency-path: gui/frontend/pnpm-lock.yaml
+    - name: Install the Wails CLI
+      run: make install/wails
+    - name: Build the app bundle
+      working-directory: gui
+      run: |
+        set -euo pipefail
+        make -C .. build/gui/darwin PRODUCT_VERSION="$PRODUCT_VERSION"
+        name="manga-downloader-gui-$TAG-darwin-universal"
+        ditto -c -k --keepParent "build/bin/Manga Downloader.app" "$name.zip"
+        shasum -a 256 "$name.zip"
+    - uses: actions/upload-artifact@v7
+      with:
+        name: manga-downloader-gui-${{ env.TAG }}-darwin-universal
+        path: gui/manga-downloader-gui-${{ env.TAG }}-darwin-universal.zip
+        if-no-files-found: error

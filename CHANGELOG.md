@@ -7,8 +7,9 @@ an exe's Properties > Details show the same version as `25.2.0.N`; on Android
 the build number is the app's version code. Add an entry here with each
 new build.
 
-This file, the README's "About this fork" section, `BUILD_GUIDELINES.md`
-and `handoff/` belong to this fork only. Keep fork notes out of upstream's
+This file, the README's "About this fork" section, `BUILD_GUIDELINES.md`,
+`handoff/` and `.github/workflows/fork-macos.yaml` (a manual macOS build, run
+from the Actions tab) belong to this fork only. Keep fork notes out of upstream's
 files (AGENTS.md, the workflows), so the feature commits can be offered to
 [elboletaire/manga-downloader](https://github.com/elboletaire/manga-downloader)
 as they are.
