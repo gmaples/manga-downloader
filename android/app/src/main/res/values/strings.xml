@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Manga Downloader</string>
+    <string name="notification_channel">Downloads</string>
+    <string name="notification_text">Running, so downloads go on in the background</string>
+    <string name="notification_stop">Quit</string>
+    <string name="starting">Starting…</string>
+    <string name="failed">The downloader didn\'t start: %1$s</string>
+    <string name="storage_title">Allow saving files</string>
+    <string name="storage_text">Manga Downloader saves the chapters it downloads into Download/Manga, or a folder you pick. Android asks you to allow access to all files for that.</string>
+    <string name="storage_allow">Allow</string>
+    <string name="storage_later">Not now</string>
+    <string name="no_folder_app">No app can show %1$s</string>
+</resources>

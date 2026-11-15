@@ -80,6 +80,12 @@ What this fork adds:
   the overall progress, each site downloading gets a bar of its own with the
   chapter it's on, or its countdown after a 429.
 
+- **Android**: the command line builds for Android (it runs in Termux), and
+  an Android app (`android/`) shows the desktop app's own window: its Go
+  backend runs on the device and serves the window to a WebView, downloads go
+  on in the background, and files are saved to `Download/Manga` until another
+  folder is picked. See [docs/android.md](docs/android.md).
+
 The `handoff/` folder and `BUILD_GUIDELINES.md` hold the scope and notes the
 work was planned from.
 

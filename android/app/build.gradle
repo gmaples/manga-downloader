@@ -1,0 +1,54 @@
+plugins {
+    id 'com.android.application'
+}
+
+// The version comes from the build: build-android.sh passes the build's
+// number (-PmdVersionCode) and PRODUCT_VERSION (-PmdVersionName).
+def mdVersionCode = (project.findProperty('mdVersionCode') ?: '1') as int
+def mdVersionName = (project.findProperty('mdVersionName') ?: 'dev') as String
+
+android {
+    namespace 'com.gmaples.mangadownloader'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'com.gmaples.mangadownloader'
+        minSdk 24
+        targetSdk 35
+        versionCode mdVersionCode
+        versionName mdVersionName
+    }
+
+    // Signed with the keystore named by MD_KEYSTORE (kept outside the repo),
+    // so each build installs over the last; without it, the debug key.
+    signingConfigs {
+        release {
+            def ks = System.getenv('MD_KEYSTORE')
+            if (ks) {
+                storeFile file(ks)
+                storePassword System.getenv('MD_KEYSTORE_PASSWORD')
+                keyAlias System.getenv('MD_KEY_ALIAS') ?: 'manga-downloader'
+                keyPassword System.getenv('MD_KEYSTORE_PASSWORD')
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig System.getenv('MD_KEYSTORE') ? signingConfigs.release : signingConfigs.debug
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    packaging {
+        jniLibs {
+            // the Go backend is run as a program, so it must be extracted
+            useLegacyPackaging true
+        }
+    }
+}
