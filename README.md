@@ -32,6 +32,53 @@ Linux, and as a **command line tool** for scripts, servers and Docker.
 
 </div>
 
+## About this fork
+
+This is a personal fork of
+[elboletaire/manga-downloader](https://github.com/elboletaire/manga-downloader),
+based on v25.2.0. **The changes in this fork were vibe coded.** AI coding
+agents wrote them from plain-language requests, and they were checked by
+tests and by trying the builds, not by reading every line. The original
+project's own note on AI, further down, describes upstream's process; it
+doesn't cover the changes listed here. Please report problems with these
+changes to this fork, not upstream.
+
+Builds from this fork are numbered `v25.2.0-series-folders.N`.
+
+What this fork adds:
+
+- **Series folders** (Options > Save, off by default): each series is saved
+  in its own `<Series Title>` folder inside the picked folder.
+- **Guess language** (off by default, needs Series folders): adds a
+  ` [tag]` such as `[ru]` to the folder name, but only when the language is
+  known for sure: from the chapters' own languages (several give `[mul]`), the
+  language filter, the site's only language, or letters that belong to one
+  language (Ukrainian Ї Є Ґ, Japanese kana, Korean Hangul). Otherwise no tag.
+- **Portable file and folder names** that are valid on Windows, macOS, Linux
+  and Android: `< > | *` and control characters become `_`, a leading `.`
+  becomes `_`, Windows device names such as `CON` get `_`, trailing dots and
+  spaces are trimmed from folders, and names over 255 bytes are shortened in
+  the middle with `…`.
+- **MangaLib**: `mangalib.org` links work, and the API host moved to
+  `api.cdnrulib.link` (the old `api2.mangalib.me` answers 403).
+- **Faster CBZ packing**: pages are stored as they are instead of being
+  compressed again, with each page's size before its data so Android's zip
+  reader accepts them. In one test of 10 chapters, packing took 93 ms instead
+  of 3,992 ms, and the files were 1.7% bigger.
+- **Per-site rate limits**: a `site-rate-limits.txt` in the download folder
+  holds one `site: time` line per site (for example `mangalib.org: 1s`), the
+  least gap between two requests. After a 429 (Too Many Requests), every
+  download from that site pauses (15s, then 1.5 times longer each time, up to
+  5m), only the failed request is made again, and the site's gap grows and is
+  saved.
+- **Download groups** in the desktop app: while downloads run, you can load
+  another series and start it at once. Each group has its own Cancel and
+  summary, keeps the options it started with, and groups from the same site
+  share that site's pace. The same series can't run twice at once.
+
+The `handoff/` folder and `BUILD_GUIDELINES.md` hold the scope and notes the
+work was planned from.
+
 ## Features
 
 - **[581 supported sites](#supported-sites)**, from big aggregators to small
