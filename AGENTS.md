@@ -38,7 +38,7 @@ Unit test coverage is thin; real verification is the makefile smoke targets, whi
 
 The makefile is tracked lowercase; on macOS `git add` needs the lowercase name. macOS also has no `timeout`.
 
-Releases: the version lives only in the git tag (the makefile injects the short sha, the release workflow also injects `git describe`). There's no hardcoded version. This fork tags its builds `v25.2.0-series-folders.N` (N is the build number `android/build-android.sh` and the build notes use) and lists them in `CHANGELOG.md`; add an entry there with each new build. **`release.yaml` triggers on a *published GitHub Release*, not on a tag push** — pushing a tag alone releases nothing.
+Releases: the version lives only in the git tag (the makefile injects the short sha, the release workflow also injects `git describe`). There's no CHANGELOG and no hardcoded version. **`release.yaml` triggers on a *published GitHub Release*, not on a tag push** — pushing a tag alone releases nothing.
 
 From v23.0.0 the tags stay `vX.Y.Z` but the numbers mean: major for new CLI/GUI features (v24.0.0, …), minor for new sites or grabbers (including a site added through an existing grabber, like `PlainHTML`), patch for fixes. The module path has no `/vN` suffix on purpose, so `go install …@latest` stays on v1.x and isn't supported.
 

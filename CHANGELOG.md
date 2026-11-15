@@ -4,7 +4,14 @@ This fork's builds, newest first. Each version is a git tag on the commit the
 build was made from. Builds are numbered `v25.2.0-series-folders.N`: the
 upstream base (v25.2.0), this fork's name, and the build number. In Windows,
 an exe's Properties > Details show the same version as `25.2.0.N`; on Android
-the build number is the app's version code.
+the build number is the app's version code. Add an entry here with each
+new build.
+
+This file, the README's "About this fork" section, `BUILD_GUIDELINES.md`
+and `handoff/` belong to this fork only. Keep fork notes out of upstream's
+files (AGENTS.md, the workflows), so the feature commits can be offered to
+[elboletaire/manga-downloader](https://github.com/elboletaire/manga-downloader)
+as they are.
 
 What the fork changes, and why, is described in the README's
 "About this fork" section. Android details are in [docs/android.md](docs/android.md).
