@@ -63,3 +63,49 @@ To try the bridge without Android, build the backend for the desktop with the
 cd gui && go build -tags bridgedev,nodynamic -o /tmp/mdgui . && /tmp/mdgui -token t -addr 127.0.0.1:8765
 # then open http://127.0.0.1:8765/?t=t
 ```
+
+## Trying it in an emulator
+
+Build 10 was tested in an Android 11 emulator (x86_64, no Google APIs, the
+WebView it ships with is Chrome 83), made with the SDK's own tools:
+
+```bash
+sdkmanager "platform-tools" "emulator" "system-images;android-30;default;x86_64"
+avdmanager create avd -n md30 -k "system-images;android-30;default;x86_64"
+emulator -avd md30 -no-snapshot -memory 3072
+adb install -r manga-downloader-v25.2.0-series-folders.<n>-android.apk
+```
+
+Without hardware acceleration (`-accel off`) it still runs, but slowly: it
+took about 7 minutes to boot, and Android's own processes often stopped
+answering in time.
+
+If the emulator reaches the internet only through a proxy, set it in
+Android, not with the emulator's `-http-proxy` option (that cut the emulator
+off from the host at `10.0.2.2`), and restart the app afterwards:
+
+```bash
+adb shell settings put global http_proxy 10.0.2.2:<port>
+```
+
+## What was tested
+
+Build 10 (`v25.2.0-series-folders.10`, commit d745ffe), in the emulator above:
+
+- The app starts, the backend prints `READY <port>`, and the page shows the
+  version.
+- A MangaDex chapter link loads its series (GATE, 919 chapters, all
+  languages listed).
+- Downloading one chapter shows the per-site and overall bars, greys out
+  Download while it runs, and saves a CBZ to `Download/Manga` whose 24 pages
+  all open as images. A second run of the same chapter, with Skip existing
+  files off, saved it again with ` v2` added to the name.
+- Open folder opens the Files app on the folder, with the file listed.
+- Browse… opens Android's folder picker, and Back cancels it with the folder
+  unchanged.
+- The command line (built the same way, for x86_64) downloads the same
+  chapter, 24 of 24 pages.
+
+Not tested yet: picking a folder in Browse… (the emulator stopped taking
+taps in the picker), the Paste button, Quit in the notification, the layout
+on a phone screen, and a real device.
