@@ -1,12 +1,13 @@
 // The foot of the side panel, always in view: the one big action. Download
-// when idle (with the reason it can't start, if any), the run's overall
-// progress and Cancel while it runs.
+// (with the reason it can't start, if any), which starts another group while
+// others run, and over it, while any group runs, their overall progress and
+// Cancel for all of them.
 
 import { useEffect, useMemo, useRef } from 'react';
 import type { T as Translator } from './i18n';
 import { T, useI18n } from './i18n/react';
 import { DownloadIcon, Spinner, XIcon } from './icons';
-import { downloadBlocker, downloadLabel, overallProgress } from './run';
+import { downloadBlocker, downloadLabel, overallProgress, runningProgress } from './run';
 import type { Chapter, Options, PackAs, State } from './types';
 
 interface Props {
@@ -22,17 +23,14 @@ interface Props {
 
 export function DownloadDock({ state, error, chapters, selected, onStart, onCancel }: Props) {
   const { t } = useI18n();
-  // Download and Cancel are different buttons, so the focus moves to the other
-  // one when the run starts or ends, rather than falling to the body
+  // Cancel goes when the last group ends, so its focus moves to Download
+  // rather than falling to the body
   const focused = useRef<'start' | 'cancel' | null>(null);
   const startButton = useRef<HTMLButtonElement>(null);
-  const cancelButton = useRef<HTMLButtonElement>(null);
   useEffect(() => {
-    if (state.running && focused.current === 'start') {
-      cancelButton.current?.focus();
-    } else if (!state.running && focused.current === 'cancel') {
+    if (!state.running && focused.current === 'cancel') {
       if (startButton.current?.disabled) {
-        // the run ended with nothing to download: focus the chapter list instead of the body
+        // nothing to download: focus the chapter list instead of the body
         document.querySelector<HTMLElement>('[role="listbox"]')?.focus();
       } else {
         startButton.current?.focus();
@@ -46,68 +44,13 @@ export function DownloadDock({ state, error, chapters, selected, onStart, onCanc
     [state.selectedCount, state.options.packAs, state.volumes.text, chapters, selected, t],
   );
 
-  if (state.running) {
-    const overall = overallProgress(state);
-    const pct = Math.round(overall.fraction * 100);
-    return (
-      <div className="dock running">
-        <div className="dock-progress">
-          <div className="dock-line">
-            <span className="dock-title">
-              <Spinner />
-              {state.cancelling
-                ? t('download.progress.finishing')
-                : state.run.bundle
-                  ? t('download.progress.bundle')
-                  : state.run.volumes
-                    ? t('download.progress.files', { done: overall.finished, total: overall.total })
-                    : t('download.progress.chapters', { done: overall.finished, total: overall.total })}
-            </span>
-            <span className="dock-pct">{pct}%</span>
-          </div>
-          <div
-            className="bar big"
-            role="progressbar"
-            aria-label={t('download.progress.label')}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={pct}
-          >
-            <span style={{ transform: `scaleX(${overall.fraction})` }} />
-          </div>
-          {state.cancelling && <p className="hint">{t('download.progress.cancelHint')}</p>}
-        </div>
-        {/* aria-disabled, not disabled: a disabled button drops its focus, and Cancel's focus must survive to the run's end */}
-        <button
-          type="button"
-          ref={cancelButton}
-          className="btn danger-outline block"
-          aria-disabled={state.cancelling || undefined}
-          onFocus={() => (focused.current = 'cancel')}
-          onBlur={() => (focused.current = null)}
-          onClick={() => {
-            if (!state.cancelling) {
-              onCancel();
-            }
-          }}
-        >
-          <XIcon /> {state.cancelling ? t('download.cancelling') : t('common.cancel')}
-        </button>
-        {error !== '' && (
-          <p className="error-text small" role="alert">
-            {error}
-          </p>
-        )}
-      </div>
-    );
-  }
-
   const blocker = downloadBlocker(state, t);
   const o = state.options;
   // the series folder when that option is on, so the folder shown is the one written to
   const dir = state.destination || o.outputDir;
   return (
-    <div className="dock">
+    <div className={`dock${state.running ? ' running' : ''}`}>
+      {state.running && <Running state={state} focused={focused} onCancel={onCancel} />}
       <p className="dock-dest" title={dir}>
         <T
           k="download.where"
@@ -144,6 +87,70 @@ export function DownloadDock({ state, error, chapters, selected, onStart, onCanc
           </p>
         )
       )}
+    </div>
+  );
+}
+
+/** The running groups' progress together, and Cancel for all of them */
+function Running({
+  state,
+  focused,
+  onCancel,
+}: {
+  state: State;
+  focused: React.MutableRefObject<'start' | 'cancel' | null>;
+  onCancel: () => void;
+}) {
+  const { t } = useI18n();
+  const running = state.groups.filter((g) => g.running);
+  // one group says what it's doing, as a single run always has; several, how many there are
+  const one = running.length === 1 ? running[0] : null;
+  const overall = one ? overallProgress(one) : runningProgress(state.groups);
+  const pct = Math.round(overall.fraction * 100);
+  return (
+    <div className="dock-progress">
+      <div className="dock-line">
+        <span className="dock-title">
+          <Spinner />
+          {state.cancelling
+            ? t('download.progress.finishing')
+            : one === null
+              ? t('download.progress.groups', { count: running.length, done: overall.finished, total: overall.total })
+              : one.run.bundle
+                ? t('download.progress.bundle')
+                : one.run.volumes
+                  ? t('download.progress.files', { done: overall.finished, total: overall.total })
+                  : t('download.progress.chapters', { done: overall.finished, total: overall.total })}
+        </span>
+        <span className="dock-pct">{pct}%</span>
+      </div>
+      <div
+        className="bar big"
+        role="progressbar"
+        aria-label={t('download.progress.label')}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={pct}
+      >
+        <span style={{ transform: `scaleX(${overall.fraction})` }} />
+      </div>
+      {state.cancelling && <p className="hint">{t('download.progress.cancelHint')}</p>}
+      {/* aria-disabled, not disabled: a disabled button drops its focus, and Cancel's focus must survive to the run's end */}
+      <button
+        type="button"
+        className="btn small danger-outline"
+        aria-disabled={state.cancelling || undefined}
+        onFocus={() => (focused.current = 'cancel')}
+        onBlur={() => (focused.current = null)}
+        onClick={() => {
+          if (!state.cancelling) {
+            onCancel();
+          }
+        }}
+      >
+        <XIcon size={13} />{' '}
+        {state.cancelling ? t('download.cancelling') : one === null ? t('download.cancelAll') : t('common.cancel')}
+      </button>
     </div>
   );
 }

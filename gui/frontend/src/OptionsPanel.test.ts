@@ -119,11 +119,12 @@ describe('Skip existing files', () => {
     expect(skipExistingInput(markup)).not.toMatch(/checked=""/);
   });
 
-  it('is checked when the option is on, and locked while a run goes', async () => {
+  it('is checked when the option is on, and locked while a series loads, not while a group runs', async () => {
     const base = await createMockApi({ scenario: 'empty', freeze: true }).state();
     const on: State = { ...base, options: { ...base.options, skipExisting: true } };
     expect(skipExistingInput(options(on))).toMatch(/checked=""/);
-    expect(skipExistingInput(options({ ...on, running: true }))).toMatch(/disabled=""/);
+    expect(skipExistingInput(options({ ...on, loading: true }))).toMatch(/disabled=""/);
+    expect(skipExistingInput(options({ ...on, running: true }))).not.toMatch(/disabled=""/);
   });
 });
 
@@ -158,11 +159,14 @@ describe('Series folders and Guess language', () => {
     expect(input(options(on), 'Guess language')).not.toMatch(/disabled=""/);
   });
 
-  it('are locked while a run goes', async () => {
+  it('are locked while a series loads, not while a group runs', async () => {
     const base = await createMockApi({ scenario: 'empty', freeze: true }).state();
+    const loading: State = { ...base, loading: true, options: { ...base.options, seriesFolders: true } };
+    expect(input(options(loading), 'Series folders')).toMatch(/disabled=""/);
+    expect(input(options(loading), 'Guess language')).toMatch(/disabled=""/);
     const running: State = { ...base, running: true, options: { ...base.options, seriesFolders: true } };
-    expect(input(options(running), 'Series folders')).toMatch(/disabled=""/);
-    expect(input(options(running), 'Guess language')).toMatch(/disabled=""/);
+    expect(input(options(running), 'Series folders')).not.toMatch(/disabled=""/);
+    expect(input(options(running), 'Guess language')).not.toMatch(/disabled=""/);
   });
 });
 
@@ -186,7 +190,7 @@ describe('Filename template', () => {
     const custom: State = { ...base, options: { ...base.options, filenameTemplate: '{{.Series}}' } };
     expect(options(custom)).toMatch(/<div class="input-wrap">.*<div class="input-action"><button[^>]*aria-label="Use default template"/);
 
-    const locked: State = { ...custom, running: true };
+    const locked: State = { ...custom, loading: true };
     expect(options(locked)).toMatch(/<button[^>]*aria-label="Use default template"[^>]*disabled=""/);
   });
 
@@ -252,8 +256,8 @@ describe('translation', () => {
 
   it('renders the labels and hints in Catalan', async () => {
     const base = await createMockApi({ scenario: 'loaded', freeze: true }).state();
-    const markup = optionsIn('ca', { ...base, running: true });
-    expect(markup).toContain('Les opcions estan bloquejades mentre hi ha una descàrrega.');
+    const markup = optionsIn('ca', { ...base, loading: true });
+    expect(markup).toContain('Les opcions estan bloquejades mentre es carrega la sèrie.');
     expect(markup).toContain('Converteix a JPEG');
   });
 });

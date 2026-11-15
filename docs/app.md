@@ -90,6 +90,18 @@ button, *Load* and *Settings*. (To open on the full window instead, turn off
    packed. *Cancel* lets the chapters already downloading finish, and starts no
    new ones. A log is one click away in the status bar.
 
+   While it runs you can paste another series, load it, pick its chapters and
+   press Download again: each press is a group of its own, listed in the
+   Activity tab under the series' title with its own *Cancel* and, once it
+   ends, its own summary. The groups download at the same time. A group keeps
+   the options it started with, so changing them only affects the next one. The
+   *Cancel all* button under the progress stops every group. A series that is
+   still downloading can't be started again until its group ends, and *Clear*
+   removes the groups that ended and leaves the running ones. Groups from the
+   same site share its pace from `site-rate-limits.txt` (see
+   [Rate limits](#rate-limits)). This is an app feature: on the command line,
+   each run is its own process.
+
    <picture>
      <source media="(prefers-color-scheme: dark)" srcset="../assets/screenshots/04-downloading-dark.webp">
      <img alt="A download in progress" src="../assets/screenshots/04-downloading-light.webp">

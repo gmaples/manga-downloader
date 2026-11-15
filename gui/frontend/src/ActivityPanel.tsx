@@ -1,27 +1,32 @@
-// What the run is doing and how the last one ended: the summary on top, then
-// one row per chapter (or the single bundle job). Rows are windowed like the
-// chapter list, since "select all" on a long series makes thousands of them.
+// What the downloads are doing and how they ended: one section per group (each
+// press of Download), in the order they started, under a header with the
+// series and its own Cancel. Each has its summary once it ended, then one row
+// per chapter (or the single bundle job). Rows are windowed like the chapter
+// list, since "select all" on a long series makes thousands of them.
 
 import { say } from './i18n';
 import { useI18n } from './i18n/react';
 import { jobFraction, jobShortStatus, jobStatus, summaryHeadline, summarySentence } from './format';
 import { AlertIcon, CheckIcon, ErrorIcon, FolderIcon, PackageIcon, SkipIcon, Spinner, XIcon } from './icons';
 import { overallProgress, summaryTone } from './run';
-import type { Job, State, Summary } from './types';
+import type { Group, Job, State, Summary } from './types';
 import { useVirtualList } from './virtual';
 
 const JOB_HEIGHT = 50;
+/** With several groups, the rows each one shows before its list scrolls */
+const GROUP_ROWS = 6;
 
 interface Props {
   state: State;
-  onOpenFolder: () => void;
+  /** Opens the folder group id saved into */
+  onOpenFolder: (id: number) => void;
+  onCancelGroup: (id: number) => void;
 }
 
-export function ActivityPanel({ state, onOpenFolder }: Props) {
+export function ActivityPanel({ state, onOpenFolder, onCancelGroup }: Props) {
   const { t } = useI18n();
-  const summary = state.running ? null : state.summary;
 
-  if (state.jobs.length === 0 && summary === null) {
+  if (state.groups.length === 0) {
     return (
       <div className="activity empty-activity">
         <p className="muted">{t('activity.emptyTitle')}</p>
@@ -30,16 +35,67 @@ export function ActivityPanel({ state, onOpenFolder }: Props) {
     );
   }
 
+  // one group fills the panel as a single run always has; several share it,
+  // each with a list of its own height, and the panel scrolls
+  const multi = state.groups.length > 1;
   return (
-    <div className="activity">
-      {summary && <SummaryCard summary={summary} onOpenFolder={onOpenFolder} />}
-      {state.jobs.length > 0 &&
-        (state.run.bundle ? (
-          <BundleCard job={state.jobs[0]} chapters={state.run.chapters} />
-        ) : (
-          <JobList state={state} />
-        ))}
+    <div className={`activity${multi ? ' multi' : ''}`}>
+      {state.groups.map((g) => (
+        <GroupSection
+          key={g.id}
+          group={g}
+          multi={multi}
+          onOpenFolder={() => onOpenFolder(g.id)}
+          onCancel={() => onCancelGroup(g.id)}
+        />
+      ))}
     </div>
+  );
+}
+
+function GroupSection({
+  group,
+  multi,
+  onOpenFolder,
+  onCancel,
+}: {
+  group: Group;
+  multi: boolean;
+  onOpenFolder: () => void;
+  onCancel: () => void;
+}) {
+  const { t } = useI18n();
+  return (
+    <section className="run-group" aria-label={group.title}>
+      <div className="run-group-head">
+        <h3 className="run-group-title" title={group.title}>
+          {group.title}
+        </h3>
+        {group.running && (
+          // aria-disabled, not disabled: a disabled button drops its focus
+          <button
+            type="button"
+            className="btn small danger-outline"
+            aria-label={t('activity.cancelGroup', { title: group.title })}
+            aria-disabled={group.cancelling || undefined}
+            onClick={() => {
+              if (!group.cancelling) {
+                onCancel();
+              }
+            }}
+          >
+            <XIcon size={13} /> {group.cancelling ? t('download.cancelling') : t('common.cancel')}
+          </button>
+        )}
+      </div>
+      {group.summary && <SummaryCard summary={group.summary} onOpenFolder={onOpenFolder} />}
+      {group.jobs.length > 0 &&
+        (group.run.bundle ? (
+          <BundleCard job={group.jobs[0]} chapters={group.run.chapters} />
+        ) : (
+          <JobList group={group} multi={multi} />
+        ))}
+    </section>
   );
 }
 
@@ -117,29 +173,35 @@ function BundleCard({ job, chapters }: { job: Job; chapters: number }) {
   );
 }
 
-function JobList({ state }: { state: State }) {
+function JobList({ group, multi }: { group: Group; multi: boolean }) {
   const { t } = useI18n();
-  const overall = overallProgress(state);
-  const queued = state.running ? overall.queued : 0;
-  const rows = state.jobs.length + (queued > 0 ? 1 : 0);
+  const overall = overallProgress(group);
+  const queued = group.running ? overall.queued : 0;
+  const rows = group.jobs.length + (queued > 0 ? 1 : 0);
   const list = useVirtualList(rows, JOB_HEIGHT, 4);
   const { first, last } = list.span;
 
   return (
     <section className="jobs-section" aria-label={t('activity.chaptersInRun')}>
       <h3 className="jobs-title">
-        {state.running ? t('activity.thisRun') : t('activity.lastRun')}
+        {group.running ? t('activity.thisRun') : t('activity.lastRun')}
         <span className="muted">
           {' '}
           {t('activity.progress', { finished: overall.finished, total: overall.total })}
         </span>
       </h3>
-      <div className="jobs" ref={list.ref} onScroll={list.onScroll} role="list">
+      <div
+        className="jobs"
+        ref={list.ref}
+        onScroll={list.onScroll}
+        role="list"
+        style={multi ? { height: Math.min(rows, GROUP_ROWS) * JOB_HEIGHT } : undefined}
+      >
         <div className="list-inner" style={{ height: rows * JOB_HEIGHT }}>
           {Array.from({ length: last - first }, (_, i) => {
             const pos = first + i;
             const style = { transform: `translateY(${pos * JOB_HEIGHT}px)`, height: JOB_HEIGHT };
-            const job = state.jobs[pos];
+            const job = group.jobs[pos];
             if (job === undefined) {
               return (
                 <div key="queued" role="listitem" className="job job-queued" style={style}>

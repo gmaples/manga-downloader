@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { ActivityPanel } from './ActivityPanel';
 import type { LangPref } from './i18n';
 import { I18nProvider } from './i18n/react';
-import type { Job, State, Summary } from './types';
+import type { Group, Job, State, Summary } from './types';
 
 const summary: Summary = {
   dir: '/out',
@@ -37,33 +37,50 @@ function render(state: Partial<State>, pref: LangPref = '') {
     createElement(
       I18nProvider,
       { pref, persist: async () => {}, systemLanguages: ['en-US'] },
-      createElement(ActivityPanel, { state: state as State, onOpenFolder: () => undefined }),
+      createElement(ActivityPanel, {
+        state: state as State,
+        onOpenFolder: () => undefined,
+        onCancelGroup: () => undefined,
+      }),
     ),
   );
 }
 
+const run = { chapters: 1, bundle: false, volumes: false, rows: 1 };
+
+/** A group of One Piece, running unless it has a summary */
+function group(g: Partial<Group>, id = 1): Group {
+  const summary = g.summary ?? null;
+  return { id, title: 'One Piece', running: summary === null, cancelling: false, run, jobs: [], summary, ...g };
+}
+
+/** The state of a window with the one group g */
+function one(g: Partial<Group>): Partial<State> {
+  const only = group(g);
+  return { running: only.running, summary: only.summary, groups: [only] };
+}
+
 describe('ActivityPanel', () => {
   it('shows the empty state in English by default', () => {
-    const html = render({ running: false, summary: null, jobs: [] });
+    const html = render({ running: false, summary: null, groups: [] });
     expect(html).toContain('Nothing downloaded yet.');
   });
 
   it('shows the empty state in Spanish', () => {
-    const html = render({ running: false, summary: null, jobs: [] }, 'es');
+    const html = render({ running: false, summary: null, groups: [] }, 'es');
     expect(html).toContain('Todavía no se ha descargado nada.');
     expect(html).not.toContain('Nothing downloaded');
   });
 
   it('labels and words the last summary in Catalan', () => {
-    const html = render({ running: false, summary, jobs: [] }, 'ca');
+    const html = render(one({ summary, jobs: [] }), 'ca');
     expect(html).toContain('aria-label="Última descàrrega"');
     expect(html).toContain('<h3>3 desats</h3>');
   });
 
   it('translates the last download\'s error in Spanish', () => {
     const html = render(
-      {
-        running: false,
+      one({
         summary: {
           ...summary,
           bundled: true,
@@ -71,7 +88,7 @@ describe('ActivityPanel', () => {
           errorMsg: { key: 'errors.noChapterDownloaded', text: 'no chapter could be downloaded' },
         },
         jobs: [],
-      },
+      }),
       'es',
     );
     expect(html).toContain('no se pudo descargar ningún capítulo');
@@ -79,10 +96,10 @@ describe('ActivityPanel', () => {
   });
 
   it('notes the chapters that were already in the folder', () => {
-    const html = render({ running: false, summary: { ...summary, existing: 2 }, jobs: [] });
+    const html = render(one({ summary: { ...summary, existing: 2 }, jobs: [] }));
     expect(html).toContain('2 chapters were already in the folder, so they were left out.');
     expect(html).not.toContain('were skipped');
-    expect(render({ running: false, summary, jobs: [] })).not.toContain('already in the folder');
+    expect(render(one({ summary, jobs: [] }))).not.toContain('already in the folder');
   });
 
   it('shows a volume row and its reason in Spanish', () => {
@@ -98,7 +115,7 @@ describe('ActivityPanel', () => {
       reason: 'download: x',
       reasonMsg: { key: 'job.reason.download', args: { reason: 'x' }, text: 'download: x' },
     };
-    const html = render({ running: true, summary: null, jobs: [volume], run: { chapters: 7, bundle: false, volumes: true, rows: 1 } }, 'es');
+    const html = render(one({ summary: null, jobs: [volume], run: { chapters: 7, bundle: false, volumes: true, rows: 1 } }), 'es');
     expect(html).toContain('Vol. 01 · capítulos 1–7');
     expect(html).toContain('descarga: x');
   });
@@ -117,7 +134,7 @@ describe('ActivityPanel', () => {
         reasonMsg: { key: 'log.volumesFailed', args: { reason: 'x' }, text: 'volumes: x' },
       },
     ];
-    const html = render({ running: false, summary: { ...summary, failures }, jobs: [] }, 'ca');
+    const html = render(one({ summary: { ...summary, failures }, jobs: [] }), 'ca');
     expect(html).toContain('<strong>Chapter 4</strong><span>empaquetat: disk full</span>');
     expect(html).toContain('<strong>Chapter 5</strong><span>page 5 returned 404</span>');
     expect(html).toContain('<span>volums: x</span>');
@@ -125,10 +142,37 @@ describe('ActivityPanel', () => {
 
   it('titles the running chapters and their progress in Spanish', () => {
     const html = render(
-      { running: true, summary: null, jobs: [job], run: { chapters: 1, bundle: false, volumes: false, rows: 1 } },
+      one({ summary: null, jobs: [job], run: { chapters: 1, bundle: false, volumes: false, rows: 1 } }),
       'es',
     );
     expect(html).toContain('Esta descarga');
     expect(html).toContain('aria-label="Progreso de Ch 1"');
+  });
+  it('shows each group under its series, with Cancel on the running ones only', () => {
+    const done = group({ title: 'Vinland Saga', summary, jobs: [{ ...job, state: 'done', done: 24 }] }, 1);
+    const going = group({ title: 'One Piece', jobs: [job] }, 2);
+    const html = render({ running: true, summary: null, groups: [done, going] });
+    expect(html).toContain('class="activity multi"');
+    expect(html.indexOf('Vinland Saga')).toBeLessThan(html.indexOf('One Piece'));
+    expect(html).toContain('aria-label="Cancel One Piece"');
+    expect(html).not.toContain('aria-label="Cancel Vinland Saga"');
+    // the ended group has its summary, the running one its progress
+    expect(html).toContain('aria-label="Last download"');
+    expect(html).toContain('This run');
+    // several groups each get a list of their own height
+    expect(html).toContain('class="jobs" role="list" style="height:50px"');
+  });
+
+  it('says a group is cancelling, in Japanese', () => {
+    const html = render(one({ jobs: [job], cancelling: true }), 'ja');
+    expect(html).toContain('aria-label="One Pieceをキャンセル"');
+    expect(html).toContain('aria-disabled="true"');
+    expect(html).toContain('キャンセル中…');
+  });
+
+  it('lets a single group fill the panel', () => {
+    const html = render(one({ jobs: [job] }));
+    expect(html).toContain('class="activity"');
+    expect(html).toContain('class="jobs" role="list">');
   });
 });

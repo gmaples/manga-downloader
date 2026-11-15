@@ -59,10 +59,15 @@ type fakeSite struct {
 	// pageGate, when set, holds the pages of chapter pageGated until closed
 	pageGate  chan struct{}
 	pageGated float64
+	// title is the series title, "Test Series" when empty
+	title string
 }
 
 func (f *fakeSite) Test() (bool, error) { return true, nil }
 func (f *fakeSite) FetchTitle() (string, error) {
+	if f.title != "" {
+		return f.title, nil
+	}
 	return "Test Series", nil
 }
 
@@ -164,7 +169,7 @@ func waitFinished(t *testing.T, c *Controller) *Summary {
 	t.Helper()
 	deadline := time.Now().Add(20 * time.Second)
 	for time.Now().Before(deadline) {
-		if s := c.Summary(); s != nil && !c.Running() {
+		if s := summaryOf(c); s != nil && !c.Running() {
 			return s
 		}
 		time.Sleep(5 * time.Millisecond)
@@ -223,9 +228,10 @@ func TestClearForgetsTheSeriesAndKeepsTheOptions(t *testing.T) {
 		t.Fatal(err)
 	}
 	// a finished run's results, as the Activity tab shows them
+	g, _ := attach(c)
 	c.mu.Lock()
-	c.jobs = []*Job{{}}
-	c.summary = &Summary{Saved: 2}
+	g.jobs = []*Job{{}}
+	g.summary = &Summary{Saved: 2}
 	c.mu.Unlock()
 	gen, logged := c.SelectionGen(), len(c.Log())
 
@@ -235,8 +241,8 @@ func TestClearForgetsTheSeriesAndKeepsTheOptions(t *testing.T) {
 	if c.Loaded() || c.URL() != "" || c.Title() != "" || len(c.Chapters()) != 0 || c.SelectedCount() != 0 {
 		t.Errorf("Clear left a series: url %q, loaded %v, %d chapters", c.URL(), c.Loaded(), len(c.Chapters()))
 	}
-	if c.Summary() != nil || len(c.Jobs()) != 0 {
-		t.Errorf("Clear left the results: summary %v, %d jobs", c.Summary(), len(c.Jobs()))
+	if summaryOf(c) != nil || len(jobsOf(c)) != 0 {
+		t.Errorf("Clear left the results: summary %v, %d jobs", summaryOf(c), len(jobsOf(c)))
 	}
 	if c.SelectionGen() == gen {
 		t.Error("Clear didn't change the selection generation, so the window keeps the old selection")
@@ -389,7 +395,7 @@ func TestDownloadNonBundle(t *testing.T) {
 	if s.Saved != 3 || s.Cancelled || s.Err != nil || len(s.Failures) != 0 {
 		t.Fatalf("summary = %+v", s)
 	}
-	for _, j := range c.Jobs() {
+	for _, j := range jobsOf(c) {
 		if j.State != JobDone || j.Done != j.Total || j.Total != 2*(core.DownloadWeight+core.ArchiveWeight) {
 			t.Errorf("job %q = %+v, want done with 2 pages' steps", j.Title, j)
 		}
@@ -443,7 +449,7 @@ func TestDownloadBundleWithFailure(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(dir, s.Bundle)); err != nil {
 		t.Errorf("bundle file missing: %v", err)
 	}
-	jobs := c.Jobs()
+	jobs := jobsOf(c)
 	if len(jobs) != 1 || jobs[0].State != JobDone || jobs[0].Done != jobs[0].Total {
 		t.Errorf("bundle job = %+v, want one done row", jobs)
 	}
@@ -560,7 +566,7 @@ func TestSkipExistingSkipsBundleWithItsFile(t *testing.T) {
 	if s.Err != nil || s.Existing != 2 || s.Bundle != "" || s.Saved != 0 {
 		t.Errorf("summary = %+v, want the bundle skipped with its 2 chapters", s)
 	}
-	jobs := c.Jobs()
+	jobs := jobsOf(c)
 	if len(jobs) != 1 || jobs[0].State != JobSkipped || jobs[0].ReasonMsg == nil || jobs[0].ReasonMsg.Key != "job.reason.exists" {
 		t.Errorf("bundle job = %+v, want one skipped row for the existing file", jobs)
 	}
@@ -574,13 +580,8 @@ func TestSkipExistingSkipsBundleWithItsFile(t *testing.T) {
 func TestExistsRows(t *testing.T) {
 	newRun := func() (*Controller, events) {
 		c := NewController(&grabber.Settings{}, nil)
-		c.byChap = map[*grabber.Chapter]*Job{}
-		c.failedC = map[*grabber.Chapter]bool{}
-		c.byVolume = map[*core.Volume]*Job{}
-		c.listedVol = map[grabber.Filterable]*Job{}
-		c.chapVol = map[*grabber.Chapter]*Job{}
-		c.fetching = map[grabber.Filterable]*Job{}
-		return c, events{c}
+		_, e := attach(c)
+		return c, e
 	}
 	checkReason := func(what string, j Job) {
 		t.Helper()
@@ -592,13 +593,13 @@ func TestExistsRows(t *testing.T) {
 	t.Run("before the fetch", func(t *testing.T) {
 		c, e := newRun()
 		e.Exists(&grabber.Chapter{Title: "Chapter 5", Number: 5}, "a.cbz")
-		jobs := c.Jobs()
+		jobs := jobsOf(c)
 		if len(jobs) != 1 {
 			t.Fatalf("jobs = %+v, want one row", jobs)
 		}
 		checkReason("row", jobs[0])
-		if c.stats.existing != 1 {
-			t.Errorf("existing = %d, want 1", c.stats.existing)
+		if e.g.stats.existing != 1 {
+			t.Errorf("existing = %d, want 1", e.g.stats.existing)
 		}
 	})
 	t.Run("after the fetch", func(t *testing.T) {
@@ -608,7 +609,7 @@ func TestExistsRows(t *testing.T) {
 		e.Fetching(listed)
 		e.Fetched(listed, fetched)
 		e.Exists(fetched, "a.cbz")
-		jobs := c.Jobs()
+		jobs := jobsOf(c)
 		if len(jobs) != 1 {
 			t.Fatalf("jobs = %+v, want the fetching row only", jobs)
 		}
@@ -622,13 +623,13 @@ func TestExistsRows(t *testing.T) {
 		}}
 		e.VolumeStart(v)
 		e.VolumePacked(v, "a.cbz", core.ErrExists)
-		jobs := c.Jobs()
+		jobs := jobsOf(c)
 		if len(jobs) != 1 || !jobs[0].Volume {
 			t.Fatalf("jobs = %+v, want the volume's row", jobs)
 		}
 		checkReason("volume", jobs[0])
-		if c.stats.existing != 2 || c.stats.volumes != 0 || len(c.stats.failures) != 0 {
-			t.Errorf("stats = %+v, want 2 existing and nothing failed", c.stats)
+		if e.g.stats.existing != 2 || e.g.stats.volumes != 0 || len(e.g.stats.failures) != 0 {
+			t.Errorf("stats = %+v, want 2 existing and nothing failed", e.g.stats)
 		}
 	})
 }
@@ -658,9 +659,11 @@ func TestCancelStartsNoNewChapters(t *testing.T) {
 	}
 }
 
-func TestConfigureRefusedWhileBusy(t *testing.T) {
+// Configure goes on while a group runs, and the group keeps the settings it
+// started with
+func TestConfigureWhileRunning(t *testing.T) {
 	gate := make(chan struct{})
-	c, _, _ := newTestController(t, false, gate, chapters(1, 1)...)
+	c, site, dir := newTestController(t, false, gate, chapters(1, 1)...)
 	if err := c.Load("https://example.com/manga/test"); err != nil {
 		t.Fatal(err)
 	}
@@ -668,16 +671,31 @@ func TestConfigureRefusedWhileBusy(t *testing.T) {
 	if err := c.Start(); err != nil {
 		t.Fatal(err)
 	}
-	if err := c.Configure(func(*grabber.Settings) {}); err != errBusy {
-		t.Errorf("Configure while running = %v, want errBusy", err)
+	<-site.entered
+	if err := c.Configure(func(s *grabber.Settings) { s.Format = "epub" }); err != nil {
+		t.Errorf("Configure while running = %v, want it applied", err)
+	}
+	if got := c.Settings().Format; got != "epub" {
+		t.Errorf("window's format = %q, want epub", got)
+	}
+	if got := site.GetFormat(); got != "cbz" {
+		t.Errorf("the running group's site reads format %q, want the cbz it started with", got)
 	}
 	close(gate)
-	waitFinished(t, c)
+	if s := waitFinished(t, c); s.Saved != 1 {
+		t.Fatalf("summary = %+v, want 1 saved", s)
+	}
+	files, _ := filepath.Glob(filepath.Join(dir, "*.cbz"))
+	if len(files) != 1 {
+		t.Errorf("files = %v, want the one CBZ the group started as", files)
+	}
 }
 
-func TestSelectionRefusedWhileBusy(t *testing.T) {
+// The selection is free while a group runs (it's the next group's), and
+// refused while a series loads
+func TestSelectionRefusedWhileLoading(t *testing.T) {
 	gate := make(chan struct{})
-	c, _, _ := newTestController(t, false, gate, chapters(3, 1)...)
+	c, site, _ := newTestController(t, false, gate, chapters(3, 1)...)
 	if err := c.Load("https://example.com/manga/test"); err != nil {
 		t.Fatal(err)
 	}
@@ -685,39 +703,39 @@ func TestSelectionRefusedWhileBusy(t *testing.T) {
 	if err := c.Start(); err != nil {
 		t.Fatal(err)
 	}
-	before := c.SelectedIndices()
-
-	check := func(state string) {
-		t.Helper()
-		if err := c.SetSelected(1, true); err != errBusy {
-			t.Errorf("SetSelected while %s = %v, want errBusy", state, err)
-		}
-		if err := c.SetAll(false); err != errBusy {
-			t.Errorf("SetAll while %s = %v, want errBusy", state, err)
-		}
-		if _, err := c.SelectRange("1-3"); err != errBusy {
-			t.Errorf("SelectRange while %s = %v, want errBusy", state, err)
-		}
-		if err := c.SetSelectedMany([]int{2}, true); err != errBusy {
-			t.Errorf("SetSelectedMany while %s = %v, want errBusy", state, err)
-		}
-		if got := c.SelectedIndices(); fmt.Sprint(got) != fmt.Sprint(before) {
-			t.Errorf("selection changed while %s: %v, was %v", state, got, before)
-		}
+	<-site.entered
+	if err := c.SetSelected(1, true); err != nil {
+		t.Errorf("SetSelected while running = %v, want it applied", err)
 	}
-	check("running")
-	if _, err := c.SelectRange("nope"); err != errBusy {
-		t.Errorf("a bad range while running = %v, want errBusy", err)
+	if got := fmt.Sprint(c.SelectedIndices()); got != "[0 1]" {
+		t.Errorf("selection = %s, want [0 1]", got)
 	}
 	close(gate)
-	waitFinished(t, c)
+	if s := waitFinished(t, c); s.Saved != 1 {
+		t.Errorf("summary = %+v, want the 1 chapter the group started with", s)
+	}
+	before := c.SelectedIndices()
 
 	if err := c.BeginLoad("https://example.com/manga/other"); err != nil {
 		t.Fatal(err)
 	}
-	check("loading")
+	if err := c.SetSelected(2, true); err != errBusy {
+		t.Errorf("SetSelected while loading = %v, want errBusy", err)
+	}
+	if err := c.SetAll(false); err != errBusy {
+		t.Errorf("SetAll while loading = %v, want errBusy", err)
+	}
+	if _, err := c.SelectRange("1-3"); err != errBusy {
+		t.Errorf("SelectRange while loading = %v, want errBusy", err)
+	}
+	if err := c.SetSelectedMany([]int{2}, true); err != errBusy {
+		t.Errorf("SetSelectedMany while loading = %v, want errBusy", err)
+	}
 	if _, err := c.SelectRange("nope"); err != errBusy {
 		t.Errorf("a bad range while loading = %v, want errBusy", err)
+	}
+	if got := c.SelectedIndices(); fmt.Sprint(got) != fmt.Sprint(before) {
+		t.Errorf("selection changed while loading: %v, was %v", got, before)
 	}
 	c.abortLoad(fmt.Errorf("cancelled"))
 }
@@ -832,13 +850,6 @@ func TestSetSelectedManyRefusedWhileBusy(t *testing.T) {
 	}
 	c.mu.Lock()
 	c.loading = false
-	c.running = true
-	c.mu.Unlock()
-	if err := c.SetSelectedMany([]int{0}, true); err != errBusy {
-		t.Errorf("SetSelectedMany while running = %v, want errBusy", err)
-	}
-	c.mu.Lock()
-	c.running = false
 	c.mu.Unlock()
 	if c.SelectedCount() != 0 {
 		t.Errorf("refused calls changed the selection: %d selected", c.SelectedCount())
@@ -861,16 +872,14 @@ func TestEventsNameTheReleaseWhenCopiesNeedAGroup(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := NewController(&grabber.Settings{}, nil)
-			c.hasGroupDuplicates = tt.groupDupes
-			// the maps a run starts with, which the events write into
-			c.byChap = map[*grabber.Chapter]*Job{}
-			c.failedC = map[*grabber.Chapter]bool{}
 			ch := &grabber.Chapter{Title: "Chapter 5", Number: 5, Language: "en", Group: "Alpha", PagesCount: 1}
-			e := events{c}
+			g, e := attach(c)
+			// a group takes the list's duplicates as it starts
+			g.hasGroupDuplicates = tt.groupDupes
 			e.Started(ch)
 			e.DownloadFailed(ch, failed)
 
-			jobs := c.Jobs()
+			jobs := jobsOf(c)
 			if len(jobs) != 1 || jobs[0].Title != "Chapter 5" || jobs[0].Tags != tt.wantTags {
 				t.Fatalf("jobs = %+v, want one titled \"Chapter 5\" with tags %q", jobs, tt.wantTags)
 			}
@@ -947,7 +956,7 @@ func TestFetchingRowBecomesTheDownloadingOne(t *testing.T) {
 	}
 	// the fetch is blocked, so the row can only come from Fetching
 	<-site.entered
-	jobs := c.Jobs()
+	jobs := jobsOf(c)
 	if len(jobs) != 1 || jobs[0].State != JobFetching || jobs[0].Status == "" || jobs[0].Done != 0 {
 		t.Fatalf("jobs while fetching = %+v, want one fetching row with a status", jobs)
 	}
@@ -956,7 +965,7 @@ func TestFetchingRowBecomesTheDownloadingOne(t *testing.T) {
 	if s := waitFinished(t, c); s.Saved != 1 {
 		t.Errorf("summary = %+v, want 1 saved", s)
 	}
-	jobs = c.Jobs()
+	jobs = jobsOf(c)
 	if len(jobs) != 1 || jobs[0].State != JobDone || jobs[0].Status != "" || jobs[0].Total != 2*(core.DownloadWeight+core.ArchiveWeight) {
 		t.Errorf("jobs after the run = %+v, want the one row done with its page total", jobs)
 	}
@@ -966,9 +975,8 @@ func TestFetchingRowBecomesTheDownloadingOne(t *testing.T) {
 func TestFetchingRowEndsBeforeStarted(t *testing.T) {
 	newRun := func() (*Controller, events) {
 		c := NewController(&grabber.Settings{}, nil)
-		c.byChap = map[*grabber.Chapter]*Job{}
-		c.fetching = map[grabber.Filterable]*Job{}
-		return c, events{c}
+		_, e := attach(c)
+		return c, e
 	}
 	listed := &grabber.Chapter{Title: "Chapter 5", Number: 5}
 
@@ -976,7 +984,7 @@ func TestFetchingRowEndsBeforeStarted(t *testing.T) {
 		c, e := newRun()
 		e.Fetching(listed)
 		e.FetchFailed(listed, errors.New("boom"))
-		jobs := c.Jobs()
+		jobs := jobsOf(c)
 		if len(jobs) != 1 || jobs[0].State != JobFailed || jobs[0].Reason != "boom" || jobs[0].Status != "" {
 			t.Errorf("jobs = %+v, want one failed row", jobs)
 		}
@@ -984,7 +992,7 @@ func TestFetchingRowEndsBeforeStarted(t *testing.T) {
 	t.Run("fetch failed without a row", func(t *testing.T) {
 		c, e := newRun()
 		e.FetchFailed(listed, core.ErrLocked)
-		jobs := c.Jobs()
+		jobs := jobsOf(c)
 		if len(jobs) != 1 || jobs[0].State != JobFailed || jobs[0].ReasonMsg == nil || jobs[0].ReasonMsg.Key != "job.reason.locked" {
 			t.Errorf("jobs = %+v, want one failed row with the locked reason", jobs)
 		}
@@ -995,7 +1003,7 @@ func TestFetchingRowEndsBeforeStarted(t *testing.T) {
 		e.Fetching(listed)
 		e.Fetched(listed, fetched)
 		e.Skipped(fetched)
-		if jobs := c.Jobs(); len(jobs) != 1 || jobs[0].State != JobSkipped {
+		if jobs := jobsOf(c); len(jobs) != 1 || jobs[0].State != JobSkipped {
 			t.Errorf("jobs = %+v, want one skipped row", jobs)
 		}
 	})
@@ -1005,7 +1013,7 @@ func TestFetchingRowEndsBeforeStarted(t *testing.T) {
 		e.Fetching(listed)
 		e.Fetched(listed, fetched)
 		e.FilenameFailed(fetched, errors.New("bad"))
-		if jobs := c.Jobs(); len(jobs) != 1 || jobs[0].State != JobFailed || jobs[0].Reason != "filename: bad" {
+		if jobs := jobsOf(c); len(jobs) != 1 || jobs[0].State != JobFailed || jobs[0].Reason != "filename: bad" {
 			t.Errorf("jobs = %+v, want one failed row", jobs)
 		}
 	})
@@ -1014,14 +1022,12 @@ func TestFetchingRowEndsBeforeStarted(t *testing.T) {
 // The fetched chapter's title can differ from the listing's, and the row takes it.
 func TestFetchedRowTakesFetchedTitle(t *testing.T) {
 	c := NewController(&grabber.Settings{}, nil)
-	c.byChap = map[*grabber.Chapter]*Job{}
-	c.fetching = map[grabber.Filterable]*Job{}
-	e := events{c}
+	_, e := attach(c)
 	listed := &grabber.Chapter{Title: "Market", Number: 1}
 	fetched := &grabber.Chapter{Title: "Chapter 0001 Market", Number: 1}
 	e.Fetching(listed)
 	e.Fetched(listed, fetched)
-	if jobs := c.Jobs(); len(jobs) != 1 || jobs[0].Title != "Chapter 0001 Market" {
+	if jobs := jobsOf(c); len(jobs) != 1 || jobs[0].Title != "Chapter 0001 Market" {
 		t.Errorf("jobs = %+v, want the fetched chapter's title", jobs)
 	}
 }
@@ -1039,14 +1045,14 @@ func TestCancelWhileFetchingEndsTheRow(t *testing.T) {
 		t.Fatal(err)
 	}
 	<-site.entered
-	if jobs := c.Jobs(); len(jobs) != 1 || jobs[0].State != JobFetching {
+	if jobs := jobsOf(c); len(jobs) != 1 || jobs[0].State != JobFetching {
 		t.Fatalf("jobs while fetching = %+v, want one fetching row", jobs)
 	}
 	c.Cancel()
 	close(gate)
 	waitFinished(t, c)
 
-	jobs := c.Jobs()
+	jobs := jobsOf(c)
 	if len(jobs) != 1 || (jobs[0].State != JobDone && jobs[0].State != JobFailed) || jobs[0].Status != "" {
 		t.Errorf("jobs after the cancel = %+v, want one finished row", jobs)
 	}
@@ -1064,16 +1070,17 @@ func TestLogLinesCarryTheirMessage(t *testing.T) {
 		text func(c *Controller) string
 	}{
 		{"cancel", func(c *Controller) {
-			c.cancel = func() {}
+			c.groups[0].running = true
+			c.groups[0].cancel = func() {}
 			c.Cancel()
 		}, "log.cancelling", func(*Controller) string {
 			return "Cancelling: chapters already downloading will finish, no new ones start"
 		}},
-		{"error downloading", func(c *Controller) { events{c}.DownloadFailed(ch, boom) }, "log.errorDownload", func(c *Controller) string {
-			return "error downloading " + c.releaseLabel(ch) + ": boom"
+		{"error downloading", func(c *Controller) { events{c, c.groups[0]}.DownloadFailed(ch, boom) }, "log.errorDownload", func(c *Controller) string {
+			return "error downloading " + c.groups[0].releaseLabel(ch) + ": boom"
 		}},
-		{"skipping", func(c *Controller) { events{c}.Skipped(ch) }, "log.skipping", func(c *Controller) string {
-			return "skipping " + c.releaseLabel(ch) + ": every page is excluded by --skip-pages"
+		{"skipping", func(c *Controller) { events{c, c.groups[0]}.Skipped(ch) }, "log.skipping", func(c *Controller) string {
+			return "skipping " + c.groups[0].releaseLabel(ch) + ": every page is excluded by --skip-pages"
 		}},
 		{"fallback", func(c *Controller) { c.addMsg(LogInfo, fallbackMessage("group", "Beta", "Alpha")) }, "log.groupFallbackValue", func(*Controller) string {
 			return `scanlation group "Beta" isn't in this series, loading "Alpha" instead`
@@ -1082,9 +1089,8 @@ func TestLogLinesCarryTheirMessage(t *testing.T) {
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
 			c := NewController(&grabber.Settings{}, nil)
-			// the maps a run starts with, which the events write into
-			c.byChap = map[*grabber.Chapter]*Job{}
-			c.failedC = map[*grabber.Chapter]bool{}
+			// the group whose events the cases log
+			attach(c)
 			tt.log(c)
 			log := c.Log()
 			last := log[len(log)-1]
@@ -1121,13 +1127,7 @@ func TestDownloadingLogIsPlural(t *testing.T) {
 // stay plain
 func TestJobRowsCarryTheirMessages(t *testing.T) {
 	c := NewController(&grabber.Settings{}, nil)
-	c.byChap = map[*grabber.Chapter]*Job{}
-	c.failedC = map[*grabber.Chapter]bool{}
-	c.byVolume = map[*core.Volume]*Job{}
-	c.listedVol = map[grabber.Filterable]*Job{}
-	c.chapVol = map[*grabber.Chapter]*Job{}
-	c.fetching = map[grabber.Filterable]*Job{}
-	e := events{c}
+	g, e := attach(c)
 	wantMsg := func(what string, m *Message, key, text string) {
 		t.Helper()
 		if m == nil || m.Key != key || m.Text != text {
@@ -1137,12 +1137,12 @@ func TestJobRowsCarryTheirMessages(t *testing.T) {
 
 	skipped := &grabber.Chapter{Title: "Chapter 5", Number: 5, Language: "en", PagesCount: 1}
 	e.Skipped(skipped)
-	wantMsg("skipped reason", c.Jobs()[0].ReasonMsg, "job.reason.skipped", "every page excluded by --skip-pages")
+	wantMsg("skipped reason", jobsOf(c)[0].ReasonMsg, "job.reason.skipped", "every page excluded by --skip-pages")
 
 	failed := &grabber.Chapter{Title: "Chapter 6", Number: 6, Language: "en", PagesCount: 1}
 	e.Started(failed)
 	e.DownloadFailed(failed, errors.New("boom"))
-	row := c.Jobs()[1]
+	row := jobsOf(c)[1]
 	wantMsg("download reason", row.ReasonMsg, "job.reason.download", "download: boom")
 	if row.Reason != "download: boom" {
 		t.Errorf("Reason = %q, want the English text", row.Reason)
@@ -1152,16 +1152,16 @@ func TestJobRowsCarryTheirMessages(t *testing.T) {
 	empty := &grabber.Chapter{Title: "Chapter 7", Number: 7, Language: "en"}
 	e.Started(empty)
 	e.DownloadFailed(empty, core.ErrNoPages)
-	wantMsg("no pages reason", c.Jobs()[2].ReasonMsg, "job.reason.noPages", "no pages found")
+	wantMsg("no pages reason", jobsOf(c)[2].ReasonMsg, "job.reason.noPages", "no pages found")
 
-	c.rng = "1-3"
-	c.bundle = &Job{}
+	g.rng = "1-3"
+	g.bundle = &Job{}
 	e.BundlePacking()
-	wantMsg("bundle status", c.bundle.StatusMsg, "job.phase.creatingBundle", "Creating bundle for chapters 1-3")
+	wantMsg("bundle status", g.bundle.StatusMsg, "job.phase.creatingBundle", "Creating bundle for chapters 1-3")
 
 	v := &core.Volume{Number: 2, Chapters: grabber.Filterables{&grabber.Chapter{Number: 2, Title: "Chapter 2"}}}
 	e.VolumeStart(v)
-	vol := c.byVolume[v]
+	vol := g.byVolume[v]
 	wantMsg("volume title", vol.TitleMsg, "job.title.volumeChapter", "Vol. 02 · chapter 2")
 	wantMsg("volume status", vol.StatusMsg, "job.phase.waiting", "Waiting…")
 	if vol.Title != "Vol. 02 · chapter 2" {
@@ -1208,17 +1208,14 @@ func TestSetReasonErrTranslatesSharedSentinels(t *testing.T) {
 // window words carry their message, and the ones from core stay plain text.
 func TestFailureLinesCarryTheirMessages(t *testing.T) {
 	c := NewController(&grabber.Settings{}, nil)
-	c.byChap = map[*grabber.Chapter]*Job{}
-	c.fetching = map[grabber.Filterable]*Job{}
-	c.failedC = map[*grabber.Chapter]bool{}
-	e := events{c}
+	g, e := attach(c)
 	ch := &grabber.Chapter{Title: "Chapter 5", Number: 5}
 
 	e.FilenameFailed(ch, errors.New("bad"))
 	e.Packed(ch, "", errors.New("disk full"))
 	e.DownloadFailed(ch, errors.New("boom"))
 
-	failures := c.stats.failures
+	failures := g.stats.failures
 	if len(failures) != 3 {
 		t.Fatalf("failures = %+v, want 3", failures)
 	}
@@ -1232,8 +1229,8 @@ func TestFailureLinesCarryTheirMessages(t *testing.T) {
 	}
 	for i, w := range want {
 		f := failures[i]
-		if f.Label != c.releaseLabel(ch) || f.Reason != w.reason {
-			t.Errorf("failure %d = %+v, want release %q reason %q", i, f, c.releaseLabel(ch), w.reason)
+		if f.Label != g.releaseLabel(ch) || f.Reason != w.reason {
+			t.Errorf("failure %d = %+v, want release %q reason %q", i, f, g.releaseLabel(ch), w.reason)
 		}
 		if (f.ReasonMsg == nil) != (w.key == "") || (w.key != "" && f.ReasonMsg.Key != w.key) {
 			t.Errorf("failure %d message = %+v, want key %q", i, f.ReasonMsg, w.key)

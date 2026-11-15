@@ -156,7 +156,7 @@ function components({ state, chapters, selected, log }: Snapshot): Screen[] {
     {
       file: 'ActivityPanel.tsx',
       name: 'ActivityPanel',
-      element: createElement(ActivityPanel, { state, onOpenFolder: noop }),
+      element: createElement(ActivityPanel, { state, onOpenFolder: noop, onCancelGroup: noop }),
     },
     {
       file: 'DownloadDock.tsx',

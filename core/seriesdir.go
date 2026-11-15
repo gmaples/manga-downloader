@@ -172,3 +172,13 @@ func (s *Series) WithOutputDir(dir string) *Series {
 
 	return &c
 }
+
+// WithSettings returns a copy of the series that reads settings, for a front
+// end that downloads the series again with other settings while an earlier
+// download of it, with its own, is still going
+func (s *Series) WithSettings(settings *grabber.Settings) *Series {
+	c := *s
+	c.settings = settings
+
+	return &c
+}

@@ -3,7 +3,7 @@
 
 import { jobFraction } from './format';
 import type { T } from './i18n';
-import type { Chapter, Job, JobState, State, Summary } from './types';
+import type { Chapter, Group, Job, JobState, State, Summary } from './types';
 import { groupChapters, groupParts, isSiteVolumes, parseVolumes, selectedIn, type Grouping } from './volumes';
 
 /** The states a job ends in */
@@ -34,11 +34,11 @@ export interface Overall {
 }
 
 /**
- * The run's overall progress. Jobs are only created as chapters start, so the
+ * A group's overall progress. Jobs are only created as chapters start, so the
  * run's chapter count is the denominator, not the job count.
  */
-export function overallProgress(state: Pick<State, 'jobs' | 'run'>): Overall {
-  const { jobs, run } = state;
+export function overallProgress(group: Pick<Group, 'jobs' | 'run'>): Overall {
+  const { jobs, run } = group;
   if (run.bundle) {
     const job = jobs[0];
     const finished = job !== undefined && isFinished(job) ? 1 : 0;
@@ -64,6 +64,28 @@ export function overallProgress(state: Pick<State, 'jobs' | 'run'>): Overall {
 }
 
 /**
+ * The progress of the running groups together: their rows add up, and the
+ * fraction weighs each group by its rows
+ */
+export function runningProgress(groups: Group[]): Overall {
+  const out: Overall = { finished: 0, total: 0, queued: 0, fraction: 0 };
+  let sum = 0;
+  for (const g of groups) {
+    if (!g.running) {
+      continue;
+    }
+    const o = overallProgress(g);
+    out.finished += o.finished;
+    out.total += o.total;
+    out.queued += o.queued;
+    sum += o.fraction * o.total;
+  }
+  out.fraction = out.total > 0 ? Math.min(1, sum / out.total) : 0;
+
+  return out;
+}
+
+/**
  * Why Download can't start right now, or "" when it can. These are the
  * refusals the backend would answer with, shown before the click instead of
  * after it. The backend stays the authority: its own refusal still shows.
@@ -71,9 +93,6 @@ export function overallProgress(state: Pick<State, 'jobs' | 'run'>): Overall {
 export function downloadBlocker(state: State, t: T): string {
   if (state.loading) {
     return t('download.blocker.loading');
-  }
-  if (state.running) {
-    return '';
   }
   if (!state.loaded) {
     return t('download.blocker.notLoaded');

@@ -341,6 +341,48 @@ export namespace main {
 		    return a;
 		}
 	}
+	export class GroupDTO {
+	    id: number;
+	    title: string;
+	    running: boolean;
+	    cancelling: boolean;
+	    run: RunDTO;
+	    jobs: JobDTO[];
+	    summary?: SummaryDTO;
+	
+	    static createFrom(source: any = {}) {
+	        return new GroupDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.title = source["title"];
+	        this.running = source["running"];
+	        this.cancelling = source["cancelling"];
+	        this.run = this.convertValues(source["run"], RunDTO);
+	        this.jobs = this.convertValues(source["jobs"], JobDTO);
+	        this.summary = this.convertValues(source["summary"], SummaryDTO);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 	export class State {
 	    url: string;
 	    loading: boolean;
@@ -357,8 +399,7 @@ export namespace main {
 	    selectedCount: number;
 	    running: boolean;
 	    cancelling: boolean;
-	    run: RunDTO;
-	    jobs: JobDTO[];
+	    groups: GroupDTO[];
 	    summary?: SummaryDTO;
 	    options: OptionsDTO;
 	    prefs: PrefsDTO;
@@ -396,8 +437,7 @@ export namespace main {
 	        this.selectedCount = source["selectedCount"];
 	        this.running = source["running"];
 	        this.cancelling = source["cancelling"];
-	        this.run = this.convertValues(source["run"], RunDTO);
-	        this.jobs = this.convertValues(source["jobs"], JobDTO);
+	        this.groups = this.convertValues(source["groups"], GroupDTO);
 	        this.summary = this.convertValues(source["summary"], SummaryDTO);
 	        this.options = this.convertValues(source["options"], OptionsDTO);
 	        this.prefs = this.convertValues(source["prefs"], PrefsDTO);

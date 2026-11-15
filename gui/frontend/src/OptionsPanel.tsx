@@ -44,7 +44,8 @@ interface Props {
 export function OptionsPanel({ state, onOptions, onChooseFolder, onError }: Props) {
   const { t } = useI18n();
   const o = state.options;
-  const locked = state.loading || state.running;
+  // a running group keeps the options it started with, so only a load locks them
+  const locked = state.loading;
   const flags = convertFlagsOf(o.convertImages);
   const avif = avifSwitchOf(flags, o.format);
   const browser = browserSwitchOf(state, t);
@@ -57,7 +58,7 @@ export function OptionsPanel({ state, onOptions, onChooseFolder, onError }: Prop
     <div className="options">
       {locked && (
         <p className="locked-note" role="status">
-          {state.running ? t('options.locked.running') : t('options.locked.loading')}
+          {t('options.locked.loading')}
         </p>
       )}
       <section className="opt-group" aria-labelledby="opt-save">

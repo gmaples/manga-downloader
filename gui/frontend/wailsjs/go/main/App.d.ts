@@ -4,6 +4,8 @@ import {main} from '../models';
 
 export function Cancel():Promise<void>;
 
+export function CancelGroup(arg1:number):Promise<void>;
+
 export function Chapters():Promise<Array<main.ChapterDTO>>;
 
 export function ChooseFolder(arg1:string):Promise<string>;
@@ -16,7 +18,7 @@ export function Load(arg1:string):Promise<void>;
 
 export function Log():Promise<Array<main.LogDTO>>;
 
-export function OpenFolder():Promise<void>;
+export function OpenFolder(arg1:number):Promise<void>;
 
 export function Options():Promise<main.OptionsDTO>;
 

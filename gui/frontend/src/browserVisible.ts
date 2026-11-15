@@ -13,7 +13,7 @@ export interface BrowserSwitch {
 }
 
 export function browserSwitchOf(state: State, t: T): BrowserSwitch {
-  const locked = state.loading || state.running;
+  const locked = state.loading;
   if (state.browserVisibleAuto) {
     return { checked: true, disabled: true, hint: t('options.browser.auto') };
   }

@@ -1,6 +1,5 @@
 {
   "locked": {
-    "running": "Las opciones están bloqueadas mientras hay una descarga en curso.",
     "loading": "Las opciones están bloqueadas mientras se carga la serie."
   },
   "save": {

@@ -1,6 +1,7 @@
 {
   "enterURL": "introdueix primer l'URL d'una sèrie",
-  "busy": "s'està carregant una sèrie o hi ha una descàrrega en curs",
+  "busy": "s'està carregant una sèrie",
+  "seriesBusy": "aquesta sèrie ja es descarrega: espera que acabi",
   "parserFailed": "l'analitzador del lloc ha fallat: {{reason}}",
   "unknownLanguage": "idioma desconegut \"{{language}}\"",
   "folderMissing": "la carpeta {{path}} no existeix",

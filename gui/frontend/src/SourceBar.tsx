@@ -61,7 +61,8 @@ export function SourceBar({
   // null until the user types: the field shows the backend's URL until then
   const [typed, setTyped] = useState<string | null>(null);
   const url = typed ?? state.url;
-  const busy = state.loading || state.running;
+  // a series loads while groups download, so only a load makes the bar busy
+  const busy = state.loading;
   const expression = useExpression(state);
   const same = state.loaded && url.trim() === state.url;
   // a pasted or typed series URL loads once the typing pauses; the timer reads

@@ -72,3 +72,24 @@ func TestDownloadSitsOut429sAndSavesTheLimit(t *testing.T) {
 		t.Errorf("the file was written into the series folder too: %v", err)
 	}
 }
+
+// Two series of one site downloading into one root at once (two groups in the
+// app) share the site's pace; one in another root doesn't
+func TestLimiterSharedByRoot(t *testing.T) {
+	site := newFakeSite(t, fakeChapter{number: 1, pages: 1})
+	one, root := newSeries(t, site, false)
+	two := one.WithOutputDir(SeriesDir(root, "Other", ""))
+
+	a, releaseA := one.limiter(root)
+	defer releaseA()
+	b, releaseB := two.limiter(two.OutputDir())
+	defer releaseB()
+	if a == nil || a != b {
+		t.Errorf("limiters = %v and %v, want one shared pace", a, b)
+	}
+	c, releaseC := one.limiter(t.TempDir())
+	defer releaseC()
+	if c == a {
+		t.Error("a download into another root shares the pace")
+	}
+}

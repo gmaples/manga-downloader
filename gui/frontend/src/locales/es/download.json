@@ -35,9 +35,11 @@
     "chapters": "{{done}} de {{total}} capítulos terminados",
     "files": "{{done}} de {{total}} archivos terminados",
     "bundle": "Creando el paquete",
+    "groups": "{{count}} descargas · {{done}} de {{total}} terminados",
     "finishing": "Terminando los capítulos en curso",
     "cancelHint": "Los capítulos que ya se descargan terminarán; no empezará ninguno nuevo."
   },
   "cancelling": "Cancelando…",
+  "cancelAll": "Cancelar todo",
   "failed": "No se puede descargar: {{error}}"
 }

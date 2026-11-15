@@ -16,5 +16,6 @@
   "queued_one": "あと{{count}}話が待機中",
   "queued_other": "あと{{count}}話が待機中",
   "progressOf": "{{title}}の進行状況{{tags}}",
-  "progressBundle": "まとめファイルの進行状況"
+  "progressBundle": "まとめファイルの進行状況",
+  "cancelGroup": "{{title}}をキャンセル"
 }

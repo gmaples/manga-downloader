@@ -6,8 +6,10 @@
 // a given state, so screenshots need no clicking: empty, loading, error,
 // loaded, stale, running, bundle, cancelling, done, update, check, volumes
 // (loaded, packing by volume, with three volumes and a half selected) or
-// volumes-running (a run by volume in progress) or parts (loaded, packing each
-// chapter with its parts merged, as &parts lists them). update is loaded too, as a
+// volumes-running (a run by volume in progress), parts (loaded, packing each
+// chapter with its parts merged, as &parts lists them) or two-groups (a first
+// series' download that ended, and the loaded series' one running after it,
+// each under the header of its group). update is loaded too, as a
 // release build (v1.17.0 with &shot, v1.12.0 without) with a newer release
 // (v1.18.0 with &shot, v1.13.0 without): the status bar shows the yellow "!".
 // check is loading a site that needs the browser window, with the alert asking
@@ -93,6 +95,7 @@ const SCENARIOS = [
   'volumes',
   'volumes-running',
   'parts',
+  'two-groups',
 ] as const;
 
 export type Scenario = (typeof SCENARIOS)[number];
@@ -395,6 +398,38 @@ class Bus<T> {
   }
 }
 
+/** One simulated download group, as the backend's: its own run, rows and outcome */
+interface MockGroup {
+  id: number;
+  title: string;
+  url: string;
+  /** The folder and the file extension it saves with, as the options were when it started */
+  dir: string;
+  ext: string;
+  running: boolean;
+  cancelling: boolean;
+  runChapters: number;
+  // the bundle option as the run started with it, as the backend's RunInfo
+  runBundle: boolean;
+  runVolumes: boolean;
+  runParts: boolean;
+  runRows: number;
+  jobs: Job[];
+  summary: Summary | null;
+  // the chapters of the run that &exists left out as already in the folder
+  existing: number;
+  // the chapters of the run that haven't started; the backend only creates a
+  // job when a chapter starts, so the mock does too
+  pending: Chapter[];
+  // how many chapters each volume row of the run holds, by title
+  volumeChapters: Map<string, number>;
+  // with &fetching, the ticks a chapter's row has left fetching its page list
+  fetchLeft: Map<string, number>;
+  timer?: ReturnType<typeof setInterval>;
+  // orders the groups that ended
+  ended: number;
+}
+
 export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): Api {
   const {
     scenario,
@@ -454,20 +489,11 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
   let applied = { language: '', scanlator: '' };
   // whether a load has been attempted, so the filters are the series' own choices
   let identified = false;
-  let running = false;
-  let cancelling = false;
-  let runChapters = 0;
-  // the bundle option as the run started with it, as the backend's RunInfo
-  let runBundle = false;
-  let runVolumes = false;
-  let runParts = false;
-  let runRows = 0;
-  let jobs: Job[] = [];
-  let summary: Summary | null = null;
-  // the chapters of the run that &exists left out as already in the folder
-  let existing = 0;
+  // the downloads started, in the order they started (see MockGroup)
+  let runs: MockGroup[] = [];
+  let lastRunID = 0;
+  let lastEnded = 0;
   let log: LogLine[] = [];
-  let timer: ReturnType<typeof setInterval> | undefined;
   // the loaded site needs the browser window, and the alert about it
   let browserAuto = false;
   let browserAlert: Message | undefined;
@@ -551,11 +577,18 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
     languages: filterOf('language'),
     scanlators: filterOf('scanlator'),
     selectedCount: selected.size,
-    running,
-    cancelling,
-    run: { chapters: runChapters, bundle: runBundle, volumes: runVolumes, rows: runRows },
-    jobs: jobs.map((j) => ({ ...j })),
-    summary: summary ? { ...summary, failures: [...summary.failures] } : null,
+    running: runs.some((g) => g.running),
+    cancelling: runs.some((g) => g.running) && runs.every((g) => !g.running || g.cancelling),
+    groups: runs.map((g) => ({
+      id: g.id,
+      title: g.title,
+      running: g.running,
+      cancelling: g.cancelling,
+      run: { chapters: g.runChapters, bundle: g.runBundle, volumes: g.runVolumes, rows: g.runRows },
+      jobs: g.jobs.map((j) => ({ ...j })),
+      summary: copySummary(g.summary),
+    })),
+    summary: runs.some((g) => g.running) ? null : copySummary(lastSummary()),
     options: { ...options },
     volumes: { text: volumesText, site: volumesSite, listed: volumesListed },
     version: reportsRelease ? releaseVersion : 'v0.0.0-mock',
@@ -585,6 +618,36 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
         : { ...prefs },
   });
   const push = () => stateBus.emit(snapshot());
+  const copySummary = (s: Summary | null): Summary | null => (s ? { ...s, failures: [...s.failures] } : null);
+  // the outcome of the group that ended last, as the backend's LastSummary
+  const lastSummary = (): Summary | null =>
+    runs.filter((g) => g.summary !== null).sort((a, b) => b.ended - a.ended)[0]?.summary ?? null;
+  // a new group of the loaded series, with the options as they are
+  const newRun = (): MockGroup => {
+    const g: MockGroup = {
+      id: ++lastRunID,
+      title,
+      url,
+      dir: options.outputDir,
+      ext: EXTENSIONS[options.format],
+      running: true,
+      cancelling: false,
+      runChapters: 0,
+      runBundle: false,
+      runVolumes: false,
+      runParts: false,
+      runRows: 0,
+      jobs: [],
+      summary: null,
+      existing: 0,
+      pending: [],
+      volumeChapters: new Map(),
+      fetchLeft: new Map(),
+      ended: 0,
+    };
+    runs = [...runs, g];
+    return g;
+  };
 
   function finishLoad(): void {
     loading = false;
@@ -616,8 +679,6 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
     volumesText = '';
     applied = { language: options.language, scanlator: options.scanlator };
     selected = new Set<number>();
-    jobs = [];
-    summary = null;
     pushLog('info', msgOf('log.loaded', { title, count: chapters.length }));
     chaptersBus.emit(chapters);
     selectionBus.emit([]);
@@ -638,48 +699,42 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
     push();
   }
 
-  function finishRun(): void {
-    clearInterval(timer);
-    timer = undefined;
-    running = false;
+  function finishRun(g: MockGroup): void {
+    clearInterval(g.timer);
+    g.timer = undefined;
+    g.running = false;
+    g.ended = ++lastEnded;
     // a volume's chapters count as saved with it, as the backend counts them
-    const saved = jobs
+    const saved = g.jobs
       .filter((j) => j.state === 'done')
-      .reduce((n, j) => n + (j.volume ? (volumeChapters.get(j.title) ?? 0) : 1), 0);
-    const volumes = jobs.filter((j) => j.volume && j.state === 'done').length;
-    const failures = jobs
+      .reduce((n, j) => n + (j.volume ? (g.volumeChapters.get(j.title) ?? 0) : 1), 0);
+    const volumes = g.jobs.filter((j) => j.volume && j.state === 'done').length;
+    const failures = g.jobs
       .filter((j) => j.state === 'failed')
       .map((j) => ({ label: j.title, reason: j.reason, reasonMsg: j.reasonMsg }));
     // as the backend, the chapters left out as already in the folder are not skipped
-    const skipped = jobs.filter((j) => j.state === 'skipped' && j.reasonMsg?.key !== 'job.reason.exists').length;
-    const bundled = runBundle;
-    summary = {
-      dir: options.outputDir,
-      cancelled: cancelling,
-      saved: bundled && failures.length === 0 && !cancelling ? runChapters : saved,
+    const skipped = g.jobs.filter((j) => j.state === 'skipped' && j.reasonMsg?.key !== 'job.reason.exists').length;
+    const bundled = g.runBundle;
+    g.summary = {
+      dir: g.dir,
+      cancelled: g.cancelling,
+      saved: bundled && failures.length === 0 && !g.cancelling ? g.runChapters : saved,
       volumes,
-      parts: runParts,
+      parts: g.runParts,
       bundled,
-      bundle: bundled && !cancelling ? `${title} 1-${runChapters}${EXTENSIONS[options.format]}` : '',
+      bundle: bundled && !g.cancelling ? `${g.title} 1-${g.runChapters}${g.ext}` : '',
       skipped,
-      existing,
+      existing: g.existing,
       failures,
       error: '',
     };
-    pushLog('info', cancelling ? `Cancelled: ${saved} saved` : `Finished: ${saved} saved`);
+    pushLog('info', g.cancelling ? `Cancelled: ${saved} saved` : `Finished: ${saved} saved`);
     if (failures.length > 0) {
       pushLog('warn', `${failures.length} chapter(s) failed`);
     }
     push();
   }
 
-  // the chapters of the run that haven't started; the backend only creates a
-  // job when a chapter starts, so the mock does too
-  let pending: Chapter[] = [];
-  // how many chapters each volume row of the run holds, by title
-  let volumeChapters = new Map<string, number>();
-  // with &fetching, the ticks a chapter's row has left fetching its page list
-  const fetchLeft = new Map<string, number>();
   const FETCH_TICKS = 4;
 
   /** A tick's steps: the pace it had when a page was two steps, scaled to STEPS_PER_PAGE. */
@@ -693,12 +748,12 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
   }
 
   /** One step of the simulated run. Returns false once it's over. */
-  function step(): boolean {
-    if (runBundle) {
-      const j = jobs[0];
+  function step(g: MockGroup): boolean {
+    if (g.runBundle) {
+      const j = g.jobs[0];
       const done = Math.min(j.total, j.done + ticks(4));
       const fetched = done < downloadEnd(j.total);
-      jobs = [
+      g.jobs = [
         {
           ...j,
           done,
@@ -708,9 +763,9 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
               ? undefined
               : fetched
                 ? msgOf('job.phase.downloadingLabel', {
-                    label: `Chapter ${Math.floor((done / downloadEnd(j.total)) * runChapters) + 1}`,
+                    label: `Chapter ${Math.floor((done / downloadEnd(j.total)) * g.runChapters) + 1}`,
                   })
-                : msgOf('job.phase.creatingBundle', { range: `1-${runChapters}` }),
+                : msgOf('job.phase.creatingBundle', { range: `1-${g.runChapters}` }),
           ),
         },
       ];
@@ -720,7 +775,7 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
     // the volumes all have rows from the start; two move at a time, as the
     // backend downloads chapters in order
     let movingVolumes = 0;
-    jobs = jobs.map((j) => {
+    g.jobs = g.jobs.map((j) => {
       if (!j.volume || (j.state !== 'downloading' && j.state !== 'archiving') || movingVolumes >= 2) {
         return j;
       }
@@ -738,20 +793,20 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
       };
     });
 
-    jobs = jobs.map((j) => {
-      const left = fetchLeft.get(j.title);
+    g.jobs = g.jobs.map((j) => {
+      const left = g.fetchLeft.get(j.title);
       if (j.state !== 'fetching' || left === undefined) {
         return j;
       }
       if (left > 1) {
-        fetchLeft.set(j.title, left - 1);
+        g.fetchLeft.set(j.title, left - 1);
         return j;
       }
-      fetchLeft.delete(j.title);
+      g.fetchLeft.delete(j.title);
       return { ...j, state: 'downloading', total: PAGES * STEPS_PER_PAGE, ...phaseOf() };
     });
 
-    jobs = jobs.map((j, idx) => {
+    g.jobs = g.jobs.map((j, idx) => {
       if (j.volume || (j.state !== 'downloading' && j.state !== 'archiving')) {
         return j;
       }
@@ -764,17 +819,17 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
       return { ...j, done, state };
     });
 
-    const active = jobs.filter(
+    const active = g.jobs.filter(
       (j) => !j.volume && (j.state === 'fetching' || j.state === 'downloading' || j.state === 'archiving'),
     ).length;
-    if (!cancelling && active < 3 && pending.length > 0) {
-      const c = pending.shift()!;
+    if (!g.cancelling && active < 3 && g.pending.length > 0) {
+      const c = g.pending.shift()!;
       if (c.locked) {
         // as the backend's FetchFailed: a listed lock fails before any fetch,
         // with a row unless the run is a bundle
-        if (!runBundle) {
-          jobs = [
-            ...jobs,
+        if (!g.runBundle) {
+          g.jobs = [
+            ...g.jobs,
             {
               title: labelOf(c),
               tags: '',
@@ -792,10 +847,10 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
         pushLog('error', msgOf('log.errorFetching', { label: labelOf(c), reason: LOCKED_REASON.text }));
         return true;
       }
-      if (skip && jobs.filter((j) => !j.volume).length === 5) {
+      if (skip && g.jobs.filter((j) => !j.volume).length === 5) {
         // as the backend's Skipped event: a row with nothing to download
-        jobs = [
-          ...jobs,
+        g.jobs = [
+          ...g.jobs,
           {
             title: labelOf(c),
             tags: '',
@@ -813,10 +868,10 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
         return true;
       }
       if (fetching) {
-        fetchLeft.set(labelOf(c), FETCH_TICKS);
+        g.fetchLeft.set(labelOf(c), FETCH_TICKS);
       }
-      jobs = [
-        ...jobs,
+      g.jobs = [
+        ...g.jobs,
         {
           title: labelOf(c),
           tags: '',
@@ -832,23 +887,23 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
     }
 
     return (
-      jobs.some((j) => j.state === 'fetching' || j.state === 'downloading' || j.state === 'archiving') ||
-      (!cancelling && pending.length > 0)
+      g.jobs.some((j) => j.state === 'fetching' || j.state === 'downloading' || j.state === 'archiving') ||
+      (!g.cancelling && g.pending.length > 0)
     );
   }
 
   /** &exists: the chapters at EXISTS_AT come out as already in the folder, as rows before any fetch */
-  function leaveOutExisting(list: Chapter[]): void {
+  function leaveOutExisting(g: MockGroup, list: Chapter[]): void {
     for (const at of EXISTS_AT) {
       const c = list[at];
       if (c === undefined) {
         continue;
       }
-      const name = `${title} ${c.number} - ${labelOf(c)}${EXTENSIONS[options.format]}`;
+      const name = `${g.title} ${c.number} - ${labelOf(c)}${g.ext}`;
       const reasonMsg = msgOf('job.reason.exists', { name });
-      pending = pending.filter((p) => p !== c);
-      jobs = [
-        ...jobs,
+      g.pending = g.pending.filter((p) => p !== c);
+      g.jobs = [
+        ...g.jobs,
         {
           title: labelOf(c),
           tags: '',
@@ -863,40 +918,40 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
         },
       ];
       pushLog('info', msgOf('log.exists', { name }));
-      existing++;
+      g.existing++;
     }
   }
 
-  function beginRun(list: Chapter[]): void {
-    running = true;
-    cancelling = false;
-    runChapters = list.length;
-    runBundle = options.packAs === 'bundle';
-    runVolumes = options.packAs === 'volumes' || options.packAs === 'parts';
-    runParts = options.packAs === 'parts';
-    summary = null;
-    pending = [...list];
-    existing = 0;
-    volumeChapters = new Map();
-    fetchLeft.clear();
-    runRows = runBundle ? 1 : list.length;
-    if (runParts) {
+  function beginRun(g: MockGroup, list: Chapter[]): void {
+    g.running = true;
+    g.cancelling = false;
+    g.runChapters = list.length;
+    g.runBundle = options.packAs === 'bundle';
+    g.runVolumes = options.packAs === 'volumes' || options.packAs === 'parts';
+    g.runParts = options.packAs === 'parts';
+    g.summary = null;
+    g.pending = [...list];
+    g.existing = 0;
+    g.volumeChapters = new Map();
+    g.fetchLeft.clear();
+    g.runRows = g.runBundle ? 1 : list.length;
+    if (g.runParts) {
       // a chapter's parts make one row, as a volume's chapters do
       const groups = groupParts(list);
-      pending = groups.filter((g) => g.chapters.length === 1).map((g) => g.chapters[0]);
-      runRows = groups.length;
-      jobs = groups
-        .filter((g) => g.chapters.length > 1)
-        .map((g) => {
-          const titleMsg = msgOf('job.title.volumeParts', { volume: `Chapter ${g.number}`, count: g.chapters.length });
+      g.pending = groups.filter((part) => part.chapters.length === 1).map((part) => part.chapters[0]);
+      g.runRows = groups.length;
+      g.jobs = groups
+        .filter((part) => part.chapters.length > 1)
+        .map((part) => {
+          const titleMsg = msgOf('job.title.volumeParts', { volume: `Chapter ${part.number}`, count: part.chapters.length });
           const title = titleMsg.text;
-          volumeChapters.set(title, g.chapters.length);
+          g.volumeChapters.set(title, part.chapters.length);
           return {
             title,
             titleMsg,
             tags: '',
-            number: g.number,
-            total: g.chapters.length * PAGES * STEPS_PER_PAGE,
+            number: part.number,
+            total: part.chapters.length * PAGES * STEPS_PER_PAGE,
             done: 0,
             state: 'downloading' as const,
             reason: '',
@@ -906,13 +961,13 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
         });
       return;
     }
-    if (runVolumes) {
+    if (g.runVolumes) {
       // the backend makes a row per volume up front, and runs the chapters
       // outside them one by one
       const grouping = groupChapters(list, parseVolumes(volumesText));
-      pending = grouping.loose;
-      runRows = grouping.volumes.length + grouping.loose.length;
-      jobs = grouping.volumes.map((v) => {
+      g.pending = grouping.loose;
+      g.runRows = grouping.volumes.length + grouping.loose.length;
+      g.jobs = grouping.volumes.map((v) => {
         const first = v.chapters[0].number;
         const last = v.chapters[v.chapters.length - 1].number;
         const vol = `Vol. ${String(v.number).padStart(2, '0')}`;
@@ -921,7 +976,7 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
             ? msgOf('job.title.volumeChapter', { volume: vol, first })
             : msgOf('job.title.volume', { volume: vol, first, last });
         const title = titleMsg.text;
-        volumeChapters.set(title, v.chapters.length);
+        g.volumeChapters.set(title, v.chapters.length);
         return {
           title,
           titleMsg,
@@ -938,7 +993,7 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
       return;
     }
     const bundleTitle = msgOf('job.title.bundle', { range: `1-${list.length}` });
-    jobs = runBundle
+    g.jobs = g.runBundle
       ? [
           {
             title: bundleTitle.text,
@@ -956,19 +1011,20 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
       : [];
   }
 
-  function tick(): void {
-    if (!step()) {
-      finishRun();
+  function tick(g: MockGroup): void {
+    if (!step(g)) {
+      finishRun(g);
       return;
     }
     push();
   }
 
   function simulateRun(list: Chapter[]): void {
-    beginRun(list);
+    const g = newRun();
+    beginRun(g, list);
     push();
     if (!freeze) {
-      timer = setInterval(tick, TICK_MS);
+      g.timer = setInterval(() => tick(g), TICK_MS);
     }
   }
 
@@ -1041,29 +1097,31 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
   if (scenario === 'volumes-running') {
     const picked = chapters.filter((c) => selected.has(c.index));
     pushLog('info', msgOf('log.downloading', { count: picked.length, title }));
-    beginRun(picked);
-    for (let i = 0; i < 12 && step(); i++) {
+    const g = newRun();
+    beginRun(g, picked);
+    for (let i = 0; i < 12 && step(g); i++) {
       // advancing
     }
     if (!freeze) {
-      timer = setInterval(tick, TICK_MS);
+      g.timer = setInterval(() => tick(g), TICK_MS);
     }
   }
   if (scenario === 'running' || scenario === 'cancelling' || scenario === 'bundle' || scenario === 'done') {
     options.packAs = scenario === 'bundle' ? 'bundle' : 'chapters';
     const picked = chapters.filter((c) => selected.has(c.index)).slice(0, 12);
     pushLog('info', msgOf('log.downloading', { count: picked.length, title }));
-    beginRun(picked);
+    const g = newRun();
+    beginRun(g, picked);
     if (exists && (scenario === 'running' || scenario === 'done')) {
-      leaveOutExisting(picked);
+      leaveOutExisting(g, picked);
     }
     // run the simulation forward to an interesting point
     const steps = scenario === 'done' ? Infinity : scenario === 'bundle' ? 8 : 14;
-    for (let i = 0; i < steps && step(); i++) {
+    for (let i = 0; i < steps && step(g); i++) {
       // advancing
     }
     if (scenario === 'cancelling') {
-      cancelling = true;
+      g.cancelling = true;
       pushLog('info', msgOf('log.cancelling'));
     }
     if (scenario === 'done') {
@@ -1073,12 +1131,47 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
       if (warned !== undefined) {
         pushLog('warn', `Chapter ${warned.number}: page 7 is AVIF but could not be converted; kept as is`);
       }
-      finishRun();
+      finishRun(g);
     } else if (!freeze) {
-      timer = setInterval(tick, TICK_MS);
+      g.timer = setInterval(() => tick(g), TICK_MS);
+    }
+  }
+  if (scenario === 'two-groups') {
+    // a first series' group that ended, then the loaded one's, running
+    const first = newRun();
+    first.title = 'Vinland Saga';
+    first.url = 'https://example.com/manga/vinland-saga';
+    beginRun(first, chapters.filter((c) => !c.locked).slice(0, 6));
+    pushLog('info', msgOf('log.downloading', { count: 6, title: first.title }));
+    while (step(first)) {
+      // advancing
+    }
+    finishRun(first);
+    const picked = chapters.filter((c) => selected.has(c.index)).slice(0, 12);
+    pushLog('info', msgOf('log.downloading', { count: picked.length, title }));
+    const g = newRun();
+    beginRun(g, picked);
+    for (let i = 0; i < 14 && step(g); i++) {
+      // advancing
+    }
+    if (!freeze) {
+      g.timer = setInterval(() => tick(g), TICK_MS);
     }
   }
   push();
+
+  // cancels the running groups pick selects that weren't cancelled yet, logging once
+  function cancelRuns(pick: (g: MockGroup) => boolean): void {
+    const picked = runs.filter((g) => g.running && !g.cancelling && pick(g));
+    if (picked.length === 0) {
+      return;
+    }
+    for (const g of picked) {
+      g.cancelling = true;
+    }
+    pushLog('info', msgOf('log.cancelling'));
+    push();
+  }
 
   // a load of next's URL: the body of the load action, shared with setOptionsAndLoad
   async function startLoad(next: string): Promise<void> {
@@ -1086,7 +1179,7 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
     if (trimmed === '') {
       throw reject('errors.enterURL');
     }
-    if (loading || running) {
+    if (loading) {
       throw reject('errors.busy');
     }
     url = trimmed;
@@ -1122,14 +1215,14 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
       await startLoad(next);
     },
     async setOptionsAndLoad(next, target) {
-      if (loading || running) {
+      if (loading) {
         throw reject('errors.busy');
       }
       Object.assign(options, next);
       await startLoad(target);
     },
     async clear() {
-      if (loading || running) {
+      if (loading) {
         throw reject('errors.busy');
       }
       url = '';
@@ -1145,14 +1238,14 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
       volumesText = '';
       volumesSite = '';
       volumesListed = 0;
-      jobs = [];
-      summary = null;
+      // the groups that ended go, the running ones stay
+      runs = runs.filter((g) => g.running);
       chaptersBus.emit([]);
       selectionBus.emit([]);
       push();
     },
     async setSelected(index, on) {
-      if (loading || running) {
+      if (loading) {
         throw reject('errors.busy');
       }
       if (index < 0 || index >= chapters.length) {
@@ -1167,7 +1260,7 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
       push();
     },
     async setSelectedMany(indices, on) {
-      if (loading || running) {
+      if (loading) {
         throw reject('errors.busy');
       }
       if (indices.some((index) => index < 0 || index >= chapters.length)) {
@@ -1186,7 +1279,7 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
       push();
     },
     async setAll(on) {
-      if (loading || running) {
+      if (loading) {
         throw reject('errors.busy');
       }
       selected = new Set(on ? chapters.filter((c) => !c.locked).map((c) => c.index) : []);
@@ -1194,7 +1287,7 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
       push();
     },
     async selectRange(text) {
-      if (loading || running) {
+      if (loading) {
         throw reject('errors.busy');
       }
       const matched: number[] = [];
@@ -1221,14 +1314,14 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
       return matched.length;
     },
     async setOptions(next) {
-      if (loading || running) {
+      if (loading) {
         throw reject('errors.busy');
       }
       Object.assign(options, next);
       push();
     },
     async setVolumes(text) {
-      if (loading || running) {
+      if (loading) {
         throw reject('errors.busy');
       }
       try {
@@ -1240,7 +1333,7 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
       push();
     },
     async chooseFolder() {
-      if (loading || running) {
+      if (loading) {
         throw reject('errors.busy');
       }
       const picked = window.prompt('Output folder (mock dialog)', options.outputDir) ?? '';
@@ -1250,8 +1343,9 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
       }
       return picked;
     },
-    async openFolder() {
-      pushLog('info', `would open ${options.outputDir} (mock)`);
+    async openFolder(id) {
+      const g = runs.find((r) => r.id === id);
+      pushLog('info', `would open ${g?.summary ? g.dir : options.outputDir} (mock)`);
     },
     openURL(url) {
       window.open(url, '_blank', 'noopener');
@@ -1260,7 +1354,7 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
       return 'https://example.com/manga/one-piece';
     },
     async start() {
-      if (loading || running) {
+      if (loading) {
         throw reject('errors.busy');
       }
       if (!loaded) {
@@ -1272,6 +1366,10 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
       const picked = chapters.filter((c) => selected.has(c.index));
       if (picked.length === 0) {
         throw reject('errors.selectOne');
+      }
+      // one series downloads once at a time, as the backend refuses
+      if (runs.some((g) => g.running && g.url === url)) {
+        throw reject('errors.seriesBusy');
       }
       if (
         options.packAs === 'volumes' &&
@@ -1314,12 +1412,10 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
       push();
     },
     async cancel() {
-      if (!running || cancelling) {
-        return;
-      }
-      cancelling = true;
-      pushLog('info', msgOf('log.cancelling'));
-      push();
+      cancelRuns(() => true);
+    },
+    async cancelGroup(id) {
+      cancelRuns((g) => g.id === id);
     },
 
     onState: (cb) => stateBus.subscribe(cb),

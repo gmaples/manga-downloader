@@ -1,6 +1,5 @@
 {
   "locked": {
-    "running": "Options are locked while a download runs.",
     "loading": "Options are locked while the series loads."
   },
   "save": {

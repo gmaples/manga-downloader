@@ -114,7 +114,7 @@ func TestLoadSiteVolumesWithoutRanges(t *testing.T) {
 	if err := c.Start(); err != nil {
 		t.Fatal(err)
 	}
-	if r := c.Run(); !r.Volumes || r.Rows != 2 {
+	if r := runOf(c); !r.Volumes || r.Rows != 2 {
 		t.Errorf("run = %+v, want 2 volume rows", r)
 	}
 	if s := waitFinished(t, c); s.Volumes != 2 || s.Saved != 4 {
@@ -140,7 +140,7 @@ func TestDownloadVolumes(t *testing.T) {
 	if err := c.Start(); err != nil {
 		t.Fatal(err)
 	}
-	if r := c.Run(); !r.Volumes || r.Rows != 3 || r.Chapters != 5 {
+	if r := runOf(c); !r.Volumes || r.Rows != 3 || r.Chapters != 5 {
 		t.Errorf("run = %+v, want volumes over 5 chapters in 3 rows", r)
 	}
 	s := waitFinished(t, c)
@@ -149,7 +149,7 @@ func TestDownloadVolumes(t *testing.T) {
 		t.Fatalf("summary = %+v", s)
 	}
 	var titles []string
-	for _, j := range c.Jobs() {
+	for _, j := range jobsOf(c) {
 		titles = append(titles, j.Title)
 		if j.State != JobDone || j.Done != j.Total {
 			t.Errorf("job %q = %+v, want done", j.Title, j)
@@ -159,7 +159,7 @@ func TestDownloadVolumes(t *testing.T) {
 	if !reflect.DeepEqual(titles, want) {
 		t.Errorf("jobs %q, want %q", titles, want)
 	}
-	if j := c.Jobs()[0]; !j.Volume || j.Total != volumeScale {
+	if j := jobsOf(c)[0]; !j.Volume || j.Total != volumeScale {
 		t.Errorf("volume job = %+v, want a volume row out of volumeScale", j)
 	}
 	// the test template is a custom one, so it names the volumes too
@@ -193,7 +193,7 @@ func TestDownloadVolumesWithFailingChapter(t *testing.T) {
 	if s.Volumes != 1 || s.Saved != 1 {
 		t.Errorf("summary = %+v, want 1 volume of 1 chapter", s)
 	}
-	jobs := c.Jobs()
+	jobs := jobsOf(c)
 	if len(jobs) != 2 || jobs[0].State != JobDone || jobs[1].State != JobFailed {
 		t.Errorf("jobs = %+v, want volume 1 done and volume 2 failed", jobs)
 	}
@@ -257,13 +257,13 @@ func TestVolumeProgressNeverGoesBack(t *testing.T) {
 	c.notify = func() {
 		mu.Lock()
 		defer mu.Unlock()
-		rows := c.Run().Rows
+		rows := runOf(c).Rows
 		if rows == 0 {
 			return
 		}
 		snapshots++
 		sum := 0.0
-		for _, j := range c.Jobs() {
+		for _, j := range jobsOf(c) {
 			f := jobFraction(j)
 			if f < rowLast[j.Title] {
 				t.Errorf("row %q went back from %.3f to %.3f", j.Title, rowLast[j.Title], f)
@@ -320,7 +320,7 @@ func TestDownloadPartsRows(t *testing.T) {
 	if err := c.Start(); err != nil {
 		t.Fatal(err)
 	}
-	if r := c.Run(); !r.Parts || r.Rows != 3 || r.Chapters != 4 {
+	if r := runOf(c); !r.Parts || r.Rows != 3 || r.Chapters != 4 {
 		t.Errorf("run = %+v, want a parts run of 4 chapters in 3 rows", r)
 	}
 	waitFinished(t, c)
@@ -328,17 +328,17 @@ func TestDownloadPartsRows(t *testing.T) {
 
 // a chapter's merged parts are named as the chapter, not as a volume
 func TestVolumeTitleParts(t *testing.T) {
-	c := NewController(&grabber.Settings{}, nil)
+	g := newGroup()
 	v := &core.Volume{Number: 2, Chapters: grabber.Filterables{
 		&grabber.Chapter{Number: 2, Title: "Chapter 2 Part 1"},
 		&grabber.Chapter{Number: 2, Title: "Chapter 2 Part 2"},
 	}}
-	if got := c.volumeTitle(v).Text; got != "Vol. 02 · chapter 2" {
+	if got := g.volumeTitle(v).Text; got != "Vol. 02 · chapter 2" {
 		t.Errorf("volume title = %q", got)
 	}
-	c.runinfo.Parts = true
+	g.runinfo.Parts = true
 	v.Parts = true
-	if got := c.volumeTitle(v).Text; got != "Chapter 2 · 2 parts" {
+	if got := g.volumeTitle(v).Text; got != "Chapter 2 · 2 parts" {
 		t.Errorf("parts title = %q", got)
 	}
 	if got := v.Label(); got != "Chapter 2" {

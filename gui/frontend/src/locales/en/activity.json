@@ -16,5 +16,6 @@
   "queued_one": "{{count}} more chapter waiting",
   "queued_other": "{{count}} more chapters waiting",
   "progressOf": "Progress of {{title}}{{tags}}",
-  "progressBundle": "Progress of the bundle"
+  "progressBundle": "Progress of the bundle",
+  "cancelGroup": "Cancel {{title}}"
 }

@@ -1,9 +1,18 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createT, say, type Vars } from './i18n';
 import { createMockApi, mockSetupFrom, scenarioFrom } from './mock';
-import type { State } from './types';
+import type { Group, State } from './types';
 
 const en = createT('en');
+
+/** The newest group of state: its rows and its run */
+const newest = (state: State): Group => {
+  const g = state.groups.at(-1);
+  if (g === undefined) throw new Error('no group');
+  return g;
+};
+const jobsOf = (state: State) => state.groups.at(-1)?.jobs ?? [];
+const runOf = (state: State) => newest(state).run;
 
 /** A rejection as the mock gives it: the message's JSON, the way the window's backend sends it */
 const rejected = (key: string, args?: Vars) =>
@@ -65,15 +74,42 @@ describe('createMockApi', () => {
     expect(await api.selection()).toEqual([2, 4]);
   });
 
-  it('refuses to change the selection, pick a folder or start while a download runs', async () => {
+  it('lets the selection change while a download runs, and refuses the same series twice', async () => {
     const api = createMockApi({ scenario: 'running', freeze: true });
-    const busy = rejected('errors.busy');
-    await expect(api.setSelected(0, false)).rejects.toBe(busy);
-    await expect(api.setSelectedMany([0], false)).rejects.toBe(busy);
-    await expect(api.setAll(false)).rejects.toBe(busy);
-    await expect(api.selectRange('1')).rejects.toBe(busy);
-    await expect(api.chooseFolder('Choose the output folder')).rejects.toBe(busy);
-    await expect(api.start()).rejects.toBe(busy);
+    await api.setSelected(0, false);
+    await api.setAll(true);
+    expect((await api.state()).selectedCount).toBeGreaterThan(0);
+    await expect(api.start()).rejects.toBe(rejected('errors.seriesBusy'));
+    expect((await api.state()).groups).toHaveLength(1);
+  });
+
+  it('starts a second series beside the running one, and cancels each on its own', async () => {
+    const api = createMockApi({ scenario: 'running', freeze: true });
+    await api.load('https://example.com/manga/another');
+    await api.setAll(true);
+    await api.start();
+    let state = await api.state();
+    expect(state.groups.map((g) => g.running)).toEqual([true, true]);
+    expect(state.groups[0].id).not.toBe(state.groups[1].id);
+
+    await api.cancelGroup(state.groups[0].id);
+    state = await api.state();
+    expect(state.groups.map((g) => g.cancelling)).toEqual([true, false]);
+    expect(state.cancelling).toBe(false);
+    await api.cancel();
+    expect((await api.state()).cancelling).toBe(true);
+  });
+
+  it('shows a finished group before the running one in the two-groups scenario', async () => {
+    const state = await createMockApi({ scenario: 'two-groups', freeze: true }).state();
+    expect(state.groups.map((g) => [g.title, g.running])).toEqual([
+      ['Vinland Saga', false],
+      ['One Piece', true],
+    ]);
+    expect(state.groups[0].summary).not.toBeNull();
+    // a group still runs, so there's no last summary yet
+    expect(state.summary).toBeNull();
+    expect(state.running).toBe(true);
   });
 
   it('refuses to start while a series loads', async () => {
@@ -83,9 +119,9 @@ describe('createMockApi', () => {
 
   it('keeps the bundle flag a run started with', async () => {
     const api = createMockApi('done');
-    expect((await api.state()).run.bundle).toBe(false);
+    expect(runOf(await api.state()).bundle).toBe(false);
     await api.setOptions({ ...(await api.state()).options, packAs: 'bundle' });
-    expect((await api.state()).run.bundle).toBe(false);
+    expect(runOf(await api.state()).bundle).toBe(false);
   });
 
   it('reports the loaded language and scanlator, apart from the options', async () => {
@@ -110,64 +146,64 @@ describe('createMockApi', () => {
     const api = createMockApi({ scenario: 'running', freeze: true, fail: true });
     const state = await api.state();
     expect(state.running).toBe(true);
-    const states = new Set(state.jobs.map((j) => j.state));
+    const states = new Set(jobsOf(state).map((j) => j.state));
     expect(states.has('done')).toBe(true);
     expect(states.has('failed')).toBe(true);
     // jobs only exist for started chapters, as in the backend
-    expect(state.jobs.length).toBeLessThan(state.run.chapters);
+    expect(jobsOf(state).length).toBeLessThan(runOf(state).chapters);
   });
 
   it('has no failures mid-run without the fail flag', async () => {
     const api = createMockApi({ scenario: 'running', freeze: true, fail: false });
     const state = await api.state();
     expect(state.running).toBe(true);
-    expect(state.jobs.every((j) => j.state !== 'failed')).toBe(true);
+    expect(jobsOf(state).every((j) => j.state !== 'failed')).toBe(true);
   });
 
   it('skips the sixth chapter with skip, and counts it in the summary', async () => {
     const state = await createMockApi({ scenario: 'done', skip: true }).state();
     expect(state.summary!.skipped).toBe(1);
     expect(state.summary!.failures).toHaveLength(0);
-    const skipped = state.jobs.filter((j) => j.state === 'skipped');
+    const skipped = jobsOf(state).filter((j) => j.state === 'skipped');
     expect(skipped).toHaveLength(1);
     expect(skipped[0].number).toBe(603); // the sixth chapter run, 598 being the first
     expect(skipped[0].reason).not.toBe('');
     // the chapter that came out skipped is not saved
-    expect(state.summary!.saved).toBe(state.run.chapters - 1);
+    expect(state.summary!.saved).toBe(runOf(state).chapters - 1);
   });
 
   it('leaves two chapters out as already in the folder with exists, counted apart from skipped', async () => {
     const state = await createMockApi({ scenario: 'done', exists: true }).state();
-    const existing = state.jobs.filter((j) => j.reasonMsg?.key === 'job.reason.exists');
+    const existing = jobsOf(state).filter((j) => j.reasonMsg?.key === 'job.reason.exists');
     expect(existing).toHaveLength(2);
     expect(existing.every((j) => j.state === 'skipped')).toBe(true);
     expect(existing[0].reason).toMatch(/\.cbz already exists$/);
     expect(state.summary!.existing).toBe(2);
     expect(state.summary!.skipped).toBe(0);
     // the chapters left out are not saved, the rest are
-    expect(state.summary!.saved).toBe(state.run.chapters - 2);
+    expect(state.summary!.saved).toBe(runOf(state).chapters - 2);
   });
 
   it('starts a running download with the first two chapters already in the folder, the rest in progress', async () => {
     const state = await createMockApi({ scenario: 'running', freeze: true, exists: true }).state();
-    const existing = state.jobs.filter((j) => j.reasonMsg?.key === 'job.reason.exists');
+    const existing = jobsOf(state).filter((j) => j.reasonMsg?.key === 'job.reason.exists');
     expect(existing).toHaveLength(2);
-    expect(state.jobs.slice(0, 2).every((j) => j.state === 'skipped')).toBe(true);
+    expect(jobsOf(state).slice(0, 2).every((j) => j.state === 'skipped')).toBe(true);
     // the skipped rows are the top two, and nothing after them is left out
-    expect(state.jobs.slice(2).some((j) => j.state === 'skipped')).toBe(false);
-    expect(state.jobs.slice(2).some((j) => j.state === 'downloading')).toBe(true);
+    expect(jobsOf(state).slice(2).some((j) => j.state === 'skipped')).toBe(false);
+    expect(jobsOf(state).slice(2).some((j) => j.state === 'downloading')).toBe(true);
     expect(state.running).toBe(true);
   });
 
   it('has no chapter already in the folder without the exists flag', async () => {
     const state = await createMockApi({ scenario: 'done' }).state();
     expect(state.summary!.existing).toBe(0);
-    expect(state.jobs.some((j) => j.reasonMsg?.key === 'job.reason.exists')).toBe(false);
+    expect(jobsOf(state).some((j) => j.reasonMsg?.key === 'job.reason.exists')).toBe(false);
   });
 
   it('has no skipped chapter without the skip flag', async () => {
     const state = await createMockApi('done').state();
-    expect(state.jobs.some((j) => j.state === 'skipped')).toBe(false);
+    expect(jobsOf(state).some((j) => j.state === 'skipped')).toBe(false);
   });
 
   it('names a real chapter of the run in the done warning', async () => {
@@ -177,9 +213,9 @@ describe('createMockApi', () => {
 
   it('runs a bundle as a single job', async () => {
     const state = await createMockApi({ scenario: 'bundle', freeze: true }).state();
-    expect(state.run.bundle).toBe(true);
-    expect(state.jobs).toHaveLength(1);
-    expect(state.jobs[0].status).not.toBe('');
+    expect(runOf(state).bundle).toBe(true);
+    expect(jobsOf(state)).toHaveLength(1);
+    expect(jobsOf(state)[0].status).not.toBe('');
   });
 
   it('names the bundle after the format it packs as', async () => {
@@ -222,14 +258,18 @@ describe('createMockApi', () => {
     expect(await api.log()).toEqual(log);
   });
 
-  it("drops the last run's results on clear", async () => {
+  it("drops the ended groups on clear, and keeps the running ones", async () => {
     const api = createMockApi('done');
     expect((await api.state()).summary).not.toBeNull();
 
     await api.clear();
     const state = await api.state();
     expect(state.summary).toBeNull();
-    expect(state.jobs).toEqual([]);
+    expect(state.groups).toEqual([]);
+
+    const two = createMockApi({ scenario: 'two-groups', freeze: true });
+    await two.clear();
+    expect((await two.state()).groups.map((g) => g.title)).toEqual(['One Piece']);
   });
 
   it('refuses to clear while a series loads', async () => {
@@ -429,16 +469,16 @@ describe('mock volumes', () => {
     await expect(api.start()).rejects.toMatch(/give the volumes as chapter ranges/);
     await api.setVolumes('1-5');
     await api.start();
-    expect((await api.state()).run.volumes).toBe(true);
+    expect(runOf(await api.state()).volumes).toBe(true);
   });
 
   it('runs one row per volume, plus the chapters outside them', async () => {
     const state = await createMockApi({ scenario: 'volumes-running', freeze: true }).state();
     expect(state.options.packAs).toBe('volumes');
     // First 32 chapters (ch 598–629) span volumes 61 (6), 62 (11), 63 (12) and 64 (3)
-    expect(state.run).toMatchObject({ volumes: true, chapters: 32, rows: 4 });
-    expect(state.jobs.every((j) => j.volume)).toBe(true);
-    expect(state.jobs.map((j) => j.title)).toEqual([
+    expect(runOf(state)).toMatchObject({ volumes: true, chapters: 32, rows: 4 });
+    expect(jobsOf(state).every((j) => j.volume)).toBe(true);
+    expect(jobsOf(state).map((j) => j.title)).toEqual([
       'Vol. 61 · chapters 598–603',
       'Vol. 62 · chapters 604–614',
       'Vol. 63 · chapters 615–626',
@@ -462,8 +502,8 @@ describe('mock volumes', () => {
       expect(state.selectedCount).toBe(8);
       await api.start();
       const running = await api.state();
-      expect(running.run).toMatchObject({ volumes: true, chapters: 8, rows: 5 });
-      expect(running.jobs.map((j) => j.title)).toEqual([
+      expect(runOf(running)).toMatchObject({ volumes: true, chapters: 8, rows: 5 });
+      expect(jobsOf(running).map((j) => j.title)).toEqual([
         'Chapter 2 · 2 parts',
         'Chapter 3 · 2 parts',
         'Chapter 4 · 2 parts',
@@ -710,13 +750,13 @@ describe('one-click update', () => {
 describe('mock fetching rows', () => {
   it('starts each chapter fetching its pages, then downloading them', async () => {
     const api = createMockApi({ scenario: 'running', fetching: true, freeze: true });
-    const rows = (await api.state()).jobs;
+    const rows = jobsOf(await api.state());
     expect(rows.some((j) => j.state === 'fetching' && j.total === 0 && j.status !== '')).toBe(true);
     expect(rows.some((j) => j.state === 'downloading')).toBe(true);
   });
 
   it('keeps the other running scenarios free of fetching rows', async () => {
-    const rows = (await createMockApi({ scenario: 'running', freeze: true }).state()).jobs;
+    const rows = jobsOf(await createMockApi({ scenario: 'running', freeze: true }).state());
     expect(rows.some((j) => j.state === 'fetching')).toBe(false);
   });
 });
@@ -827,7 +867,7 @@ describe('mock messages', () => {
   it('sends the rows of a running volume download with their title and phase as messages', async () => {
     const api = createMockApi({ scenario: 'volumes-running', freeze: true });
     const state = await api.state();
-    const row = state.jobs[0];
+    const row = jobsOf(state)[0];
     expect(row.volume).toBe(true);
     expect(row.titleMsg?.key).toBe('job.title.volume');
     expect(row.titleMsg?.text).toBe(row.title);
@@ -838,8 +878,8 @@ describe('mock messages', () => {
 
   it('sends the bundle row and its phase as messages', async () => {
     const state = await createMockApi({ scenario: 'bundle', freeze: true }).state();
-    const bundle = state.jobs[0];
-    expect(bundle.titleMsg).toEqual({ key: 'job.title.bundle', args: { range: `1-${state.run.chapters}` }, text: bundle.title });
+    const bundle = jobsOf(state)[0];
+    expect(bundle.titleMsg).toEqual({ key: 'job.title.bundle', args: { range: `1-${runOf(state).chapters}` }, text: bundle.title });
     expect(bundle.statusMsg?.text).toBe(bundle.status);
   });
 });

@@ -113,6 +113,19 @@ export interface FilterChoice {
   selected: string;
 }
 
+/** One press of Download: its own rows, cancel and summary */
+export interface Group {
+  id: number;
+  /** The series' title */
+  title: string;
+  running: boolean;
+  cancelling: boolean;
+  run: Run;
+  jobs: Job[];
+  /** null while it runs */
+  summary: Summary | null;
+}
+
 /** The window's state, without the chapter list, selection and log */
 export interface State {
   url: string;
@@ -133,10 +146,13 @@ export interface State {
   /** The scanlator the list was fetched with */
   loadedScanlator: string;
   selectedCount: number;
+  /** Any group is downloading */
   running: boolean;
+  /** Every running group has been asked to stop */
   cancelling: boolean;
-  run: Run;
-  jobs: Job[];
+  /** The downloads started, running or finished, in the order they started */
+  groups: Group[];
+  /** The outcome of the group that ended last; null while any group runs or before one ended */
   summary: Summary | null;
   options: Options;
   volumes: Volumes;

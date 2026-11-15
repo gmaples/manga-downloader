@@ -35,9 +35,11 @@
     "chapters": "{{done}} de {{total}} capítols acabats",
     "files": "{{done}} de {{total}} fitxers acabats",
     "bundle": "Creant el paquet",
+    "groups": "{{count}} descàrregues · {{done}} de {{total}} acabats",
     "finishing": "Acabant els capítols en curs",
     "cancelHint": "Els capítols que ja es descarreguen acabaran; no en començarà cap de nou."
   },
   "cancelling": "Cancel·lant…",
+  "cancelAll": "Cancel·la-ho tot",
   "failed": "No es pot descarregar: {{error}}"
 }

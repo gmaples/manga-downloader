@@ -117,7 +117,7 @@ function FailedState({ state, onRetry }: { state: State; onRetry: () => void }) 
       <p className="muted">
         <T k="chapters.failed.hint" />
       </p>
-      <button type="button" className="btn" disabled={state.loading || state.running} onClick={onRetry}>
+      <button type="button" className="btn" disabled={state.loading} onClick={onRetry}>
         <RefreshIcon /> {t('chapters.failed.retry')}
       </button>
     </section>

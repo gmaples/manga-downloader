@@ -161,7 +161,8 @@ export function App({ api, initial }: { api: Api; initial?: State }) {
     );
   }
 
-  const busy = state.loading || state.running;
+  // the list is the next group's to pick from while others download, so only a load locks it
+  const busy = state.loading;
 
   const load = (target: string) => {
     setLoadRefusal('');
@@ -187,8 +188,11 @@ export function App({ api, initial }: { api: Api; initial?: State }) {
       setOptionError(errorMessage(e, t));
     });
   };
-  const counts = tally(state.jobs);
-  const failed = state.summary && !state.running ? state.summary.failures.length : counts.failed;
+  // the failures of every group: an ended one's summary, else its failed rows so far
+  const failed = state.groups.reduce(
+    (n, g) => n + (g.summary ? g.summary.failures.length : tally(g.jobs).failed),
+    0,
+  );
 
   return (
     <div ref={frame} className={`app${view === 'simple' ? ' simple' : ''}${revealing ? ' revealing' : ''}`}>
@@ -274,8 +278,11 @@ export function App({ api, initial }: { api: Api; initial?: State }) {
             >
               <ActivityPanel
                 state={state}
-                onOpenFolder={() => {
-                  api.openFolder().catch((e) => setActionError(errorMessage(e, t)));
+                onOpenFolder={(id) => {
+                  api.openFolder(id).catch((e) => setActionError(errorMessage(e, t)));
+                }}
+                onCancelGroup={(id) => {
+                  api.cancelGroup(id).catch((e) => setActionError(errorMessage(e, t)));
                 }}
               />
             </div>

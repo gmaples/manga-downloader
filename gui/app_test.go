@@ -102,7 +102,7 @@ func waitUntil(t *testing.T, what string, cond func() bool) {
 
 func TestStateReflectsTheController(t *testing.T) {
 	a, _, _ := newTestApp(t, 5)
-	if st := a.State(); st.Loaded || st.Running || st.Summary != nil || st.Version != "v1.2.3" {
+	if st := a.State(); st.Loaded || st.Running || len(st.Groups) != 0 || st.Version != "v1.2.3" {
 		t.Fatalf("fresh state %+v", st)
 	}
 

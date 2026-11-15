@@ -35,9 +35,11 @@
     "chapters": "{{done}} of {{total}} chapters done",
     "files": "{{done}} of {{total}} files done",
     "bundle": "Building the bundle",
+    "groups": "{{count}} downloads · {{done}} of {{total}} done",
     "finishing": "Finishing the current chapters",
     "cancelHint": "Chapters already downloading will finish; no new ones start."
   },
   "cancelling": "Cancelling…",
+  "cancelAll": "Cancel all",
   "failed": "Can't download: {{error}}"
 }

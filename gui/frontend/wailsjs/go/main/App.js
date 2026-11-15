@@ -6,6 +6,10 @@ export function Cancel() {
   return window['go']['main']['App']['Cancel']();
 }
 
+export function CancelGroup(arg1) {
+  return window['go']['main']['App']['CancelGroup'](arg1);
+}
+
 export function Chapters() {
   return window['go']['main']['App']['Chapters']();
 }
@@ -30,8 +34,8 @@ export function Log() {
   return window['go']['main']['App']['Log']();
 }
 
-export function OpenFolder() {
-  return window['go']['main']['App']['OpenFolder']();
+export function OpenFolder(arg1) {
+  return window['go']['main']['App']['OpenFolder'](arg1);
 }
 
 export function Options() {

@@ -35,9 +35,11 @@
     "chapters": "全{{total}}話中{{done}}話が完了",
     "files": "全{{total}}ファイル中{{done}}ファイルが完了",
     "bundle": "1ファイルにまとめています",
+    "groups": "{{count}}件のダウンロード · {{total}}件中{{done}}件完了",
     "finishing": "ダウンロード中の話を完了させています",
     "cancelHint": "ダウンロード中の話は完了させ、新しい話は開始しません。"
   },
   "cancelling": "キャンセル中…",
+  "cancelAll": "すべてキャンセル",
   "failed": "ダウンロードできません: {{error}}"
 }

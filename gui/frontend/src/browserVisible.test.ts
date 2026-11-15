@@ -46,7 +46,9 @@ describe('browserSwitchOf', () => {
     expect(browserSwitchOf(state, en)).toEqual({ checked: false, disabled: false, hint: BROWSER_HINT });
     const on = { ...state, options: { ...state.options, browserVisible: true } };
     expect(browserSwitchOf(on, en).checked).toBe(true);
-    expect(browserSwitchOf({ ...state, running: true }, en).disabled).toBe(true);
+    expect(browserSwitchOf({ ...state, loading: true }, en).disabled).toBe(true);
+    // a running group keeps the options it started with, so the next one's stay free
+    expect(browserSwitchOf({ ...state, running: true }, en).disabled).toBe(false);
   });
 
   it('shows on and locked, with the hint, when the site needs the window', async () => {

@@ -16,5 +16,6 @@
   "queued_one": "{{count}} capítol més en espera",
   "queued_other": "{{count}} capítols més en espera",
   "progressOf": "Progrés de {{title}}{{tags}}",
-  "progressBundle": "Progrés del paquet"
+  "progressBundle": "Progrés del paquet",
+  "cancelGroup": "Cancel·la {{title}}"
 }

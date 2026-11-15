@@ -1,6 +1,7 @@
 {
   "enterURL": "introduce primero la URL de una serie",
-  "busy": "se está cargando una serie o hay una descarga en curso",
+  "busy": "se está cargando una serie",
+  "seriesBusy": "esta serie ya se está descargando: espera a que termine",
   "parserFailed": "el analizador del sitio ha fallado: {{reason}}",
   "unknownLanguage": "idioma desconocido \"{{language}}\"",
   "folderMissing": "la carpeta {{path}} no existe",

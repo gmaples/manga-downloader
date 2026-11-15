@@ -140,7 +140,7 @@ func TestUIErrKeysAndTexts(t *testing.T) {
 		key  string
 		text string
 	}{
-		{errBusy, "errors.busy", "a series is loading or a download is running"},
+		{errBusy, "errors.busy", "a series is loading"},
 		{uiErr("errors.folderMissing", map[string]any{"path": "/x"}, nil), "errors.folderMissing", "the folder /x doesn't exist"},
 		{uiErr("errors.chapterMissing", map[string]any{"index": 3}, nil), "errors.chapterMissing", "chapter 3 is not in the list"},
 		{uiErr("errors.updateDownload", map[string]any{"reason": "boom"}, base), "errors.updateDownload", "couldn't download the update: boom"},

@@ -18,7 +18,7 @@ export interface Api {
 
   // Actions. A rejected promise carries the reason as a string (or Error).
   load(url: string): Promise<void>;
-  /** Forgets the loaded series (URL, chapters, selection, load error); refused while one loads or a download runs */
+  /** Forgets the loaded series (URL, chapters, selection, load error) and the groups that ended; refused while one loads */
   clear(): Promise<void>;
   setSelected(index: number, on: boolean): Promise<void>;
   /** Selects or deselects every index at once; rejects, changing nothing, if one is out of range */
@@ -33,13 +33,18 @@ export interface Api {
   setVolumes(text: string): Promise<void>;
   /** Asks for the output folder with the picker titled title; "" when cancelled */
   chooseFolder(title: string): Promise<string>;
-  openFolder(): Promise<void>;
+  /** Opens the folder group id saved into (the next run's, when it hasn't ended) */
+  openFolder(id: number): Promise<void>;
   /** Opens the URL in the system's browser, never in the window */
   openURL(url: string): void;
   /** The clipboard's text, for the Paste button; rejects when the runtime isn't there */
   readClipboard(): Promise<string>;
+  /** Starts a group with the selected chapters, beside any running */
   start(): Promise<void>;
+  /** Cancels every running group */
   cancel(): Promise<void>;
+  /** Cancels group id */
+  cancelGroup(id: number): Promise<void>;
   /** Downloads and runs the installer, then quits; rejects with the reason (also logged) when it can't */
   update(): Promise<void>;
   /** Brings the browser window to the front again */
@@ -110,12 +115,13 @@ export function createWailsApi(): Api {
       app.SetOptionsAndLoad(options as unknown as Parameters<typeof app.SetOptionsAndLoad>[0], url),
     setVolumes: (text) => app.SetVolumes(text),
     chooseFolder: (title) => app.ChooseFolder(title),
-    openFolder: () => app.OpenFolder(),
+    openFolder: (id) => app.OpenFolder(id),
     openURL: (url) => BrowserOpenURL(url),
     // async, so a missing runtime rejects rather than throwing into the click
     readClipboard: async () => ClipboardGetText(),
     start: () => app.Start(),
     cancel: () => app.Cancel(),
+    cancelGroup: (id) => app.CancelGroup(id),
     update: () => app.Update(),
     showBrowser: () => app.ShowBrowser(),
     dismissBrowserAlert: () => app.DismissBrowserAlert(),

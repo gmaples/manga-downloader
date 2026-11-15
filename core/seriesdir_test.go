@@ -129,6 +129,21 @@ func TestWithOutputDirCopiesSettings(t *testing.T) {
 	}
 }
 
+// WithSettings reads the settings it's given and leaves the original alone
+func TestWithSettings(t *testing.T) {
+	first := &grabber.Settings{OutputDir: "root", Bundle: true}
+	series := &Series{Title: "T", settings: first}
+
+	second := series.WithSettings(&grabber.Settings{OutputDir: "other"})
+
+	if series.settings != first || series.OutputDir() != "root" {
+		t.Errorf("original changed: %+v", series.settings)
+	}
+	if second.OutputDir() != "other" || second.settings.Bundle || second.Title != "T" {
+		t.Errorf("copy = %+v %q", second.settings, second.Title)
+	}
+}
+
 // cbzIn lists the archives in dir by reading it, as filepath.Glob would read
 // the "[en]" of a series folder as a character class
 func cbzIn(t *testing.T, dir string) []string {

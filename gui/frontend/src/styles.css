@@ -1604,6 +1604,47 @@ fieldset:disabled .check {
   min-height: 0;
 }
 
+.activity.multi {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* one press of Download; alone it fills the panel, as a single run always has */
+.run-group {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.activity.multi .run-group {
+  flex: none;
+  border-bottom: 1px solid var(--border);
+}
+
+.activity.multi .jobs-section {
+  flex: none;
+  min-height: 0;
+  padding-bottom: 8px;
+}
+
+.run-group-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px 0;
+}
+
+.run-group-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 13px;
+  font-weight: 650;
+}
+
 .empty-activity {
   justify-content: center;
   gap: 6px;

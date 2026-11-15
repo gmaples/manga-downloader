@@ -212,15 +212,20 @@ type State struct {
 	Stale              bool `json:"stale"`
 	// LoadedLanguage and LoadedScanlator are the filters the list was fetched
 	// with, so the window can tell which of the two went stale
-	LoadedLanguage  string      `json:"loadedLanguage"`
-	LoadedScanlator string      `json:"loadedScanlator"`
-	SelectedCount   int         `json:"selectedCount"`
-	Running         bool        `json:"running"`
-	Cancelling      bool        `json:"cancelling"`
-	Run             RunDTO      `json:"run"`
-	Jobs            []JobDTO    `json:"jobs"`
-	Summary         *SummaryDTO `json:"summary"`
-	Options         OptionsDTO  `json:"options"`
+	LoadedLanguage  string `json:"loadedLanguage"`
+	LoadedScanlator string `json:"loadedScanlator"`
+	SelectedCount   int    `json:"selectedCount"`
+	// Running is set while any group downloads, and Cancelling once every
+	// running group has been asked to stop
+	Running    bool `json:"running"`
+	Cancelling bool `json:"cancelling"`
+	// Groups are the downloads started, running or finished, in the order
+	// they started
+	Groups []GroupDTO `json:"groups"`
+	// Summary is the outcome of the group that ended last, null while any
+	// group runs or before one ended
+	Summary *SummaryDTO `json:"summary"`
+	Options OptionsDTO  `json:"options"`
 	// Prefs are the app-only preferences, which aren't options (see PrefsDTO)
 	Prefs PrefsDTO `json:"prefs"`
 	// Volumes is the Volumes box, used when the options pack as volumes
@@ -276,7 +281,19 @@ type FilterDTO struct {
 	Selected string   `json:"selected"`
 }
 
-// RunDTO describes the run in progress, or the last one
+// GroupDTO is one download group: one press of Download, with its own rows,
+// cancel and summary (null while it runs)
+type GroupDTO struct {
+	ID         int         `json:"id"`
+	Title      string      `json:"title"`
+	Running    bool        `json:"running"`
+	Cancelling bool        `json:"cancelling"`
+	Run        RunDTO      `json:"run"`
+	Jobs       []JobDTO    `json:"jobs"`
+	Summary    *SummaryDTO `json:"summary"`
+}
+
+// RunDTO describes the run of a group
 type RunDTO struct {
 	Chapters int  `json:"chapters"`
 	Bundle   bool `json:"bundle"`
@@ -382,9 +399,8 @@ func (a *App) State() State {
 		SelectedCount:      c.SelectedCount(),
 		Running:            c.Running(),
 		Cancelling:         c.Cancelling(),
-		Run:                runDTO(c.Run()),
-		Jobs:               []JobDTO{},
-		Summary:            summaryDTO(c.Summary()),
+		Groups:             []GroupDTO{},
+		Summary:            summaryDTO(c.LastSummary()),
 		Options:            optionsOf(c.Settings()),
 		Destination:        c.Destination(),
 		Prefs:              c.Prefs(),
@@ -411,21 +427,8 @@ func (a *App) State() State {
 	if alert := c.BrowserAlert(); alert != nil {
 		st.BrowserAlert, st.BrowserAlertMsg = alert.Text, alert
 	}
-	for _, j := range c.Jobs() {
-		st.Jobs = append(st.Jobs, JobDTO{
-			Title:     j.Title,
-			TitleMsg:  j.TitleMsg,
-			Tags:      j.Tags,
-			Number:    j.Number,
-			Total:     j.Total,
-			Done:      j.Done,
-			State:     jobStateName(j.State),
-			Reason:    j.Reason,
-			ReasonMsg: j.ReasonMsg,
-			Status:    j.Status,
-			StatusMsg: j.StatusMsg,
-			Volume:    j.Volume,
-		})
+	for _, g := range c.Groups() {
+		st.Groups = append(st.Groups, groupDTO(g))
 	}
 
 	return st
@@ -540,7 +543,7 @@ func (a *App) finishLoad(url string) {
 }
 
 // SetSelected selects or deselects the chapter at index. It's refused while a
-// series loads or a download runs.
+// series loads.
 func (a *App) SetSelected(index int, on bool) error {
 	return a.ctrl.SetSelected(index, on)
 }
@@ -552,7 +555,7 @@ func (a *App) SetSelectedMany(indices []int, on bool) error {
 }
 
 // SetAll selects or deselects every chapter. It's refused while a series
-// loads or a download runs.
+// loads.
 func (a *App) SetAll(on bool) error {
 	return a.ctrl.SetAll(on)
 }
@@ -575,7 +578,7 @@ func (a *App) Options() OptionsDTO {
 }
 
 // SetOptions applies the options and saves them for the next run. It's
-// refused while a series loads or a download runs.
+// refused while a series loads.
 func (a *App) SetOptions(o OptionsDTO) error {
 	if err := a.ctrl.Configure(func(s *grabber.Settings) { applyOptions(s, o) }); err != nil {
 		return err
@@ -639,7 +642,7 @@ func (a *App) save() {
 // and starting at the current one. A picked folder becomes the output folder; "" means the
 // picker was cancelled.
 func (a *App) ChooseFolder(title string) (string, error) {
-	if a.ctrl.Loading() || a.ctrl.Running() {
+	if a.ctrl.Loading() {
 		return "", errBusy
 	}
 	current := optionsOf(a.ctrl.Settings()).OutputDir
@@ -671,12 +674,12 @@ func existingDir(dir string) string {
 	return ""
 }
 
-// OpenFolder opens the folder of the last run's output, or when no run has
-// finished, the folder the next run would save into if it's there already
-// (a series folder from an earlier session), else the output folder, in the
-// system's file manager
-func (a *App) OpenFolder() error {
-	dir := openFolderDir(optionsOf(a.ctrl.Settings()).OutputDir, a.ctrl.Destination(), a.ctrl.Summary())
+// OpenFolder opens the folder group id saved into, or when it hasn't finished
+// (or there's no such group), the folder the next run would save into if it's
+// there already (a series folder from an earlier session), else the output
+// folder, in the system's file manager
+func (a *App) OpenFolder(id int) error {
+	dir := openFolderDir(optionsOf(a.ctrl.Settings()).OutputDir, a.ctrl.Destination(), a.ctrl.GroupSummary(id))
 	abs, err := filepath.Abs(dir)
 	if err != nil {
 		return err
@@ -723,15 +726,21 @@ func openInFileManager(dir string) error {
 	return nil
 }
 
-// Start downloads the selected chapters in the background. Refusals (nothing
-// selected, invalid options, a run already going) are returned here.
+// Start downloads the selected chapters in the background, as a new group
+// beside any running. Refusals (nothing selected, invalid options, a series
+// loading) are returned here.
 func (a *App) Start() error {
 	return a.ctrl.Start()
 }
 
-// Cancel stops the run from starting new chapters
+// Cancel stops every running group from starting new chapters
 func (a *App) Cancel() {
 	a.ctrl.Cancel()
+}
+
+// CancelGroup stops group id from starting new chapters
+func (a *App) CancelGroup(id int) {
+	a.ctrl.CancelGroup(id)
 }
 
 // ShowBrowser brings the browser window to the front again
@@ -894,6 +903,36 @@ func filterDTO(f *Filter) *FilterDTO {
 	}
 
 	return &FilterDTO{Values: f.Values, All: f.All, Selected: f.Selected}
+}
+
+func groupDTO(g GroupState) GroupDTO {
+	out := GroupDTO{
+		ID:         g.ID,
+		Title:      g.Title,
+		Running:    g.Running,
+		Cancelling: g.Cancelling,
+		Run:        runDTO(g.Run),
+		Jobs:       []JobDTO{},
+		Summary:    summaryDTO(g.Summary),
+	}
+	for _, j := range g.Jobs {
+		out.Jobs = append(out.Jobs, JobDTO{
+			Title:     j.Title,
+			TitleMsg:  j.TitleMsg,
+			Tags:      j.Tags,
+			Number:    j.Number,
+			Total:     j.Total,
+			Done:      j.Done,
+			State:     jobStateName(j.State),
+			Reason:    j.Reason,
+			ReasonMsg: j.ReasonMsg,
+			Status:    j.Status,
+			StatusMsg: j.StatusMsg,
+			Volume:    j.Volume,
+		})
+	}
+
+	return out
 }
 
 func runDTO(r RunInfo) RunDTO {
