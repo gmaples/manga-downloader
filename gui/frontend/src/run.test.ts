@@ -143,6 +143,14 @@ describe('downloadBlocker', () => {
     expect(downloadBlocker({ ...s, options: volumes, volumes: { text: '', site: '', listed: 2 } }, t)).toBe('');
     expect(downloadBlocker({ ...s, volumes: { text: '', site: '', listed: 0 } }, t)).toBe('');
   });
+
+  it('refuses a selection already in the series run, or already started', async () => {
+    const s = await loadedState();
+    expect(downloadBlocker({ ...s, addTo: 1, fresh: 0 }, t)).toMatch(/already in this series' download/);
+    expect(downloadBlocker({ ...s, addTo: 1, fresh: 2 }, t)).toBe('');
+    expect(downloadBlocker({ ...s, unchanged: true }, t)).toMatch(/already started: change it/);
+    expect(downloadBlocker({ ...s, unchanged: false }, t)).toBe('');
+  });
 });
 
 describe('downloadLabel', () => {
@@ -158,6 +166,11 @@ describe('downloadLabel', () => {
     expect(downloadLabel({ ...s, selectedCount: 0 }, [], [], t)).toBe('Download');
     expect(downloadLabel({ ...s, selectedCount: 1 }, [], [], t)).toBe('Download 1 chapter');
     expect(downloadLabel({ ...s, selectedCount: 5 }, [], [], t)).toBe('Download 5 chapters');
+    // a running series counts only the chapters it doesn't have yet
+    expect(downloadLabel({ ...s, selectedCount: 5, addTo: 1, fresh: 2 }, [], [], t)).toBe('Add 2 chapters to the queue');
+    expect(downloadLabel({ ...s, selectedCount: 5, addTo: 1, fresh: 1 }, [], [], createT('es'))).toBe(
+      'Añadir 1 capítulo a la cola',
+    );
     expect(downloadLabel({ ...s, selectedCount: 5, options: { ...s.options, packAs: 'bundle' } }, [], [], t)).toBe(
       'Download 5 chapters as one file',
     );

@@ -397,6 +397,9 @@ export namespace main {
 	    loadedLanguage: string;
 	    loadedScanlator: string;
 	    selectedCount: number;
+	    addTo: number;
+	    fresh: number;
+	    unchanged: boolean;
 	    running: boolean;
 	    cancelling: boolean;
 	    groups: GroupDTO[];
@@ -435,6 +438,9 @@ export namespace main {
 	        this.loadedLanguage = source["loadedLanguage"];
 	        this.loadedScanlator = source["loadedScanlator"];
 	        this.selectedCount = source["selectedCount"];
+	        this.addTo = source["addTo"];
+	        this.fresh = source["fresh"];
+	        this.unchanged = source["unchanged"];
 	        this.running = source["running"];
 	        this.cancelling = source["cancelling"];
 	        this.groups = this.convertValues(source["groups"], GroupDTO);

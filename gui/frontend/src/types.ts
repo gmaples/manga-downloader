@@ -146,6 +146,14 @@ export interface State {
   /** The scanlator the list was fetched with */
   loadedScanlator: string;
   selectedCount: number;
+  /**
+   * The running group of the loaded series, 0 when none runs: Download then
+   * adds the fresh selected chapters (those not in its run yet) to it
+   */
+  addTo: number;
+  fresh: number;
+  /** Set, when no group of the series runs, while the selection is the one Download was last pressed with */
+  unchanged: boolean;
   /** Any group is downloading */
   running: boolean;
   /** Every running group has been asked to stop */

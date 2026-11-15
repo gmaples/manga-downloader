@@ -1,7 +1,7 @@
 {
   "enterURL": "enter the URL of a series first",
   "busy": "a series is loading",
-  "seriesBusy": "this series is already downloading: wait for it to finish",
+  "nothingNew": "the selected chapters are already in this series' download",
   "parserFailed": "the site's parser failed: {{reason}}",
   "unknownLanguage": "unknown language \"{{language}}\"",
   "folderMissing": "the folder {{path}} doesn't exist",

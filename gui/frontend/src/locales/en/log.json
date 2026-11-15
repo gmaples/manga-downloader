@@ -13,6 +13,8 @@
   "loaded_other": "Loaded {{title}}: {{count}} chapters",
   "downloading_one": "Downloading {{count}} chapter of {{title}}",
   "downloading_other": "Downloading {{count}} chapters of {{title}}",
+  "queued_one": "Added {{count}} chapter of {{title}} to its download",
+  "queued_other": "Added {{count}} chapters of {{title}} to its download",
   "downloadingUpdate": "Downloading the update {{version}}…",
   "saveFailed": "could not save the options: {{reason}}",
   "siteCheck": "site check: {{reason}}",

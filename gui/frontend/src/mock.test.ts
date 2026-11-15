@@ -74,13 +74,41 @@ describe('createMockApi', () => {
     expect(await api.selection()).toEqual([2, 4]);
   });
 
-  it('lets the selection change while a download runs, and refuses the same series twice', async () => {
+  it('adds the chapters a running series lacks to its run, not a second one', async () => {
     const api = createMockApi({ scenario: 'running', freeze: true });
-    await api.setSelected(0, false);
-    await api.setAll(true);
-    expect((await api.state()).selectedCount).toBeGreaterThan(0);
-    await expect(api.start()).rejects.toBe(rejected('errors.seriesBusy'));
-    expect((await api.state()).groups).toHaveLength(1);
+    // the scenario runs 12 of the 24 chapters selected
+    let state = await api.state();
+    const id = state.groups[0].id;
+    expect(state).toMatchObject({ addTo: id, fresh: 12, unchanged: false });
+    await api.start();
+    state = await api.state();
+    expect(state.groups).toHaveLength(1);
+    expect(state.groups[0].run.chapters).toBe(24);
+    expect(state).toMatchObject({ addTo: id, fresh: 0 });
+    await expect(api.start()).rejects.toBe(rejected('errors.nothingNew'));
+
+    await api.setSelected(30, true);
+    state = await api.state();
+    expect(state).toMatchObject({ addTo: id, fresh: 1 });
+    const before = state.groups[0].run.chapters;
+    await api.start();
+    state = await api.state();
+    expect(state.groups).toHaveLength(1);
+    expect(state.groups[0].run.chapters).toBe(before + 1);
+    expect(state.fresh).toBe(0);
+  });
+
+  it('greys out a selection already started once its run is over', async () => {
+    const api = createMockApi({ chapters: 4 });
+    await api.load('https://example.com/series/a');
+    await api.setSelectedMany([0, 1], true);
+    expect((await api.state()).unchanged).toBe(false);
+    await api.start();
+    await api.cancel();
+    await vi.waitFor(async () => expect((await api.state()).running).toBe(false), { timeout: 5000 });
+    expect((await api.state()).unchanged).toBe(true);
+    await api.setSelected(2, true);
+    expect((await api.state()).unchanged).toBe(false);
   });
 
   it('starts a second series beside the running one, and cancels each on its own', async () => {

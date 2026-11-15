@@ -4,11 +4,14 @@
     "notLoaded": "Load a series to pick its chapters.",
     "stale": "The filters changed: reload the series first.",
     "noChapters": "Select at least one chapter.",
-    "noVolumes": "The site lists no volumes: enter them as chapter ranges, e.g. {{example}}."
+    "noVolumes": "The site lists no volumes: enter them as chapter ranges, e.g. {{example}}.",
+    "allQueued": "The selected chapters are already in this series' download.",
+    "unchanged": "This selection was already started: change it to download again."
   },
   "label": {
     "download": "Download",
     "chapters": "Download {{chapters}}",
+    "add": "Add {{chapters}} to the queue",
     "bundle": "Download {{chapters}} as one file",
     "volumes": "Download {{volumes}} ({{chapters}})",
     "volumesAndChapters": "Download {{volumes}} and {{chapters}}",

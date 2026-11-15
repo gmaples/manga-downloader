@@ -103,6 +103,13 @@ export function downloadBlocker(state: State, t: T): string {
   if (state.selectedCount === 0) {
     return t('download.blocker.noChapters');
   }
+  // a running series takes only the chapters it doesn't have yet
+  if (state.addTo !== 0 && state.fresh === 0) {
+    return t('download.blocker.allQueued');
+  }
+  if (state.unchanged) {
+    return t('download.blocker.unchanged');
+  }
   if (state.options.packAs === 'volumes' && isSiteVolumes(state.volumes.text) && state.volumes.listed === 0) {
     return t('download.blocker.noVolumes', { example: '1-7/8-16' });
   }
@@ -112,7 +119,7 @@ export function downloadBlocker(state: State, t: T): string {
 
 /** The Download button's label; chapters and selected are the loaded list and its selected indices */
 export function downloadLabel(
-  state: Pick<State, 'selectedCount' | 'options' | 'volumes'>,
+  state: Pick<State, 'selectedCount' | 'options' | 'volumes' | 'addTo' | 'fresh'>,
   chapters: Chapter[],
   selected: number[],
   t: T,
@@ -120,6 +127,9 @@ export function downloadLabel(
   const n = state.selectedCount;
   if (n === 0) {
     return t('download.label.download');
+  }
+  if (state.addTo !== 0 && state.fresh > 0) {
+    return t('download.label.add', { chapters: t('count.chapter', { count: state.fresh }) });
   }
   if (state.options.packAs === 'bundle' && n > 1) {
     return t('download.label.bundle', { chapters: t('count.chapter', { count: n }) });

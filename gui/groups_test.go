@@ -141,39 +141,6 @@ func TestSecondSeriesRunsBesideTheFirst(t *testing.T) {
 	}
 }
 
-// A series never downloads twice at once: neither from the same load nor
-// from a reload of its URL, which gives it a new site
-func TestStartRefusesASeriesAlreadyDownloading(t *testing.T) {
-	gateA := make(chan struct{})
-	c, sites, _ := newTwoSeries(t, gateA, nil)
-	startAll(t, c, urlA)
-	<-sites(urlA).entered
-
-	busy := func(what string) {
-		t.Helper()
-		err := c.Start()
-		if m := messageOf(err); m == nil || m.Key != "errors.seriesBusy" {
-			t.Errorf("Start %s = %v, want errors.seriesBusy", what, err)
-		}
-	}
-	busy("again")
-	if err := c.Load(urlA); err != nil {
-		t.Fatal(err)
-	}
-	c.SetAll(true)
-	busy("after a reload")
-	if n := len(c.Groups()); n != 1 {
-		t.Errorf("%d groups, want the 1 running", n)
-	}
-
-	close(gateA)
-	waitGroup(t, c, "Series A")
-	if err := c.Start(); err != nil {
-		t.Errorf("Start once A ended = %v, want it to start", err)
-	}
-	waitFinished(t, c)
-}
-
 // CancelGroup stops its group only, and Cancel every one still running
 func TestCancelGroup(t *testing.T) {
 	gateA, gateB := make(chan struct{}), make(chan struct{})

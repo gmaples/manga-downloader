@@ -4,11 +4,14 @@
     "notLoaded": "作品を読み込んで話を選択してください。",
     "stale": "絞り込みが変わりました。先に作品を読み込み直してください。",
     "noChapters": "話を1つ以上選択してください。",
-    "noVolumes": "サイトに巻の情報がありません。話の範囲で入力してください（例: {{example}}）。"
+    "noVolumes": "サイトに巻の情報がありません。話の範囲で入力してください（例: {{example}}）。",
+    "allQueued": "選択した話はすでにこの作品のダウンロードに含まれています。",
+    "unchanged": "この選択はすでに開始しました。もう一度ダウンロードするには選択を変えてください。"
   },
   "label": {
     "download": "ダウンロード",
     "chapters": "{{chapters}}をダウンロード",
+    "add": "{{chapters}}をキューに追加",
     "bundle": "{{chapters}}を1ファイルでダウンロード",
     "volumes": "{{volumes}}をダウンロード（{{chapters}}）",
     "volumesAndChapters": "{{volumes}}と{{chapters}}をダウンロード",

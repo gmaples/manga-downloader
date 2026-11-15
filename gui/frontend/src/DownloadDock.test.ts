@@ -29,6 +29,9 @@ async function render(lang: 'en' | 'es' | 'ca' | 'ja', over: Partial<State> = {}
   );
 }
 
+/** The Download button's opening tag */
+const startButton = (html: string): string => /<button[^>]*class="btn primary block big"[^>]*>/.exec(html)?.[0] ?? '';
+
 describe('DownloadDock', () => {
   it('shows the idle dock in the chosen language', async () => {
     const es = await render('es');
@@ -55,6 +58,20 @@ describe('DownloadDock', () => {
     const ca = await render('ca', { running: true, groups: [one] });
     expect(ca).toContain('0 de 4 capítols acabats');
     expect(ca).toContain('Cancel·la');
+  });
+
+  it('adds to the running series, and greys out what it has already', async () => {
+    const one = group(1, 4);
+    const adding = await render('en', { running: true, groups: [one], addTo: 1, fresh: 3 });
+    expect(adding).toContain('Add 3 chapters to the queue');
+    expect(startButton(adding)).not.toBe('');
+    expect(startButton(adding)).not.toContain('disabled');
+    const queued = await render('en', { running: true, groups: [one], addTo: 1, fresh: 0 });
+    expect(startButton(queued)).toContain('disabled=""');
+    expect(queued).toContain("already in this series&#x27; download");
+    const started = await render('en', { unchanged: true });
+    expect(startButton(started)).toContain('disabled=""');
+    expect(started).toContain('This selection was already started');
   });
 
   it('keeps Download under the progress while groups run', async () => {

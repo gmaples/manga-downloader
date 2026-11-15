@@ -215,6 +215,13 @@ type State struct {
 	LoadedLanguage  string `json:"loadedLanguage"`
 	LoadedScanlator string `json:"loadedScanlator"`
 	SelectedCount   int    `json:"selectedCount"`
+	// AddTo is the running group of the loaded series, 0 when none runs:
+	// Download then adds the Fresh selected chapters, those not in its run
+	// yet, to it. Unchanged is set, when none runs, while the selection is
+	// the one Download was last pressed with for this URL.
+	AddTo     int  `json:"addTo"`
+	Fresh     int  `json:"fresh"`
+	Unchanged bool `json:"unchanged"`
 	// Running is set while any group downloads, and Cancelling once every
 	// running group has been asked to stop
 	Running    bool `json:"running"`
@@ -418,6 +425,7 @@ func (a *App) State() State {
 		st.FilenameTemplateWarning = packer.TemplateWarning(st.Options.FilenameTemplate)
 	}
 	st.LoadedLanguage, st.LoadedScanlator = c.LoadedFilters()
+	st.AddTo, st.Fresh, st.Unchanged = c.DownloadMode()
 	st.Volumes.Text, st.Volumes.Site, st.Volumes.Listed = c.Volumes()
 	language, scanlator := c.Filters()
 	st.Languages, st.Scanlators = filterDTO(language), filterDTO(scanlator)

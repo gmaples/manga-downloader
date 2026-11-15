@@ -41,7 +41,7 @@ export function DownloadDock({ state, error, chapters, selected, onStart, onCanc
   // the label regroups the chapters, so it's kept across the progress ticks
   const label = useMemo(
     () => downloadLabel(state, chapters, selected, t),
-    [state.selectedCount, state.options.packAs, state.volumes.text, chapters, selected, t],
+    [state.selectedCount, state.addTo, state.fresh, state.options.packAs, state.volumes.text, chapters, selected, t],
   );
 
   const blocker = downloadBlocker(state, t);

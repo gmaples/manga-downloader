@@ -13,6 +13,8 @@
   "loaded_other": "{{title}}を読み込みました: {{count}}話",
   "downloading_one": "{{title}}の{{count}}話をダウンロード中",
   "downloading_other": "{{title}}の{{count}}話をダウンロード中",
+  "queued_one": "{{title}}の{{count}}話をダウンロードに追加しました",
+  "queued_other": "{{title}}の{{count}}話をダウンロードに追加しました",
   "downloadingUpdate": "アップデート{{version}}をダウンロード中…",
   "saveFailed": "オプションを保存できませんでした: {{reason}}",
   "siteCheck": "サイトの確認: {{reason}}",

@@ -428,6 +428,8 @@ interface MockGroup {
   timer?: ReturnType<typeof setInterval>;
   // orders the groups that ended
   ended: number;
+  // the chapters in the run, by index, which Download doesn't add again
+  keys: Set<number>;
 }
 
 export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): Api {
@@ -492,6 +494,8 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
   // the downloads started, in the order they started (see MockGroup)
   let runs: MockGroup[] = [];
   let lastRunID = 0;
+  // the selection Download was last pressed with, by URL, as the backend's started
+  const started = new Map<string, Set<number>>();
   let lastEnded = 0;
   let log: LogLine[] = [];
   // the loaded site needs the browser window, and the alert about it
@@ -559,6 +563,21 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
   const isReleaseBuild = (sc: Scenario) => sc === 'update';
   const reportsRelease = shot || isReleaseBuild(scenario);
 
+  // what Download would do, as the backend's DownloadMode
+  const downloadMode = (): Pick<State, 'addTo' | 'fresh' | 'unchanged'> => {
+    if (!loaded || loading) {
+      return { addTo: 0, fresh: 0, unchanged: false };
+    }
+    const g = runs.find((r) => r.running && r.url === url);
+    if (g) {
+      return { addTo: g.id, fresh: [...selected].filter((i) => !g.keys.has(i)).length, unchanged: false };
+    }
+    const last = started.get(url);
+    const unchanged =
+      last !== undefined && selected.size > 0 && last.size === selected.size && [...selected].every((i) => last.has(i));
+    return { addTo: 0, fresh: 0, unchanged };
+  };
+
   const snapshot = (): State => ({
     url,
     loading,
@@ -577,6 +596,7 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
     languages: filterOf('language'),
     scanlators: filterOf('scanlator'),
     selectedCount: selected.size,
+    ...downloadMode(),
     running: runs.some((g) => g.running),
     cancelling: runs.some((g) => g.running) && runs.every((g) => !g.running || g.cancelling),
     groups: runs.map((g) => ({
@@ -644,6 +664,7 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
       volumeChapters: new Map(),
       fetchLeft: new Map(),
       ended: 0,
+      keys: new Set(),
     };
     runs = [...runs, g];
     return g;
@@ -923,6 +944,9 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
   }
 
   function beginRun(g: MockGroup, list: Chapter[]): void {
+    for (const c of list) {
+      g.keys.add(c.index);
+    }
     g.running = true;
     g.cancelling = false;
     g.runChapters = list.length;
@@ -1367,9 +1391,25 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
       if (picked.length === 0) {
         throw reject('errors.selectOne');
       }
-      // one series downloads once at a time, as the backend refuses
-      if (runs.some((g) => g.running && g.url === url)) {
-        throw reject('errors.seriesBusy');
+      // one series downloads once at a time: while it does, Download adds to
+      // its run, as the backend's queueLocked. The mock queues the added
+      // chapters after the pending ones; only a chapters run plays them as rows.
+      const running = runs.find((g) => g.running && g.url === url);
+      if (running) {
+        const fresh = picked.filter((c) => !running.keys.has(c.index));
+        if (fresh.length === 0) {
+          throw reject('errors.nothingNew');
+        }
+        for (const c of fresh) {
+          running.keys.add(c.index);
+        }
+        running.pending.push(...fresh);
+        running.runChapters += fresh.length;
+        running.runRows += fresh.length;
+        started.set(url, new Set(selected));
+        pushLog('info', msgOf('log.queued', { count: fresh.length, title: running.title }));
+        push();
+        return;
       }
       if (
         options.packAs === 'volumes' &&
@@ -1380,6 +1420,7 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
         throw reject('errors.noVolumes');
       }
       pushLog('info', msgOf('log.downloading', { count: picked.length, title }));
+      started.set(url, new Set(selected));
       simulateRun(picked);
     },
     async update() {

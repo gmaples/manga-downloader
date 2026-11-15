@@ -1,7 +1,7 @@
 {
   "enterURL": "先に作品のURLを入力してください",
   "busy": "作品を読み込み中です",
-  "seriesBusy": "この作品はすでにダウンロード中です。終わるまでお待ちください",
+  "nothingNew": "選択した話はすでにこの作品のダウンロードに含まれています",
   "parserFailed": "サイトの解析に失敗しました: {{reason}}",
   "unknownLanguage": "不明な言語「{{language}}」",
   "folderMissing": "フォルダー{{path}}がありません",

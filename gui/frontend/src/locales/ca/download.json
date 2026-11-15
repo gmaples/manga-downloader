@@ -4,11 +4,14 @@
     "notLoaded": "Carrega una sèrie per triar-ne els capítols.",
     "stale": "Els filtres han canviat: torna a carregar la sèrie primer.",
     "noChapters": "Selecciona almenys un capítol.",
-    "noVolumes": "El lloc no llista volums: indica'ls com a rangs de capítols, p. ex. {{example}}."
+    "noVolumes": "El lloc no llista volums: indica'ls com a rangs de capítols, p. ex. {{example}}.",
+    "allQueued": "Els capítols seleccionats ja són a la descàrrega d'aquesta sèrie.",
+    "unchanged": "Aquesta selecció ja s'ha iniciat: canvia-la per tornar a descarregar."
   },
   "label": {
     "download": "Descarrega",
     "chapters": "Descarrega {{chapters}}",
+    "add": "Afegeix {{chapters}} a la cua",
     "bundle": "Descarrega {{chapters}} en un paquet",
     "volumes": "Descarrega {{volumes}} ({{chapters}})",
     "volumesAndChapters": "Descarrega {{volumes}} i {{chapters}}",

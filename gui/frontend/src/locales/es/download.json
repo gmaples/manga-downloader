@@ -4,11 +4,14 @@
     "notLoaded": "Carga una serie para elegir sus capítulos.",
     "stale": "Los filtros han cambiado: recarga la serie primero.",
     "noChapters": "Selecciona al menos un capítulo.",
-    "noVolumes": "El sitio no lista volúmenes: indícalos como rangos de capítulos, p. ej. {{example}}."
+    "noVolumes": "El sitio no lista volúmenes: indícalos como rangos de capítulos, p. ej. {{example}}.",
+    "allQueued": "Los capítulos seleccionados ya están en la descarga de esta serie.",
+    "unchanged": "Esta selección ya se inició: cámbiala para volver a descargar."
   },
   "label": {
     "download": "Descargar",
     "chapters": "Descargar {{chapters}}",
+    "add": "Añadir {{chapters}} a la cola",
     "bundle": "Descargar {{chapters}} en un paquete",
     "volumes": "Descargar {{volumes}} ({{chapters}})",
     "volumesAndChapters": "Descargar {{volumes}} y {{chapters}}",

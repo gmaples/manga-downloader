@@ -5,6 +5,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"sort"
 	"strings"
@@ -257,6 +258,9 @@ type Controller struct {
 	// lastID numbers the groups, and lastEnd orders their endings
 	lastID  int
 	lastEnd uint64
+	// started holds, by URL, the chapters (by chapKey) selected when Download
+	// was last pressed for that URL, so the same selection isn't started again
+	started map[string]map[string]bool
 	log     []LogLine
 }
 
@@ -301,6 +305,32 @@ type group struct {
 	fetching map[grabber.Filterable]*Job
 	stats    runStats
 	summary  *Summary
+	// series and skip are what the group downloads with, kept for the
+	// chapters added to it while it runs (see queueLocked)
+	series *core.Series
+	skip   []ranges.Range
+	// keys are the chapters in the group's run, by chapKey, and pending the
+	// added passes waiting for the one running to end
+	keys    map[string]bool
+	pending []pass
+}
+
+// pass is chapters added to a running group, downloaded once the chapters
+// before them are done, and the range a bundle of them is named by
+type pass struct {
+	chapters grabber.Filterables
+	rng      string
+}
+
+// chapKey identifies a listed chapter across loads of the same URL: by the
+// site's own id for the release when it has one, else by its number, title,
+// language and groups, which tell apart the copies of a number
+func chapKey(f grabber.Filterable) string {
+	c := grabber.ChapterOf(f)
+	if c.ID != "" {
+		return "id:" + c.ID
+	}
+	return fmt.Sprintf("%v\x00%s\x00%s\x00%s", c.Number, c.Title, c.Language, strings.Join(c.GetGroups(), "\x00"))
 }
 
 // newGroup returns a group with its row maps made
@@ -312,6 +342,7 @@ func newGroup() *group {
 		listedVol: map[grabber.Filterable]*Job{},
 		chapVol:   map[*grabber.Chapter]*Job{},
 		fetching:  map[grabber.Filterable]*Job{},
+		keys:      map[string]bool{},
 	}
 }
 
@@ -755,6 +786,74 @@ func (c *Controller) runningLocked() bool {
 		}
 	}
 	return false
+}
+
+// seriesGroupLocked returns the running group of the loaded series (of this
+// load, or of an earlier load of its URL), nil when none runs. The caller
+// holds c.mu.
+func (c *Controller) seriesGroupLocked() *group {
+	if c.series == nil {
+		return nil
+	}
+	for _, g := range c.groups {
+		if g.running && (g.site == c.series.Site || g.url == c.url) {
+			return g
+		}
+	}
+	return nil
+}
+
+// selectedKeysLocked returns the selected chapters by chapKey. The caller
+// holds c.mu.
+func (c *Controller) selectedKeysLocked() map[string]bool {
+	keys := map[string]bool{}
+	for i, chap := range c.series.Chapters {
+		if c.selected[i] {
+			keys[chapKey(chap)] = true
+		}
+	}
+	return keys
+}
+
+// rememberStartLocked records the selection Download was pressed with, for
+// DownloadMode. The caller holds c.mu.
+func (c *Controller) rememberStartLocked() {
+	if c.started == nil {
+		c.started = map[string]map[string]bool{}
+	}
+	c.started[c.url] = c.selectedKeysLocked()
+}
+
+// DownloadMode tells the window what Download would do. addTo is the id of
+// the running group of the loaded series, 0 when none runs, and fresh counts
+// the selected chapters not in its run yet, which Download adds to it.
+// unchanged is set, when no such group runs, while the selection is the one
+// Download was last pressed with for this URL.
+func (c *Controller) DownloadMode() (addTo, fresh int, unchanged bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.series == nil || c.loading {
+		return 0, 0, false
+	}
+	if g := c.seriesGroupLocked(); g != nil {
+		for i, chap := range c.series.Chapters {
+			if c.selected[i] && !g.keys[chapKey(chap)] {
+				fresh++
+			}
+		}
+		return g.id, fresh, false
+	}
+	last := c.started[c.url]
+	keys := c.selectedKeysLocked()
+	if len(keys) == 0 || len(keys) != len(last) {
+		return 0, 0, false
+	}
+	for k := range keys {
+		if !last[k] {
+			return 0, 0, false
+		}
+	}
+	return 0, 0, true
 }
 
 // dropFinishedLocked forgets the groups that ended, keeping the running ones.
@@ -1471,6 +1570,11 @@ func (c *Controller) Start() error {
 		c.mu.Unlock()
 		return uiErr("errors.filtersChanged", nil, nil)
 	}
+	// one series downloads once at a time: while it does, of this load or of
+	// a reload of its URL, Download adds to its run instead
+	if g := c.seriesGroupLocked(); g != nil {
+		return c.queueLocked(g)
+	}
 	// volume mode packs the Volumes box, which isn't saved with the options;
 	// a parts run has no box
 	volumes := c.settings.Volumes != ""
@@ -1497,14 +1601,6 @@ func (c *Controller) Start() error {
 	if len(chapters) == 0 {
 		c.mu.Unlock()
 		return uiErr("errors.selectOne", nil, nil)
-	}
-	// one series downloads once at a time: a second run of it, of this load
-	// or of a reload of its URL, waits for the first to end
-	for _, g := range c.groups {
-		if g.running && (g.site == c.series.Site || g.url == c.url) {
-			c.mu.Unlock()
-			return uiErr("errors.seriesBusy", nil, nil)
-		}
 	}
 	// the run's folder: the picked one, or with series folders on, the
 	// series' folder inside it, made now, as the archivers make no folders
@@ -1563,6 +1659,11 @@ func (c *Controller) Start() error {
 		series = series.WithOutputDir(outDir)
 	}
 	rng := g.rng
+	g.series, g.skip = series, skip
+	for _, chap := range chapters {
+		g.keys[chapKey(chap)] = true
+	}
+	c.rememberStartLocked()
 	c.appendMsgLocked(LogInfo, msg("log.downloading", map[string]any{"count": len(chapters), "title": series.Title}))
 	c.mu.Unlock()
 	c.emit()
@@ -1579,32 +1680,132 @@ func (c *Controller) Start() error {
 	return nil
 }
 
-// run is the download goroutine of group g
-func (c *Controller) run(ctx context.Context, g *group, series *core.Series, chapters grabber.Filterables, skip []ranges.Range, rng string) {
-	file, err := series.Download(ctx, chapters, skip, rng, events{c, g})
+// queueLocked adds the selected chapters that aren't in g's run yet to it,
+// as a pass of their own that starts once the chapters before it are done.
+// They're downloaded with the group's settings, not the window's. It unlocks
+// c.mu.
+func (c *Controller) queueLocked(g *group) error {
+	var fresh grabber.Filterables
+	var numbers []float64
+	var selected []bool
+	for i, chap := range c.series.Chapters {
+		add := c.selected[i] && !g.keys[chapKey(chap)]
+		numbers = append(numbers, chap.GetNumber())
+		selected = append(selected, add)
+		if add {
+			fresh = append(fresh, chap)
+		}
+	}
+	if len(fresh) == 0 {
+		c.mu.Unlock()
+		return uiErr("errors.nothingNew", nil, nil)
+	}
+	rows := len(fresh)
+	if g.runinfo.Bundle {
+		rows = 1
+	}
+	if g.runinfo.Volumes {
+		spec, _ := core.ParseVolumes(g.settings.Volumes)
+		groups, loose, err := core.GroupVolumes(fresh, spec)
+		if err != nil {
+			c.mu.Unlock()
+			return err
+		}
+		rows = len(groups) + len(loose)
+	}
+	for _, chap := range fresh {
+		g.keys[chapKey(chap)] = true
+	}
+	g.pending = append(g.pending, pass{chapters: fresh, rng: bundleRange(numbers, selected)})
+	g.runinfo.Chapters += len(fresh)
+	g.runinfo.Rows += rows
+	c.rememberStartLocked()
+	c.appendMsgLocked(LogInfo, msg("log.queued", map[string]any{"count": len(fresh), "title": g.title}))
+	c.mu.Unlock()
+	c.emit()
+	return nil
+}
 
-	c.mu.Lock()
+// run is the download goroutine of group g. It downloads chapters, then each
+// pass added to the group while it runs (see queueLocked), in turn, unless the
+// group was cancelled, and sums them up in one summary.
+func (c *Controller) run(ctx context.Context, g *group, series *core.Series, chapters grabber.Filterables, skip []ranges.Range, rng string) {
+	s := &Summary{
+		Dir:     series.OutputDir(),
+		Bundled: g.bundle != nil,
+		Parts:   g.runinfo.Parts,
+	}
+	// the outcome of each pass that isn't one of its chapters' (see endPassLocked)
+	var extra []Failure
+	var bundles []string
+	existing := 0
+	for {
+		saved := g.savedNow(c)
+		file, err := series.Download(ctx, chapters, skip, rng, events{c, g})
+
+		c.mu.Lock()
+		f, bundle, exists := c.endPassLocked(g, s, len(chapters), g.stats.saved-saved, file, err)
+		extra = append(extra, f...)
+		if bundle != "" {
+			bundles = append(bundles, bundle)
+		}
+		existing += exists
+		if ctx.Err() != nil || len(g.pending) == 0 {
+			break
+		}
+		next := g.pending[0]
+		g.pending = g.pending[1:]
+		chapters, rng = next.chapters, next.rng
+		if g.bundle != nil {
+			g.bundle = &Job{}
+			g.bundle.setTitle(msg("job.title.bundle", map[string]any{"range": rng}))
+			g.bundle.setStatus(msg("job.phase.gathering", nil))
+			g.jobs = append(g.jobs, g.bundle)
+		}
+		c.mu.Unlock()
+		c.emit()
+	}
 	defer func() {
 		c.mu.Unlock()
 		c.emit()
 	}()
 
-	s := &Summary{
-		Dir:      series.OutputDir(),
-		Bundled:  g.bundle != nil,
-		Saved:    g.stats.saved,
-		Volumes:  g.stats.volumes,
-		Parts:    g.runinfo.Parts,
-		Skipped:  g.stats.skipped,
-		Existing: g.stats.existing,
-		Failures: g.stats.failures,
+	s.Saved = g.stats.saved
+	s.Volumes = g.stats.volumes
+	s.Skipped = g.stats.skipped
+	s.Existing = g.stats.existing + existing
+	s.Failures = append(g.stats.failures, extra...)
+	s.Bundle = strings.Join(bundles, ", ")
+	g.summary = s
+	g.running = false
+	g.pending = nil
+	c.lastEnd++
+	g.ended = c.lastEnd
+	// the group's context is released with it
+	if g.cancel != nil {
+		g.cancel()
+		g.cancel = nil
 	}
+}
+
+// savedNow is g's saved count, read under c.mu
+func (g *group) savedNow(c *Controller) int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return g.stats.saved
+}
+
+// endPassLocked settles one pass of g's run: n chapters, saved of them kept,
+// and Download's file and err. It returns the failures that aren't a chapter's
+// own, the bundle written ("" for none) and the chapters a bundle already in
+// the folder accounts for, and marks s cancelled or failed. The caller holds c.mu.
+func (c *Controller) endPassLocked(g *group, s *Summary, n, saved int, file string, err error) (extra []Failure, bundle string, existing int) {
 	switch {
 	case err != nil && g.runinfo.Volumes && !errors.Is(err, context.Canceled):
 		// only the volumes check Start already ran can fail a volume run
 		s.Err = err
 		m := msg("log.volumesFailed", map[string]any{"reason": err.Error()})
-		s.Failures = append(s.Failures, windowFailure("", m))
+		extra = append(extra, windowFailure("", m))
 		c.appendMsgLocked(LogError, m)
 	case errors.Is(err, context.Canceled):
 		// a cancelled bundle is never packed: the chapters it never started
@@ -1612,7 +1813,7 @@ func (c *Controller) run(ctx context.Context, g *group, series *core.Series, cha
 		s.Cancelled = true
 	case errors.Is(err, core.ErrExists):
 		// the bundle is named by Download's file; none of its chapters was fetched
-		s.Existing = g.runinfo.Chapters
+		existing = n
 		m := msg("job.reason.exists", map[string]any{"name": file})
 		if g.bundle != nil {
 			g.bundle.setReason(m)
@@ -1621,21 +1822,21 @@ func (c *Controller) run(ctx context.Context, g *group, series *core.Series, cha
 	case err != nil:
 		s.Err = err
 		m := msg("log.packingBundle", map[string]any{"reason": err.Error()})
-		s.Failures = append(s.Failures, windowFailure("", m))
+		extra = append(extra, windowFailure("", m))
 		c.appendMsgLocked(LogError, m)
-	case g.bundle != nil && g.stats.saved == 0:
+	case g.bundle != nil && saved == 0:
 		// core still packs an empty bundle when every chapter failed (as the
 		// CLI does), so the file it leaves behind is not a result
 		s.Err = uiErr("errors.noChapterDownloaded", nil, nil)
 		m := msg("log.bundleEmpty", nil)
-		s.Failures = append(s.Failures, windowFailure("", m))
+		extra = append(extra, windowFailure("", m))
 		c.appendMsgLocked(LogError, m)
 	default:
-		s.Bundle = file
+		bundle = file
 	}
 	if g.bundle != nil {
 		switch {
-		case s.Bundle != "":
+		case bundle != "":
 			g.bundle.State = JobDone
 			g.bundle.Done = g.bundle.Total
 		case errors.Is(err, core.ErrExists):
@@ -1645,15 +1846,7 @@ func (c *Controller) run(ctx context.Context, g *group, series *core.Series, cha
 		}
 		g.bundle.clearStatus()
 	}
-	g.summary = s
-	g.running = false
-	c.lastEnd++
-	g.ended = c.lastEnd
-	// the group's context is released with it
-	if g.cancel != nil {
-		g.cancel()
-		g.cancel = nil
-	}
+	return extra, bundle, existing
 }
 
 // Cancel stops every running group from starting new chapters. Chapters

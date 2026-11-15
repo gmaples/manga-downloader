@@ -13,6 +13,8 @@
   "loaded_other": "Se ha cargado {{title}}: {{count}} capítulos",
   "downloading_one": "Descargando {{count}} capítulo de {{title}}",
   "downloading_other": "Descargando {{count}} capítulos de {{title}}",
+  "queued_one": "Añadido {{count}} capítulo de {{title}} a su descarga",
+  "queued_other": "Añadidos {{count}} capítulos de {{title}} a su descarga",
   "downloadingUpdate": "Descargando la actualización {{version}}…",
   "saveFailed": "no se pudieron guardar las opciones: {{reason}}",
   "siteCheck": "comprobación del sitio: {{reason}}",

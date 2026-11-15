@@ -95,9 +95,14 @@ button, *Load* and *Settings*. (To open on the full window instead, turn off
    Activity tab under the series' title with its own *Cancel* and, once it
    ends, its own summary. The groups download at the same time. A group keeps
    the options it started with, so changing them only affects the next one. The
-   *Cancel all* button under the progress stops every group. A series that is
-   still downloading can't be started again until its group ends, and *Clear*
-   removes the groups that ended and leaves the running ones. Groups from the
+   *Cancel all* button under the progress stops every group. A series never
+   downloads twice at once: while it does, selecting more of its chapters
+   turns the button into *Add N chapters to the queue*, which adds them to its
+   group, after the chapters already queued and with the group's options (with
+   *One file* they make a file of their own). Download stays greyed out while
+   the selection has nothing new for the running series, and after a run until
+   the selection changes. *Clear* removes the groups that ended and leaves the
+   running ones. Groups from the
    same site share its pace from `site-rate-limits.txt` (see
    [Rate limits](#rate-limits)). This is an app feature: on the command line,
    each run is its own process.
