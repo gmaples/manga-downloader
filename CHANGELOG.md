@@ -17,6 +17,21 @@ as they are.
 What the fork changes, and why, is described in the README's
 "About this fork" section. Android details are in [docs/android.md](docs/android.md).
 
+## v25.2.0-series-folders.11 (2026-11-15)
+
+Commit `cd05cc5`. The first macOS build of this fork; the code is the same as
+build 10.
+
+- **macOS desktop app**: `manga-downloader-gui-v25.2.0-series-folders.11-darwin-universal.zip`,
+  one `Manga Downloader.app` for Apple Silicon and Intel Macs, built by the
+  fork-only `fork-macos.yaml` workflow on GitHub's macOS runner with the same
+  `make build/gui/darwin` that upstream's release uses. It's kept as that
+  run's artifact (run 43692104268).
+  SHA-256 of the zip: `88163c3986361e0558ecc16b86fca32050d70f10eb8d2bf7789ea925987a61d4`.
+- Not signed or notarized, like upstream's: allow the first launch once in
+  System Settings > Privacy & Security.
+- Not tested yet: it hasn't been run on a Mac.
+
 ## v25.2.0-series-folders.10 (2026-11-15)
 
 Commit `d745ffe`. An Android app; the desktop app and command line are the same
