@@ -44,5 +44,12 @@
   },
   "cancelling": "Cancelando…",
   "cancelAll": "Cancelar todo",
-  "failed": "No se puede descargar: {{error}}"
+  "failed": "No se puede descargar: {{error}}",
+  "site": {
+    "list": "Progreso por sitio",
+    "label": "Progreso de {{site}}",
+    "waiting": "Esperando {{seconds}} s: demasiadas peticiones",
+    "next": "Empezando el siguiente capítulo",
+    "fetching": "Obteniendo la lista de páginas"
+  }
 }

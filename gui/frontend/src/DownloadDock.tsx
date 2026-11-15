@@ -3,12 +3,12 @@
 // others run, and over it, while any group runs, their overall progress and
 // Cancel for all of them.
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { T as Translator } from './i18n';
 import { T, useI18n } from './i18n/react';
 import { DownloadIcon, Spinner, XIcon } from './icons';
 import { downloadBlocker, downloadLabel, overallProgress, runningProgress } from './run';
-import type { Chapter, Options, PackAs, State } from './types';
+import type { Chapter, Options, PackAs, SiteBar, State } from './types';
 
 interface Props {
   state: State;
@@ -109,6 +109,7 @@ function Running({
   const pct = Math.round(overall.fraction * 100);
   return (
     <div className="dock-progress">
+      {state.sites.length > 0 && <SiteBars sites={state.sites} />}
       <div className="dock-line">
         <span className="dock-title">
           <Spinner />
@@ -152,6 +153,69 @@ function Running({
         {state.cancelling ? t('download.cancelling') : one === null ? t('download.cancelAll') : t('common.cancel')}
       </button>
     </div>
+  );
+}
+
+/** The time now, ticking every second while on, for the pauses' countdowns */
+function useNow(on: boolean): number {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!on) {
+      return;
+    }
+    setNow(Date.now());
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [on]);
+  return now;
+}
+
+/** A bar for each site downloading: the chapter it's on, or its pause after a 429 */
+function SiteBars({ sites }: { sites: SiteBar[] }) {
+  const { t } = useI18n();
+  const now = useNow(sites.some((s) => s.until > 0));
+  return (
+    <ul className="site-bars" aria-label={t('download.site.list')}>
+      {sites.map((s) => {
+        const waiting = s.until > now;
+        const fraction = s.total > 0 ? Math.min(1, s.done / s.total) : 0;
+        const pct = Math.round(fraction * 100);
+        const status = waiting
+          ? t('download.site.waiting', { seconds: Math.ceil((s.until - now) / 1000) })
+          : s.title === ''
+            ? t('download.site.next')
+            : s.total === 0
+              ? t('download.site.fetching')
+              : `${pct}%`;
+        return (
+          <li key={s.site} className={`site-bar${waiting ? ' waiting' : ''}`}>
+            <div className="dock-line">
+              <span className="site-name" title={s.title === '' ? s.site : `${s.site} · ${s.title}${s.tags}`}>
+                <strong>{s.site}</strong>
+                {s.title !== '' && (
+                  <span className="site-chapter">
+                    {' · '}
+                    {s.title}
+                    {s.tags}
+                  </span>
+                )}
+              </span>
+              <span className="site-status">{status}</span>
+            </div>
+            <div
+              className="bar"
+              role="progressbar"
+              aria-label={t('download.site.label', { site: s.site })}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={waiting ? undefined : pct}
+            >
+              <span style={{ transform: `scaleX(${waiting ? 0 : fraction})` }} />
+            </div>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 

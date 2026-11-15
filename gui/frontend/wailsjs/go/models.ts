@@ -383,6 +383,28 @@ export namespace main {
 		    return a;
 		}
 	}
+	export class SiteBarDTO {
+	    site: string;
+	    title: string;
+	    tags: string;
+	    done: number;
+	    total: number;
+	    until: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new SiteBarDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.site = source["site"];
+	        this.title = source["title"];
+	        this.tags = source["tags"];
+	        this.done = source["done"];
+	        this.total = source["total"];
+	        this.until = source["until"];
+	    }
+	}
 	export class State {
 	    url: string;
 	    loading: boolean;
@@ -403,6 +425,7 @@ export namespace main {
 	    running: boolean;
 	    cancelling: boolean;
 	    groups: GroupDTO[];
+	    sites: SiteBarDTO[];
 	    summary?: SummaryDTO;
 	    options: OptionsDTO;
 	    prefs: PrefsDTO;
@@ -444,6 +467,7 @@ export namespace main {
 	        this.running = source["running"];
 	        this.cancelling = source["cancelling"];
 	        this.groups = this.convertValues(source["groups"], GroupDTO);
+	        this.sites = this.convertValues(source["sites"], SiteBarDTO);
 	        this.summary = this.convertValues(source["summary"], SummaryDTO);
 	        this.options = this.convertValues(source["options"], OptionsDTO);
 	        this.prefs = this.convertValues(source["prefs"], PrefsDTO);

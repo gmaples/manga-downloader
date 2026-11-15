@@ -44,5 +44,12 @@
   },
   "cancelling": "Cancel·lant…",
   "cancelAll": "Cancel·la-ho tot",
-  "failed": "No es pot descarregar: {{error}}"
+  "failed": "No es pot descarregar: {{error}}",
+  "site": {
+    "list": "Progrés per lloc",
+    "label": "Progrés de {{site}}",
+    "waiting": "Esperant {{seconds}} s: massa peticions",
+    "next": "Començant el capítol següent",
+    "fetching": "Obtenint la llista de pàgines"
+  }
 }

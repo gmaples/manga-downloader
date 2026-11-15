@@ -338,6 +338,33 @@ func TestShareWhileInUse(t *testing.T) {
 	}
 }
 
+// Cooling reports a site's cooldown in the books in use, and nothing once it's
+// over, for another site or after the book was released
+func TestCooling(t *testing.T) {
+	shrink(t, time.Second, time.Minute, 200*time.Millisecond, time.Minute)
+	b, release := Share(t.TempDir(), nil, nil)
+	if got := Cooling("example.com"); !got.IsZero() {
+		t.Fatalf("Cooling before any 429 = %v, want zero", got)
+	}
+	b.Site("example.com").Hit(0, 0)
+	got := Cooling("example.com")
+	if left := time.Until(got); left <= 0 || left > 200*time.Millisecond {
+		t.Fatalf("Cooling after a 429 ends in %s, want within the 200ms cooldown", left)
+	}
+	if other := Cooling("other.example"); !other.IsZero() {
+		t.Errorf("Cooling of another site = %v, want zero", other)
+	}
+	time.Sleep(time.Until(got) + 10*time.Millisecond)
+	if after := Cooling("example.com"); !after.IsZero() {
+		t.Errorf("Cooling once the cooldown is over = %v, want zero", after)
+	}
+	b.Site("example.com").Hit(1, 0)
+	release()
+	if gone := Cooling("example.com"); !gone.IsZero() {
+		t.Errorf("Cooling after the release = %v, want zero", gone)
+	}
+}
+
 // Downloads into different folders don't share
 func TestShareByFolder(t *testing.T) {
 	a, releaseA := Share(t.TempDir(), nil, nil)

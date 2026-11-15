@@ -52,7 +52,8 @@
 
 import type { Api, Unsubscribe } from './api';
 import { createT, LANGS, resolveLanguage, type Lang, type LangPref, type Vars } from './i18n';
-import type { Chapter, FilterChoice, Job, LogLine, Message, Options, Prefs, State, Summary, Update } from './types';
+import type { Chapter, FilterChoice, Job, LogLine, Message, Options, Prefs, SiteBar, State, Summary, Update } from './types';
+import { hostOf } from './run';
 import { groupChapters, groupParts, listedVolumes, parseVolumes, siteVolumes } from './volumes';
 import { OP_TITLES, OP_TITLES_JA } from './mock-onepiece';
 
@@ -578,6 +579,41 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
     return { addTo: 0, fresh: 0, unchanged };
   };
 
+  // a bar for each site of the running groups, as the backend's SiteBars: the
+  // first row still in flight. The mock's sites never pause.
+  const siteBars = (): SiteBar[] => {
+    const bars = new Map<string, SiteBar>();
+    for (const g of runs.filter((r) => r.running)) {
+      const site = hostOf(g.url);
+      if (!bars.has(site)) {
+        bars.set(site, { site, title: '', tags: '', done: 0, total: 0, until: 0 });
+      }
+      const bar = bars.get(site)!;
+      if (bar.title !== '') {
+        continue;
+      }
+      if (g.runBundle) {
+        // the chapter the bundle's phase names, as step does
+        const j = g.jobs[0];
+        const end = downloadEnd(j.total);
+        if (j.done < end) {
+          const share = end / g.runChapters;
+          const n = Math.floor(j.done / share);
+          Object.assign(bar, { title: `Chapter ${n + 1}`, done: j.done - n * share, total: share });
+        }
+        continue;
+      }
+      // a chapter's own row; a volume's row names the volume, not a chapter
+      const job = g.jobs.find(
+        (j) => !j.volume && (j.state === 'fetching' || j.state === 'downloading' || j.state === 'archiving'),
+      );
+      if (job) {
+        Object.assign(bar, { title: job.title, tags: job.tags, done: job.done, total: job.total });
+      }
+    }
+    return [...bars.values()];
+  };
+
   const snapshot = (): State => ({
     url,
     loading,
@@ -608,6 +644,7 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
       jobs: g.jobs.map((j) => ({ ...j })),
       summary: copySummary(g.summary),
     })),
+    sites: siteBars(),
     summary: runs.some((g) => g.running) ? null : copySummary(lastSummary()),
     options: { ...options },
     volumes: { text: volumesText, site: volumesSite, listed: volumesListed },

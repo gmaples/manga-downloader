@@ -17,6 +17,7 @@ import (
 	"github.com/elboletaire/manga-downloader/grabber"
 	"github.com/elboletaire/manga-downloader/notice"
 	"github.com/elboletaire/manga-downloader/ranges"
+	"github.com/elboletaire/manga-downloader/ratelimit"
 )
 
 // maxLogLines caps the log so a long download can't grow it without bound
@@ -261,7 +262,9 @@ type Controller struct {
 	// started holds, by URL, the chapters (by chapKey) selected when Download
 	// was last pressed for that URL, so the same selection isn't started again
 	started map[string]map[string]bool
-	log     []LogLine
+	// flightSeq orders the chapters in flight across groups (see flight)
+	flightSeq uint64
+	log       []LogLine
 }
 
 // group is one press of Download: its chapters' rows, its cancel and its
@@ -313,6 +316,23 @@ type group struct {
 	// added passes waiting for the one running to end
 	keys    map[string]bool
 	pending []pass
+	// siteKey names the group's site as site-rate-limits.txt does, and
+	// flights are its chapters in flight, by fetched chapter and, until
+	// fetched, by listing entry (see SiteBars)
+	siteKey  string
+	flights  map[*grabber.Chapter]*flight
+	flightOf map[grabber.Filterable]*flight
+}
+
+// flight is the progress of one chapter of a group from its fetch to its end,
+// whatever row it's in (its own, a volume's or the bundle's): Done of Total is
+// its pages' download steps, plus their archive steps when it's packed on its
+// own. Total is 0 while its page list is being fetched. seq orders the
+// chapters by when they started.
+type flight struct {
+	seq         uint64
+	title, tags string
+	done, total int64
 }
 
 // pass is chapters added to a running group, downloaded once the chapters
@@ -343,7 +363,59 @@ func newGroup() *group {
 		chapVol:   map[*grabber.Chapter]*Job{},
 		fetching:  map[grabber.Filterable]*Job{},
 		keys:      map[string]bool{},
+		flights:   map[*grabber.Chapter]*flight{},
+		flightOf:  map[grabber.Filterable]*flight{},
 	}
+}
+
+// SiteBar is the progress of one site that's downloading: the first chapter
+// in flight of its running groups (Title and Tags, Done of Total, Total 0
+// while its page list is fetched, Title "" between chapters), and Until, the
+// end of its pause after a 429, zero when it isn't paused
+type SiteBar struct {
+	Site        string
+	Title, Tags string
+	Done, Total int64
+	Until       time.Time
+}
+
+// SiteBars returns a bar for each site a running group downloads from, in the
+// order their groups started. Groups from one site share its bar, which shows
+// the chapter of theirs that started first.
+func (c *Controller) SiteBars() []SiteBar {
+	c.mu.Lock()
+	var bars []SiteBar
+	first := map[string]*flight{}
+	index := map[string]int{}
+	for _, g := range c.groups {
+		if !g.running {
+			continue
+		}
+		if _, ok := index[g.siteKey]; !ok {
+			index[g.siteKey] = len(bars)
+			bars = append(bars, SiteBar{Site: g.siteKey})
+		}
+		for _, f := range g.flights {
+			if cur := first[g.siteKey]; cur == nil || f.seq < cur.seq {
+				first[g.siteKey] = f
+			}
+		}
+		for _, f := range g.flightOf {
+			if cur := first[g.siteKey]; cur == nil || f.seq < cur.seq {
+				first[g.siteKey] = f
+			}
+		}
+	}
+	for key, f := range first {
+		b := &bars[index[key]]
+		b.Title, b.Tags, b.Done, b.Total = f.title, f.tags, f.done, f.total
+	}
+	c.mu.Unlock()
+	// read outside c.mu: the pacing has locks of its own
+	for i := range bars {
+		bars[i].Until = ratelimit.Cooling(bars[i].Site)
+	}
+	return bars
 }
 
 // GroupState is a copy of a group for the window: its rows in chapter order
@@ -1660,6 +1732,10 @@ func (c *Controller) Start() error {
 	}
 	rng := g.rng
 	g.series, g.skip = series, skip
+	g.siteKey = ratelimit.SiteKey(g.site.BaseUrl())
+	if g.siteKey == "" {
+		g.siteKey = ratelimit.SiteKey(g.url)
+	}
 	for _, chap := range chapters {
 		g.keys[chapKey(chap)] = true
 	}
@@ -1779,6 +1855,8 @@ func (c *Controller) run(ctx context.Context, g *group, series *core.Series, cha
 	g.summary = s
 	g.running = false
 	g.pending = nil
+	clear(g.flights)
+	clear(g.flightOf)
 	c.lastEnd++
 	g.ended = c.lastEnd
 	// the group's context is released with it
@@ -1975,6 +2053,8 @@ func (e events) BundleStart(pages int64) {
 func (e events) Fetching(listed grabber.Filterable) {
 	c, g := e.c, e.g
 	c.mu.Lock()
+	c.flightSeq++
+	g.flightOf[listed] = &flight{seq: c.flightSeq, title: grabber.ChapterLabel(listed), tags: g.releaseTags(listed)}
 	// a bundle or a volume has its own row
 	if g.bundle == nil && g.listedVol[listed] == nil {
 		j := &Job{Title: grabber.ChapterLabel(listed), Tags: g.releaseTags(listed), Number: listed.GetNumber(), State: JobFetching}
@@ -1989,6 +2069,11 @@ func (e events) Fetching(listed grabber.Filterable) {
 func (e events) Fetched(listed grabber.Filterable, ch *grabber.Chapter) {
 	c, g := e.c, e.g
 	c.mu.Lock()
+	if f := g.flightOf[listed]; f != nil {
+		f.title, f.tags = grabber.ChapterLabel(ch), g.releaseTags(ch)
+		g.flights[ch] = f
+		delete(g.flightOf, listed)
+	}
 	if j := g.fetching[listed]; j != nil {
 		// the fetched chapter's title can differ from the listing's
 		j.Title, j.Tags = grabber.ChapterLabel(ch), g.releaseTags(ch)
@@ -2016,6 +2101,7 @@ func (g *group) endRow(ch *grabber.Chapter, state JobState, reason Message) {
 func (e events) FetchFailed(listed grabber.Filterable, err error) {
 	c, g := e.c, e.g
 	c.mu.Lock()
+	delete(g.flightOf, listed)
 	g.stats.failures = append(g.stats.failures, newFailure(g.releaseLabel(listed), err))
 	if j := g.fetching[listed]; j != nil {
 		j.State = JobFailed
@@ -2035,6 +2121,7 @@ func (e events) FetchFailed(listed grabber.Filterable, err error) {
 func (e events) Skipped(ch *grabber.Chapter) {
 	c, g := e.c, e.g
 	c.mu.Lock()
+	delete(g.flights, ch)
 	g.stats.skipped++
 	if g.bundle == nil && g.chapVol[ch] == nil {
 		g.endRow(ch, JobSkipped, msg("job.reason.skipped", nil))
@@ -2052,9 +2139,13 @@ func (e events) Exists(listed grabber.Filterable, name string) {
 	c.mu.Lock()
 	g.stats.existing++
 	reason := msg("job.reason.exists", map[string]any{"name": name})
+	delete(g.flightOf, listed)
 	j := g.fetching[listed]
-	if ch, ok := listed.(*grabber.Chapter); j == nil && ok {
-		j = g.byChap[ch]
+	if ch, ok := listed.(*grabber.Chapter); ok {
+		delete(g.flights, ch)
+		if j == nil {
+			j = g.byChap[ch]
+		}
 	}
 	if j != nil {
 		j.State = JobSkipped
@@ -2074,6 +2165,7 @@ func (e events) Exists(listed grabber.Filterable, name string) {
 func (e events) FilenameFailed(ch *grabber.Chapter, err error) {
 	c, g := e.c, e.g
 	c.mu.Lock()
+	delete(g.flights, ch)
 	reason := msg("job.reason.filename", map[string]any{"reason": err.Error()})
 	g.stats.failures = append(g.stats.failures, windowFailure(g.releaseLabel(ch), reason))
 	if g.bundle == nil {
@@ -2087,6 +2179,17 @@ func (e events) FilenameFailed(ch *grabber.Chapter, err error) {
 func (e events) Started(ch *grabber.Chapter) {
 	c, g := e.c, e.g
 	c.mu.Lock()
+	f := g.flights[ch]
+	if f == nil {
+		c.flightSeq++
+		f = &flight{seq: c.flightSeq, title: grabber.ChapterLabel(ch), tags: g.releaseTags(ch)}
+		g.flights[ch] = f
+	}
+	// a chapter packed on its own also counts its archive steps, as its row does
+	f.done, f.total = 0, ch.PagesCount*core.DownloadWeight
+	if g.bundle == nil && g.chapVol[ch] == nil {
+		f.total += ch.PagesCount * core.ArchiveWeight
+	}
 	if g.bundle != nil {
 		g.bundle.setStatus(msg("job.phase.downloadingLabel", map[string]any{"label": g.releaseLabel(ch)}))
 	} else if j := g.chapVol[ch]; j != nil {
@@ -2111,6 +2214,9 @@ func (e events) Started(ch *grabber.Chapter) {
 func (e events) Page(ch *grabber.Chapter, idx int, err error) {
 	c, g := e.c, e.g
 	c.mu.Lock()
+	if f := g.flights[ch]; f != nil && err == nil && g.live(ch) {
+		f.done += core.DownloadWeight
+	}
 	if err != nil {
 		c.appendMsgLocked(LogError, msg("log.errorPage", map[string]any{"page": idx + 1, "label": g.releaseLabel(ch), "reason": err.Error()}))
 	} else if j := g.jobFor(ch); j != nil && !j.Volume && g.live(ch) {
@@ -2126,6 +2232,7 @@ func (e events) DownloadFailed(ch *grabber.Chapter, err error) {
 	c, g := e.c, e.g
 	c.mu.Lock()
 	g.failedC[ch] = true
+	delete(g.flights, ch)
 	g.stats.failures = append(g.stats.failures, newFailure(g.releaseLabel(ch), err))
 	// a volume goes on with its other chapters
 	if j := g.byChap[ch]; j != nil && g.bundle == nil {
@@ -2145,6 +2252,9 @@ func (e events) DownloadFailed(ch *grabber.Chapter, err error) {
 func (e events) Archived(ch *grabber.Chapter) {
 	c, g := e.c, e.g
 	c.mu.Lock()
+	if f := g.flights[ch]; f != nil {
+		f.done += core.ArchiveWeight
+	}
 	if j := g.byChap[ch]; j != nil && g.bundle == nil && j.State != JobFailed {
 		j.Done += core.ArchiveWeight
 		advance(j)
@@ -2156,6 +2266,7 @@ func (e events) Archived(ch *grabber.Chapter) {
 func (e events) Packed(ch *grabber.Chapter, name string, err error) {
 	c, g := e.c, e.g
 	c.mu.Lock()
+	delete(g.flights, ch)
 	j := g.byChap[ch]
 	if err != nil {
 		reason := msg("job.reason.packing", map[string]any{"reason": err.Error()})
@@ -2181,6 +2292,7 @@ func (e events) Packed(ch *grabber.Chapter, name string, err error) {
 func (e events) Downloaded(ch *grabber.Chapter) {
 	c, g := e.c, e.g
 	c.mu.Lock()
+	delete(g.flights, ch)
 	// the pages were counted as they came in; this only tallies the chapter
 	g.stats.saved++
 	c.mu.Unlock()

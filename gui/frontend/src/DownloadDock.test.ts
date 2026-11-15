@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { I18nProvider } from './i18n/react';
 import { DownloadDock } from './DownloadDock';
 import { createMockApi } from './mock';
-import type { Chapter, Group, State } from './types';
+import type { Chapter, Group, SiteBar, State } from './types';
 
 /** A running group of chapters chapters, none started */
 const group = (id: number, chapters: number): Group => ({
@@ -72,6 +72,42 @@ describe('DownloadDock', () => {
     const started = await render('en', { unchanged: true });
     expect(startButton(started)).toContain('disabled=""');
     expect(started).toContain('This selection was already started');
+  });
+
+  it('shows a bar per site above the total, with its chapter or its pause', async () => {
+    const one = group(1, 4);
+    const site = (over: Partial<SiteBar>): SiteBar => ({
+      site: 'a.example',
+      title: 'Chapter 12',
+      tags: ' [ru]',
+      done: 4,
+      total: 10,
+      until: 0,
+      ...over,
+    });
+    const html = await render('en', {
+      running: true,
+      groups: [one],
+      sites: [
+        site({}),
+        site({ site: 'b.example', until: Date.now() + 60_000 }),
+        site({ site: 'c.example', title: '' }),
+        site({ site: 'd.example', total: 0 }),
+      ],
+    });
+    expect(html.match(/class="site-bar( waiting)?"/g)).toHaveLength(4);
+    expect(html).toContain('a.example');
+    expect(html).toContain('Chapter 12');
+    expect(html).toContain('40%');
+    expect(html).toMatch(/Waiting (59|60)s: too many requests/);
+    expect(html).toContain('Starting the next chapter');
+    expect(html).toContain('Getting the page list');
+    // above the total
+    expect(html.indexOf('site-bars')).toBeLessThan(html.indexOf('0 of 4 chapters done'));
+    expect(await render('ja', { running: true, groups: [one], sites: [site({ until: Date.now() + 5000 })] })).toMatch(
+      /[45]秒待機中/,
+    );
+    expect(await render('en', { running: true, groups: [one], sites: [] })).not.toContain('site-bars');
   });
 
   it('keeps Download under the progress while groups run', async () => {

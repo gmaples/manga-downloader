@@ -98,6 +98,15 @@ describe('createMockApi', () => {
     expect(state.fresh).toBe(0);
   });
 
+  it('gives a bar per site downloading, and none once nothing runs', async () => {
+    const api = createMockApi({ scenario: 'running', freeze: true });
+    const [bar, ...rest] = (await api.state()).sites;
+    expect(rest).toHaveLength(0);
+    expect(bar.site).toBe('example.com');
+    expect(bar.total).toBeGreaterThan(0);
+    expect((await createMockApi('loaded').state()).sites).toEqual([]);
+  });
+
   it('greys out a selection already started once its run is over', async () => {
     const api = createMockApi({ chapters: 4 });
     await api.load('https://example.com/series/a');

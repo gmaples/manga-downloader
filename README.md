@@ -76,7 +76,9 @@ What this fork adds:
   summary, keeps the options it started with, and groups from the same site
   share that site's pace. The same series never runs twice at once: picking
   more of its chapters while it downloads adds them to its queue, and
-  Download stays greyed out until the selection has something new.
+  Download stays greyed out until the selection has something new. Above
+  the overall progress, each site downloading gets a bar of its own with the
+  chapter it's on, or its countdown after a 429.
 
 The `handoff/` folder and `BUILD_GUIDELINES.md` hold the scope and notes the
 work was planned from.

@@ -44,5 +44,12 @@
   },
   "cancelling": "キャンセル中…",
   "cancelAll": "すべてキャンセル",
-  "failed": "ダウンロードできません: {{error}}"
+  "failed": "ダウンロードできません: {{error}}",
+  "site": {
+    "list": "サイトごとの進行状況",
+    "label": "{{site}}の進行状況",
+    "waiting": "{{seconds}}秒待機中: リクエストが多すぎます",
+    "next": "次の話を開始中",
+    "fetching": "ページ一覧を取得中"
+  }
 }

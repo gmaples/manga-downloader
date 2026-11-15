@@ -229,6 +229,9 @@ type State struct {
 	// Groups are the downloads started, running or finished, in the order
 	// they started
 	Groups []GroupDTO `json:"groups"`
+	// Sites are a bar for each site the running groups download from (see
+	// Controller.SiteBars)
+	Sites []SiteBarDTO `json:"sites"`
 	// Summary is the outcome of the group that ended last, null while any
 	// group runs or before one ended
 	Summary *SummaryDTO `json:"summary"`
@@ -438,8 +441,32 @@ func (a *App) State() State {
 	for _, g := range c.Groups() {
 		st.Groups = append(st.Groups, groupDTO(g))
 	}
+	st.Sites = []SiteBarDTO{}
+	for _, b := range c.SiteBars() {
+		st.Sites = append(st.Sites, siteBarDTO(b))
+	}
 
 	return st
+}
+
+// SiteBarDTO is a SiteBar for the window. Until is the end of the site's
+// pause after a 429 in Unix milliseconds, 0 when it isn't paused, so the
+// window can count it down on its own.
+type SiteBarDTO struct {
+	Site  string `json:"site"`
+	Title string `json:"title"`
+	Tags  string `json:"tags"`
+	Done  int64  `json:"done"`
+	Total int64  `json:"total"`
+	Until int64  `json:"until"`
+}
+
+func siteBarDTO(b SiteBar) SiteBarDTO {
+	d := SiteBarDTO{Site: b.Site, Title: b.Title, Tags: b.Tags, Done: b.Done, Total: b.Total}
+	if !b.Until.IsZero() {
+		d.Until = b.Until.UnixMilli()
+	}
+	return d
 }
 
 // Chapters returns the loaded chapter list, sorted by number

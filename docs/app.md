@@ -102,8 +102,10 @@ button, *Load* and *Settings*. (To open on the full window instead, turn off
    *One file* they make a file of their own). Download stays greyed out while
    the selection has nothing new for the running series, and after a run until
    the selection changes. *Clear* removes the groups that ended and leaves the
-   running ones. Groups from the
-   same site share its pace from `site-rate-limits.txt` (see
+   running ones. Above the overall progress, each site that's downloading
+   has a bar of its own showing the chapter it's on (the first one, when
+   it has several going), or how long it's still waiting after a 429. Groups
+   from the same site share its bar and its pace from `site-rate-limits.txt` (see
    [Rate limits](#rate-limits)). This is an app feature: on the command line,
    each run is its own process.
 

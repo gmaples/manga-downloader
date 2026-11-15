@@ -114,6 +114,21 @@ export interface FilterChoice {
 }
 
 /** One press of Download: its own rows, cancel and summary */
+/**
+ * The progress of a site that's downloading: the first chapter in flight of
+ * its running groups (title "" between chapters, total 0 while its page list
+ * is fetched), and until, the end of its pause after a 429 in Unix ms, 0 when
+ * it isn't paused
+ */
+export interface SiteBar {
+  site: string;
+  title: string;
+  tags: string;
+  done: number;
+  total: number;
+  until: number;
+}
+
 export interface Group {
   id: number;
   /** The series' title */
@@ -160,6 +175,8 @@ export interface State {
   cancelling: boolean;
   /** The downloads started, running or finished, in the order they started */
   groups: Group[];
+  /** A bar for each site the running groups download from, in the order they started */
+  sites: SiteBar[];
   /** The outcome of the group that ended last; null while any group runs or before one ended */
   summary: Summary | null;
   options: Options;

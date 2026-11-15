@@ -149,6 +149,35 @@ func Share(dir string, warn, info func(format string, a ...any)) (b *Book, relea
 	}
 }
 
+// Cooling returns when the cooldown after a 429 of the site key ends, over
+// the books the downloads running in this process share (see Share), and the
+// zero time when it isn't cooling down in any of them
+func Cooling(key string) time.Time {
+	sharedMu.Lock()
+	books := make([]*Book, 0, len(shared))
+	for _, sb := range shared {
+		books = append(books, sb.book)
+	}
+	sharedMu.Unlock()
+
+	var until time.Time
+	now := time.Now()
+	for _, b := range books {
+		b.mu.Lock()
+		s := b.sites[key]
+		b.mu.Unlock()
+		if s == nil {
+			continue
+		}
+		s.mu.Lock()
+		if s.until.After(now) && s.until.After(until) {
+			until = s.until
+		}
+		s.mu.Unlock()
+	}
+	return until
+}
+
 // parseLine reads one line: ok is false for a blank line or a comment
 func parseLine(line string) (key string, gap time.Duration, ok bool, err error) {
 	line = strings.TrimSpace(strings.TrimSuffix(line, "\r"))

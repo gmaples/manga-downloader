@@ -2010,6 +2010,43 @@ fieldset:disabled .check {
   color: var(--accent-text);
 }
 
+.site-bars {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.site-bar {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+}
+
+.site-name {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--text);
+}
+
+.site-chapter {
+  color: var(--text-3);
+}
+
+.site-status {
+  flex: none;
+  margin-left: 8px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-3);
+}
+
+.site-bar.waiting .site-status {
+  color: var(--warning);
+}
+
 /* ---------- buttons ---------- */
 
 .btn {
