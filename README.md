@@ -43,7 +43,9 @@ project's own note on AI, further down, describes upstream's process; it
 doesn't cover the changes listed here. Please report problems with these
 changes to this fork, not upstream.
 
-Builds from this fork are numbered `v25.2.0-series-folders.N`.
+Builds from this fork are numbered `v25.2.0-series-folders.N`, and each one
+is a git tag. [CHANGELOG.md](CHANGELOG.md) lists what each build changed; the
+latest is v25.2.0-series-folders.10, the Android app.
 
 What this fork adds:
 

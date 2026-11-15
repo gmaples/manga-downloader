@@ -109,3 +109,75 @@ Build 10 (`v25.2.0-series-folders.10`, commit d745ffe), in the emulator above:
 Not tested yet: picking a folder in Browse… (the emulator stopped taking
 taps in the picker), the Paste button, Quit in the notification, the layout
 on a phone screen, and a real device.
+
+## Trying it on a Windows PC
+
+The same emulator runs on Windows, with the app in a window on the PC.
+Everything below installs into one folder and needs no administrator rights.
+It was set up this way on Windows 11 (AMD Ryzen, Windows Hypervisor Platform
+present), where `emulator -accel-check` reported
+`WHPX(10.0.26200) is installed and usable`. It takes about 10 GB.
+
+1. Get a JDK 17 or later. A ZIP such as Eclipse Temurin 21 works; point
+   `JAVA_HOME` at it.
+2. Unzip the Android command-line tools (`commandlinetools-win-*_latest.zip`
+   from developer.android.com) so that `sdk\cmdline-tools\latest\bin\sdkmanager.bat`
+   exists, and set `ANDROID_HOME` to `sdk`.
+3. Install the emulator, platform-tools and an image, accepting the licences:
+
+   ```bash
+   yes | sdkmanager --licenses
+   sdkmanager "platform-tools" "emulator" "system-images;android-35;google_apis;x86_64"
+   ```
+
+4. Create a tablet AVD, keeping it in your folder with `ANDROID_AVD_HOME`:
+
+   ```bash
+   echo no | avdmanager create avd -n MangaTablet -k "system-images;android-35;google_apis;x86_64" -d pixel_tablet
+   ```
+
+   Set `hw.keyboard=yes` in `MangaTablet.avd\config.ini`, so the PC's
+   keyboard types into the tablet.
+
+5. Start it with a window:
+
+   ```bat
+   start "MangaTablet" "%ANDROID_HOME%\emulator\emulator.exe" -avd MangaTablet -gpu auto -no-snapshot-save
+   ```
+
+   Put the `set` lines for `JAVA_HOME`, `ANDROID_HOME`, `ANDROID_SDK_ROOT` and
+   `ANDROID_AVD_HOME` and this line in a `.cmd` file to reopen it with a
+   double-click.
+
+6. Install the APK, give it access to all files and open it:
+
+   ```bash
+   adb install -r manga-downloader-v25.2.0-series-folders.<n>-android.apk
+   adb shell appops set com.gmaples.mangadownloader MANAGE_EXTERNAL_STORAGE allow
+   adb shell am start -n com.gmaples.mangadownloader/.MainActivity
+   adb logcat -d -s MangaDownloader:*   # shows READY <port> once the backend serves
+   ```
+
+### When adb won't start
+
+On one PC, every program in platform-tools (`adb`, `fastboot`, even
+`hprof-conv`) froze as soon as it started, with only `ntdll.dll` loaded, and
+couldn't be ended (`taskkill` said there was no running instance) until a
+reboot. Releases 35.0.2, 36.0.0, 37.0.1 and 37.0.3 all did the same, while the
+emulator, Java and other programs ran. Defender logged no detection. The
+emulator still works then; it shows a "Could not automatically detect an ADB
+binary" dialog that can be dismissed. Without adb:
+
+- **Install through the tablet's browser.** Serve the folder holding the APK
+  from the PC (`python -m http.server 8765 --bind 127.0.0.1`). In the tablet's
+  Chrome, open `http://10.0.2.2:8765/<apk name>` (10.0.2.2 is the PC as the
+  emulator sees it), open the download, and allow installs from Chrome when
+  asked. Then turn on Settings > Apps > Special app access > All files access
+  for Manga Downloader.
+- **Control and screenshots** go through the emulator console on
+  `127.0.0.1:5554`, which needs the token in
+  `%USERPROFILE%\.emulator_console_auth_token` (`auth <token>` first).
+  `screenrecord screenshot <folder>` saves a PNG of the screen,
+  `event mouse <x> <y> 0 1` then `... 0 0` taps, and
+  `event send EV_KEY:KEY_A:1 EV_KEY:KEY_A:0` presses a key (needs
+  `hw.keyboard=yes`). `event text` didn't type into Chrome.
