@@ -3,15 +3,14 @@
 package grabber
 
 import (
-	"net/http"
-	"net/http/httptest"
+	"reflect"
 	"testing"
 )
 
-// joilmangSeriesHTML is a trimmed copy of a joilmang.com series page: the
-// visible chapter panel is a ul.divide-y with only the newest rows (which
-// mangavault's `ul.divide-y a` would take), and the full list sits in
-// <details><ol> blocks with the number in <b>.
+// joilmangSeriesHTML is a trimmed copy of a joilmang.com series page as the
+// browser renders it: the visible chapter panel is a ul.divide-y with only
+// the newest rows, and the full list sits in <details><ol> blocks with a bare
+// number in <b>.
 const joilmangSeriesHTML = `<html><head><title>Перерождение Дяди — читать мангу онлайн, 133 главы | Joilmang</title></head><body>
 <main id="main-content">
 <nav aria-label="Хлебные крошки" class="jm-title-crumbs"><ol class="flex flex-wrap"><li><a href="/">Главная</a></li><li><a href="/catalog">Каталог</a></li></ol></nav>
@@ -36,57 +35,36 @@ const joilmangSeriesHTML = `<html><head><title>Перерождение Дяди
 
 // joilmangReaderHTML is a trimmed copy of a joilmang.com reader page: every
 // page is an <img> in picture[data-reader-page], next to the site's art that
-// must not be read as a page, a breadcrumb nav labelled in Russian, and the
-// link back to the series.
+// must not be read as a page.
 const joilmangReaderHTML = `<html><head><title>Перерождение Дяди — том 1 глава 1 читать онлайн | Joilmang</title></head><body>
-<nav aria-label="Хлебные крошки"><ol><li><a tabindex="-1" href="/">Главная</a></li><li><a tabindex="-1" href="/manga/pererozhdenie-dyadi">Перерождение Дяди</a></li></ol></nav>
-<a aria-label="К странице тайтла «Перерождение Дяди»" title="К странице тайтла «Перерождение Дяди»" class="hidden h-11 md:flex" href="/manga/pererozhdenie-dyadi">back</a>
+<a title="К странице тайтла «Перерождение Дяди»" href="/manga/pererozhdenie-dyadi">back</a>
 <img src="/voice/art/joli-rec-240.webp" class="jm-art__img">
 <picture data-reader-page="" class="reader-page-flow"><img src="https://jm-img.lexa86218.workers.dev/p/64644/0.avif" alt="Перерождение Дяди — Том 1 · Глава 1, страница 1" width="1150" height="1618" class="h-auto w-full"></picture>
 <picture data-reader-page="" class="reader-page-flow"><img src="https://jm-img.lexa86218.workers.dev/p/64644/1.avif" alt="Перерождение Дяди — Том 1 · Глава 1, страница 2" width="1138" height="1616" class="h-auto w-full"></picture>
 </body></html>`
 
-func joilmangServer(t *testing.T) *httptest.Server {
+func joilmangEntry(t *testing.T) BrowserSiteSelector {
 	t.Helper()
-	mux := http.NewServeMux()
-	mux.HandleFunc("/manga/pererozhdenie-dyadi", func(w http.ResponseWriter, r *http.Request) {
-		_, _ = w.Write([]byte(joilmangSeriesHTML))
-	})
-	mux.HandleFunc("/manga/pererozhdenie-dyadi/1/1", func(w http.ResponseWriter, r *http.Request) {
-		_, _ = w.Write([]byte(joilmangReaderHTML))
-	})
-	srv := httptest.NewServer(mux)
-	t.Cleanup(srv.Close)
-
-	return srv
+	sel, ok := matchBrowserSelector("joilmang.com")
+	if !ok {
+		t.Fatal("no joilmang.com entry")
+	}
+	return sel
 }
 
-func TestJoilmang(t *testing.T) {
-	srv := joilmangServer(t)
+func TestJoilmangChapters(t *testing.T) {
+	sel := joilmangEntry(t)
+	m := PlainHTML{Grabber: &Grabber{URL: "https://joilmang.com/manga/pererozhdenie-dyadi"}, site: sel.SiteSelector}
+	m.doc = docFromHTML(t, joilmangSeriesHTML)
+	m.rows = m.doc.Find(m.site.Rows)
 
-	m := NewPlainHTML(&Grabber{URL: srv.URL + "/manga/pererozhdenie-dyadi", Settings: &Settings{}})
-	ok, err := m.Test()
-	if err != nil || !ok {
-		t.Fatalf("Test() = %v, %v; want the series to match", ok, err)
-	}
-	if m.site.Rows != `details > ol > li > a[href^="/manga/"]` {
-		t.Errorf("Test() matched with selector %q, want the joilmang one (an earlier entry shadows it)", m.site.Rows)
-	}
-
-	title, err := m.FetchTitle()
-	if err != nil {
-		t.Fatalf("FetchTitle() error: %v", err)
-	}
-	if title != "Перерождение Дяди" {
-		t.Errorf("FetchTitle() = %q, want %q", title, "Перерождение Дяди")
+	if got := m.pageTitle(); got != "Перерождение Дяди" {
+		t.Errorf("title = %q, want %q", got, "Перерождение Дяди")
 	}
 
 	chapters, errs := m.FetchChapters()
-	if len(errs) != 0 {
-		t.Fatalf("FetchChapters() errors: %v", errs)
-	}
-	if len(chapters) != 4 {
-		t.Fatalf("FetchChapters() returned %d chapters, want 4", len(chapters))
+	if len(errs) != 0 || len(chapters) != 4 {
+		t.Fatalf("chapters = %d, errs = %v; want 4 from the full list, not the newest-rows panel", len(chapters), errs)
 	}
 	for i, want := range []float64{80.1, 80, 1, 0} {
 		if got := chapters[i].GetNumber(); got != want {
@@ -96,44 +74,35 @@ func TestJoilmang(t *testing.T) {
 			t.Errorf("chapter %d title = %q, want none (the number is the label)", i, got)
 		}
 	}
-
-	chapter, err := m.FetchChapter(chapters[2])
-	if err != nil {
-		t.Fatalf("FetchChapter() error: %v", err)
-	}
-	if len(chapter.Pages) != 2 {
-		t.Fatalf("FetchChapter() returned %d pages, want 2", len(chapter.Pages))
-	}
-	for i, want := range []string{
-		"https://jm-img.lexa86218.workers.dev/p/64644/0.avif",
-		"https://jm-img.lexa86218.workers.dev/p/64644/1.avif",
-	} {
-		if chapter.Pages[i].URL != want {
-			t.Errorf("page %d URL = %q, want %q", i, chapter.Pages[i].URL, want)
-		}
+	if got := chapters[2].(*PlainHTMLChapter).URL; got != "https://joilmang.com/manga/pererozhdenie-dyadi/1/1" {
+		t.Errorf("url = %q", got)
 	}
 }
 
-// TestJoilmangChapterURL checks that a pasted reader URL loads the series
-// through the reader's link back to it.
-func TestJoilmangChapterURL(t *testing.T) {
-	srv := joilmangServer(t)
+func TestJoilmangReaderImages(t *testing.T) {
+	sel := joilmangEntry(t)
+	doc := docFromHTML(t, joilmangReaderHTML)
+	want := []string{
+		"https://jm-img.lexa86218.workers.dev/p/64644/0.avif",
+		"https://jm-img.lexa86218.workers.dev/p/64644/1.avif",
+	}
+	if got := getPlainHTMLImageURL(sel.Image, doc); !reflect.DeepEqual(got, want) {
+		t.Errorf("images = %v, want %v", got, want)
+	}
+}
 
-	m := NewPlainHTML(&Grabber{URL: srv.URL + "/manga/pererozhdenie-dyadi/1/1", Settings: &Settings{}})
-	ok, err := m.Test()
-	if err != nil {
-		t.Fatalf("Test() error: %v", err)
-	}
-	if ok {
-		t.Fatalf("Test() matched the reader page itself; want it to decline so the series is resolved")
-	}
-	if !m.resolveSeriesURL() {
-		t.Fatalf("resolveSeriesURL() = false; want the reader to resolve to its series")
-	}
-	if want := srv.URL + "/manga/pererozhdenie-dyadi"; m.URL != want {
-		t.Errorf("resolved URL = %q, want %q", m.URL, want)
-	}
-	if m.site.Rows != `details > ol > li > a[href^="/manga/"]` {
-		t.Errorf("resolved series matched with selector %q, want the joilmang one", m.site.Rows)
+// TestJoilmangChapterURL checks that a pasted reader URL, the form Greg
+// pasted, is trimmed to its series before anything is rendered
+func TestJoilmangChapterURL(t *testing.T) {
+	sel := joilmangEntry(t)
+	for _, c := range []struct{ url, want string }{
+		{"https://joilmang.com/manga/pererozhdenie-dyadi/1/1", "https://joilmang.com/manga/pererozhdenie-dyadi"},
+		{"https://www.joilmang.com/manga/pererozhdenie-dyadi/16/80.1?x=1", "https://www.joilmang.com/manga/pererozhdenie-dyadi"},
+		{"https://joilmang.com/manga/pererozhdenie-dyadi", ""},
+	} {
+		m := &PlainHTMLBrowser{PlainHTML: NewPlainHTML(&Grabber{URL: c.url}), selector: sel}
+		if got := m.pathSeriesURL(); got != c.want {
+			t.Errorf("pathSeriesURL(%q) = %q, want %q", c.url, got, c.want)
+		}
 	}
 }

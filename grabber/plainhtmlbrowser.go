@@ -25,6 +25,8 @@ func init() {
 	browser.RequireVisible("gaiatoon.com")
 	browser.RequireVisible("arcurafansub.com")
 	browser.RequireVisible("paradise-bl.com")
+	// Vercel's Security Checkpoint, not Cloudflare
+	browser.RequireVisible("joilmang.com")
 }
 
 // BrowserSiteSelector is a SiteSelector for sites that need a real browser
@@ -287,6 +289,29 @@ var browserSelectors = []BrowserSiteSelector{
 		Domains:         []string{"paradise-bl.com"},
 		ChaptersWait:    "li.wp-manga-chapter",
 		ImageWait:       "div.reading-content",
+		SeriesPathDepth: 2,
+	},
+	// joilmang.com (Russian, Next.js on Vercel): its pages sit behind Vercel's
+	// Security Checkpoint, which answers plain HTTP with a 429 challenge
+	// page (X-Vercel-Mitigated: challenge), so the site opens in a visible
+	// window that passes the check as any visitor's browser does. The
+	// images (jm-img.lexa86218.workers.dev) aren't behind it. The series page
+	// lists every chapter in <details><ol> blocks, a bare number in <b>
+	// ("80.1", which parseChapterNumber doesn't read without a keyword), so
+	// the number comes from the link, /manga/{slug}/{volume}/{number}.
+	// Readers carry every page as an <img> in picture[data-reader-page].
+	{
+		SiteSelector: SiteSelector{
+			Title:        "h1",
+			Rows:         `details > ol > li > a[href^="/manga/"]`,
+			Chapter:      "b",
+			ChapterTitle: "b",
+			NumberRe:     `^/manga/[^/]+/[^/]+/(\d+(?:\.\d+)?)$`,
+			Image:        "picture[data-reader-page] img",
+		},
+		Domains:         []string{"joilmang.com"},
+		ChaptersWait:    `details > ol > li > a[href^="/manga/"]`,
+		ImageWait:       "picture[data-reader-page] img",
 		SeriesPathDepth: 2,
 	},
 }

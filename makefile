@@ -1059,6 +1059,7 @@ grabber/browser: \
 	grabber/asmotoon \
 	grabber/dragontea \
 	grabber/gaiatoon \
+	grabber/joilmang \
 	grabber/kappabeast \
 	grabber/mangakakalot \
 	grabber/manhuatop \
@@ -1316,7 +1317,6 @@ grabber/html: \
 	grabber/hotcabaretscan \
 	grabber/inumanga \
 	grabber/izanamiscans \
-	grabber/joilmang \
 	grabber/kanzenin \
 	grabber/kensscan \
 	grabber/kewnscans \
@@ -1614,8 +1614,6 @@ grabber/komikmanga:
 	go run . https://komikmanga.com/manga/Unrivaled-Spear-Demon 55
 grabber/komikstation:
 	go run . https://komikstation.org/manga/boukun-wo-teki-ni-mawashita-akujo-desu-ga-bankaisa-sete-itadakimasu/ 10
-grabber/joilmang:
-	go run . https://joilmang.com/manga/pererozhdenie-dyadi 80
 grabber/mangavault:
 	go run . https://mangavault.lat/manga/control-mental-f7d784 20
 grabber/mangaworld:
@@ -1817,6 +1815,10 @@ grabber/octopusmanga:
 # the reader's images download over plain HTTP afterwards
 grabber/paradisebl:
 	go run . --browser-visible https://paradise-bl.com/manga/under-the-green-light/ 39
+# uses a real (visible) browser: Vercel's Security Checkpoint answers plain
+# HTTP with a 429; the reader's images download over plain HTTP afterwards
+grabber/joilmang:
+	go run . --browser-visible https://joilmang.com/manga/pererozhdenie-dyadi 80
 grabber/piacomic:
 	go run . https://piacomic.jp/series/029fcd22bc9fd 1
 grabber/rawdex:

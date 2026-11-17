@@ -581,7 +581,7 @@ environment variables.
 | [izanamiscans.my.id](https://izanamiscans.my.id) | Indonesian | 2026-11-02 |
 | [jellycomics.online](https://jellycomics.online) | Vietnamese, mostly NSFW, use a series URL | 2026-10-29 |
 | [jestful.net](https://jestful.net) |  | 2026-11-02 |
-| [joilmang.com](https://joilmang.com) | Russian | 2026-11-17 |
+| [joilmang.com](https://joilmang.com) \* | Russian | 2026-11-17 |
 | [jojolandsmanga.com](https://jojolandsmanga.com) | The JoJoLands | 2026-11-02 |
 | [jujutsukaisenmanga.pro](https://jujutsukaisenmanga.pro) | Jujutsu Kaisen | 2026-10-29 |
 | [kaijuno8chapters.com](https://kaijuno8chapters.com) | English, single series | ❌ failing since 2026-11-02 (checked 2026-11-02) |
