@@ -17,6 +17,19 @@ as they are.
 What the fork changes, and why, is described in the README's
 "About this fork" section. Android details are in [docs/android.md](docs/android.md).
 
+## v25.2.0-series-folders.12 (2026-11-17)
+
+Commit `a73f88b`. Adds joilmang.com, on the Windows desktop app and command line.
+
+- **joilmang.com** (Russian): series and chapter links both work, for example
+  `https://joilmang.com/manga/pererozhdenie-dyadi/1/1`. The site sits behind
+  Vercel's Security Checkpoint, which turns away programs with a 429, so it
+  opens in a visible browser window that passes the check as a normal visitor's
+  browser does; the images then download over plain HTTP and are converted
+  from AVIF to JPEG as usual.
+- Tested on a Windows PC: chapter 1 (16 pages) and chapter 80 (43 pages) of
+  Перерождение Дяди downloaded into CBZs holding real JPEG pages.
+
 ## v25.2.0-series-folders.11 (2026-11-15)
 
 Commit `cd05cc5`. The first macOS build of this fork; the code is the same as
