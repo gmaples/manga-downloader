@@ -93,7 +93,7 @@ work was planned from.
 
 ## Features
 
-- **[581 supported sites](#supported-sites)**, from big aggregators to small
+- **[582 supported sites](#supported-sites)**, from big aggregators to small
   scanlation groups.
 - In the app, **paste a URL and it loads**: the series, its chapters and the
   languages and scanlation groups it offers appear on their own.
@@ -387,7 +387,7 @@ environment variables.
 ## Supported sites
 
 <details>
-<summary><b>Show all 581 supported sites</b></summary>
+<summary><b>Show all 582 supported sites</b></summary>
 <br>
 
 | Site | Notes | Last verified |
@@ -581,6 +581,7 @@ environment variables.
 | [izanamiscans.my.id](https://izanamiscans.my.id) | Indonesian | 2026-11-02 |
 | [jellycomics.online](https://jellycomics.online) | Vietnamese, mostly NSFW, use a series URL | 2026-10-29 |
 | [jestful.net](https://jestful.net) |  | 2026-11-02 |
+| [joilmang.com](https://joilmang.com) | Russian | 2026-11-17 |
 | [jojolandsmanga.com](https://jojolandsmanga.com) | The JoJoLands | 2026-11-02 |
 | [jujutsukaisenmanga.pro](https://jujutsukaisenmanga.pro) | Jujutsu Kaisen | 2026-10-29 |
 | [kaijuno8chapters.com](https://kaijuno8chapters.com) | English, single series | ❌ failing since 2026-11-02 (checked 2026-11-02) |

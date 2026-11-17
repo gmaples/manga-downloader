@@ -419,6 +419,23 @@ var plainHTMLSelectors = []SiteSelector{
 		Image:        "img.page-image",
 		ChapterQuery: "style=list",
 	},
+	// joilmang.com (Russian, Next.js): the series page lists every chapter in
+	// <details><ol> blocks, a bare number in <b> ("80.1", which
+	// parseChapterNumber doesn't read without a keyword), so the number comes
+	// from the link, /manga/{slug}/{volume}/{number}. Its visible chapter panel is a
+	// ul.divide-y holding only the newest rows, which mangavault's entry
+	// would take, so this one goes first. Readers carry every page as an
+	// <img> in picture[data-reader-page], and a link back titled
+	// "К странице тайтла «…»" (the breadcrumb nav is labelled in Russian).
+	{
+		Title:        "h1",
+		Rows:         `details > ol > li > a[href^="/manga/"]`,
+		Chapter:      "b",
+		ChapterTitle: "b",
+		NumberRe:     `^/manga/[^/]+/[^/]+/(\d+(?:\.\d+)?)$`,
+		Image:        "picture[data-reader-page] img",
+		SeriesLink:   `a[title^="К странице тайтла"]`,
+	},
 	// visorotaku.com (Spanish): mangavault's rows, but "Capítulo N" plus a page
 	// count, and plain <img>s on its CDN. Its ul carries divide-line.
 	{

@@ -1316,6 +1316,7 @@ grabber/html: \
 	grabber/hotcabaretscan \
 	grabber/inumanga \
 	grabber/izanamiscans \
+	grabber/joilmang \
 	grabber/kanzenin \
 	grabber/kensscan \
 	grabber/kewnscans \
@@ -1613,6 +1614,8 @@ grabber/komikmanga:
 	go run . https://komikmanga.com/manga/Unrivaled-Spear-Demon 55
 grabber/komikstation:
 	go run . https://komikstation.org/manga/boukun-wo-teki-ni-mawashita-akujo-desu-ga-bankaisa-sete-itadakimasu/ 10
+grabber/joilmang:
+	go run . https://joilmang.com/manga/pererozhdenie-dyadi 80
 grabber/mangavault:
 	go run . https://mangavault.lat/manga/control-mental-f7d784 20
 grabber/mangaworld:
