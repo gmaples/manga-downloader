@@ -190,6 +190,8 @@ type Controller struct {
 	identify func(url string, s *grabber.Settings) (grabber.Site, []error)
 	// closeBrowser is browser.Close, replaced in tests
 	closeBrowser func()
+	// hold is browser.Hold, replaced in tests
+	hold func() (release func())
 	// needsVisible is browser.NeedsVisible, and bringToFront
 	// browser.BringToFront, replaced in tests
 	needsVisible func(url string) bool
@@ -197,6 +199,11 @@ type Controller struct {
 	// closing tracks a browser close running in the background (see Clear),
 	// which loads wait for rather than meet a browser going away
 	closing sync.WaitGroup
+	// loadRelease releases the browser hold of the loaded series, kept from
+	// its load so its download reuses the browser (and window) the load
+	// opened. Start, the next load and Clear release it; nil when none is kept.
+	// Guarded by mu.
+	loadRelease func()
 	// filterChange is set by BeginLoad when a load changes only the filters of
 	// the URL loaded last; load() reads and clears it (see listingFor)
 	filterChange bool
@@ -441,6 +448,7 @@ func NewController(settings *grabber.Settings, notifyFn func()) *Controller {
 		notify:       notifyFn,
 		identify:     core.Identify,
 		closeBrowser: browser.Close,
+		hold:         browser.Hold,
 		needsVisible: browser.NeedsVisible,
 		bringToFront: browser.BringToFront,
 		settings:     settings,
@@ -672,8 +680,14 @@ func (c *Controller) FinishLoad(url string) error {
 	// the browser's visibility is read when it starts, and loading a site
 	// may be what starts it
 	browser.SetVisible(s.BrowserVisible)
-	release := browser.Hold()
-	defer release()
+	release := c.hold()
+	// a loaded series keeps its hold, so its download reuses this browser
+	kept := false
+	defer func() {
+		if !kept {
+			release()
+		}
+	}()
 	err := c.load(url, s)
 
 	c.mu.Lock()
@@ -684,7 +698,17 @@ func (c *Controller) FinishLoad(url string) error {
 		c.selected = nil
 		c.selGen++
 	}
+	// the series loaded before this one, if any, is gone: so is its hold
+	prev := c.loadRelease
+	c.loadRelease = nil
+	if err == nil {
+		c.loadRelease = release
+		kept = true
+	}
 	c.mu.Unlock()
+	if prev != nil {
+		prev()
+	}
 	c.emit()
 	return err
 }
@@ -1177,11 +1201,16 @@ func (c *Controller) Clear() error {
 	c.listings = nil
 	c.loadErr = nil
 	c.attention = nil
+	loadRelease := c.loadRelease
+	c.loadRelease = nil
 	c.dropFinishedLocked()
 	if c.runningLocked() {
 		// a running group may still use the browser: it closes when the last
-		// group releases it (see browser.Hold)
+		// group releases it (see browser.Hold), so this release never closes it
 		c.mu.Unlock()
+		if loadRelease != nil {
+			loadRelease()
+		}
 		c.emit()
 		return nil
 	}
@@ -1194,6 +1223,9 @@ func (c *Controller) Clear() error {
 	c.emit()
 	go func() {
 		defer c.closing.Done()
+		if loadRelease != nil {
+			loadRelease()
+		}
 		c.closeBrowser()
 	}()
 	return nil
@@ -1645,7 +1677,14 @@ func (c *Controller) Start() error {
 	// one series downloads once at a time: while it does, of this load or of
 	// a reload of its URL, Download adds to its run instead
 	if g := c.seriesGroupLocked(); g != nil {
-		return c.queueLocked(g)
+		// the group's run holds the browser, so the load's hold can go
+		loadRelease := c.loadRelease
+		c.loadRelease = nil
+		err := c.queueLocked(g)
+		if loadRelease != nil {
+			loadRelease()
+		}
+		return err
 	}
 	// volume mode packs the Volumes box, which isn't saved with the options;
 	// a parts run has no box
@@ -1741,6 +1780,8 @@ func (c *Controller) Start() error {
 	}
 	c.rememberStartLocked()
 	c.appendMsgLocked(LogInfo, msg("log.downloading", map[string]any{"count": len(chapters), "title": series.Title}))
+	loadRelease := c.loadRelease
+	c.loadRelease = nil
 	c.mu.Unlock()
 	c.emit()
 
@@ -1748,7 +1789,12 @@ func (c *Controller) Start() error {
 	// option as of this run, not the one in force when the series was loaded
 	browser.SetVisible(settings.BrowserVisible)
 	// Hold keeps the browser open; releasing closes it when the last group is done
-	release := browser.Hold()
+	release := c.hold()
+	// taken over from the load, after the run's own hold, so the browser the
+	// load opened stays open for this run instead of closing and reopening
+	if loadRelease != nil {
+		loadRelease()
+	}
 	go func() {
 		defer release()
 		c.run(ctx, g, series, chapters, skip, rng)
