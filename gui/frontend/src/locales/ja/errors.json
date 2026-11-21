@@ -24,5 +24,7 @@
   "loadTitle": "作品のタイトルを取得できませんでした: {{reason}}",
   "loadChapters": "話の一覧を取得できませんでした: {{reason}}",
   "noChapterDownloaded": "どの話もダウンロードできませんでした",
-  "noSuchGroup": "そのダウンロードは一覧にありません"
+  "noSuchGroup": "そのダウンロードは一覧にありません",
+  "nothingToRestart": "そのダウンロードに再開するものはありません",
+  "nothingMissing": "この作品の話はすべて保存済みか、ダウンロード中です"
 }

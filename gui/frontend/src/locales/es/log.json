@@ -38,5 +38,6 @@
   "packFailed": "{{label}}: error al empaquetar: {{reason}}",
   "errorPacking": "error al empaquetar {{label}}: {{reason}}",
   "saved": "guardado {{name}}",
-  "historyFailed": "no se pudo guardar el historial: {{reason}}"
+  "historyFailed": "no se pudo guardar el historial: {{reason}}",
+  "restartFailed": "no se pudieron reiniciar los capítulos: {{reason}}"
 }

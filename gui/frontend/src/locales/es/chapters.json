@@ -49,9 +49,9 @@
     "failed": "Falló: selecciónalo para descargarlo de nuevo",
     "cancelled": "Cancelado antes de guardarse: selecciónalo para descargarlo de nuevo"
   },
-  "pickUnfinished_one": "Elegir {{count}} sin terminar",
-  "pickUnfinished_other": "Elegir {{count}} sin terminar",
-  "pickUnfinishedHint": "Selecciona solo los capítulos que fallaron o se cancelaron, listos para descargar de nuevo",
+  "downloadMissing_one": "Descargar {{count}} que faltan",
+  "downloadMissing_other": "Descargar {{count}} que faltan",
+  "downloadMissingHint": "Descarga todos los capítulos de esta serie que aún no están en la carpeta, incluidos los que fallaron o se cancelaron. Los ya guardados y los que se están descargando no se tocan.",
   "duplicates": {
     "language": "Algunos números aparecen una vez por idioma; la etiqueta de idioma los distingue.",
     "group": "Algunos números aparecen una vez por grupo; la etiqueta de grupo los distingue."

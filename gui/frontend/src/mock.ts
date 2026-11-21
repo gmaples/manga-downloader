@@ -678,11 +678,15 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
       running: g.running,
       cancelling: g.cancelling,
       run: { chapters: g.runChapters, bundle: g.runBundle, volumes: g.runVolumes, rows: g.runRows },
-      jobs: g.jobs.map((j) => ({ ...j })),
+      jobs: g.jobs.map((j) => {
+        const restart = j.state === 'todo' || (j.state === 'failed' && !j.volume && !g.runBundle);
+        return { ...j, ...(restart ? { key: `n:${j.number}`, restart } : {}) };
+      }),
       summary: copySummary(g.summary),
       restored: g.restored,
       url: g.url,
       adult: g.adult,
+      unfinished: unfinishedOf(g).length,
     })),
     sites: siteBars(),
     summary: runs.some((g) => g.running) ? null : copySummary(lastSummary()),
@@ -753,6 +757,16 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
       }
       return '';
     });
+  };
+  // the chapter numbers restart() downloads again of group g, as the
+  // backend's restartTargets: a restored group's to do, another's failed
+  // rows and, once it ended, the chapters it never started
+  const unfinishedOf = (g: MockGroup): number[] => {
+    if (g.restored) {
+      return g.jobs.filter((j) => j.state === 'todo').map((j) => j.number);
+    }
+    const failed = g.runBundle ? [] : g.jobs.filter((j) => j.state === 'failed' && !j.volume).map((j) => j.number);
+    return g.running ? failed : [...failed, ...g.pending.map((c) => c.number)];
   };
   const push = () => {
     stateBus.emit(snapshot());
@@ -1634,6 +1648,45 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
       selected = new Set(chapters.filter((c) => !c.locked && todo.has(c.number)).map((c) => c.index));
       selectionBus.emit(selectionOf());
       push();
+    },
+
+    async downloadMissing() {
+      const marks = marksOf();
+      const missing = chapters.filter(
+        (c) => !c.locked && (marks[c.index] === '' || marks[c.index] === 'failed' || marks[c.index] === 'cancelled'),
+      );
+      if (missing.length === 0) {
+        throw reject('errors.nothingMissing');
+      }
+      selected = new Set(missing.map((c) => c.index));
+      selectionBus.emit(selectionOf());
+      await api.start();
+    },
+
+    async restart(id, key) {
+      const g = runs.find((r) => r.id === id);
+      if (!g) {
+        throw reject('errors.noSuchGroup');
+      }
+      const numbers = new Set(key === '' ? unfinishedOf(g) : unfinishedOf(g).filter((n) => `n:${n}` === key));
+      if (numbers.size === 0) {
+        throw reject('errors.nothingToRestart');
+      }
+      if (g.running) {
+        // as the backend's forget: the chapters leave the run, and their failed rows go
+        g.jobs = g.jobs.filter((j) => !(j.state === 'failed' && numbers.has(j.number)));
+        for (const c of chapters) {
+          if (numbers.has(c.number)) {
+            g.keys.delete(c.index);
+          }
+        }
+      }
+      if (g.restored || g.url !== url) {
+        await startLoad(g.url);
+      }
+      selected = new Set(chapters.filter((c) => !c.locked && numbers.has(c.number)).map((c) => c.index));
+      selectionBus.emit(selectionOf());
+      await api.start();
     },
 
     onState: (cb) => stateBus.subscribe(cb),

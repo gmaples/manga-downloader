@@ -20,5 +20,9 @@
   "cancelGroup": "{{title}}をキャンセル",
   "restored": "前回のセッション",
   "resume": "読み込んで再開",
-  "resumeLabel": "未完了の話を選択した状態で作品を読み込む"
+  "resumeLabel": "未完了の話を選択した状態で作品を読み込む",
+  "restartAll_one": "未完了の{{count}}話を再開",
+  "restartAll_other": "未完了の{{count}}話を再開",
+  "restartAllLabel": "このダウンロードで失敗、キャンセル、または未完了の話をもう一度ダウンロードします",
+  "restartRow": "{{title}}をもう一度ダウンロード"
 }

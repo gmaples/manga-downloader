@@ -7,7 +7,7 @@ import { errorMessage, formatNumber } from './format';
 import { say } from './i18n';
 import type { T as Translator } from './i18n';
 import { T, useI18n } from './i18n/react';
-import { AlertIcon, CheckIcon, ChevronIcon, ErrorIcon, LinkIcon, LockIcon, RefreshIcon, SkipIcon, Spinner } from './icons';
+import { AlertIcon, CheckIcon, ChevronIcon, DownloadIcon, ErrorIcon, LinkIcon, LockIcon, RefreshIcon, SkipIcon, Spinner } from './icons';
 import { Mascot } from './Mascot';
 import { MaskedTitle, useMask } from './Masked';
 import { extendsSpan, moveActive, pickable, spanIndices } from './listKeys';
@@ -43,6 +43,8 @@ interface Props {
   onToggleMany: (indices: number[], on: boolean) => Promise<void>;
   onSetAll: (on: boolean) => Promise<void>;
   onRange: (text: string) => Promise<number>;
+  /** Selects and downloads every chapter not saved yet, the failed and cancelled ones included */
+  onDownloadMissing: () => Promise<void>;
   /** Sets the Volumes box; rejects a value that doesn't parse */
   onVolumes: (text: string) => Promise<void>;
   onReload: () => void;
@@ -138,6 +140,7 @@ function ChapterList({
   onSetAll,
   onRange,
   onVolumes,
+  onDownloadMissing,
   onError,
 }: Props) {
   const { t } = useI18n();
@@ -351,12 +354,10 @@ function ChapterList({
 
   // locked chapters can't be picked, so "all" and the count are of the others
   const selectable = useMemo(() => pickable(chapters).length, [chapters]);
-  // the chapters a download left unsaved, which one click picks to try again;
-  // not while the series downloads, as its run never takes a chapter twice
-  const unfinished = useMemo(
-    () => (state.addTo !== 0 ? [] : unfinishedOf(chapters, marks)),
-    [state.addTo, chapters, marks],
-  );
+  // the chapters not saved yet, which one click downloads; offered once
+  // something of the series was saved or tried, as before that Download says it
+  const missing = useMemo(() => missingOf(chapters, marks), [chapters, marks]);
+  const tried = useMemo(() => marks.some((m) => m !== ''), [marks]);
   const all = selectable > 0 && state.selectedCount === selectable;
   const some = state.selectedCount > 0 && !all;
   const { first, last } = list.span;
@@ -427,19 +428,15 @@ function ChapterList({
           >
             {t('common.none')}
           </button>
-          {unfinished.length > 0 && (
+          {tried && missing.length > 0 && (
             <button
               type="button"
-              className="btn ghost small unfinished"
+              className="btn primary small download-missing"
               disabled={disabled}
-              title={t('chapters.pickUnfinishedHint')}
-              onClick={() =>
-                onSetAll(false)
-                  .then(() => onToggleMany(unfinished, true))
-                  .catch(fail)
-              }
+              title={t('chapters.downloadMissingHint')}
+              onClick={() => onDownloadMissing().catch(fail)}
             >
-              <AlertIcon size={13} /> {t('chapters.pickUnfinished', { count: unfinished.length })}
+              <DownloadIcon size={13} /> {t('chapters.downloadMissing', { count: missing.length })}
             </button>
           )}
         </div>
@@ -653,10 +650,19 @@ export function ChapterMarkIcon({ mark }: { mark: ChapterMark }) {
   );
 }
 
-/** The indices of the chapters a download left unsaved (failed or cancelled), locked ones aside */
-export function unfinishedOf(chapters: Chapter[], marks: ChapterMark[]): number[] {
+/**
+ * The indices of the chapters not saved yet (no mark, failed or cancelled), as the backend's
+ * DownloadMissing picks them: not the ones on their way, and no locked one
+ */
+export function missingOf(chapters: Chapter[], marks: ChapterMark[]): number[] {
+  if (marks.length !== chapters.length) {
+    return [];
+  }
   return chapters
-    .filter((c) => !c.locked && (marks[c.index] === 'failed' || marks[c.index] === 'cancelled'))
+    .filter((c) => {
+      const m = marks[c.index];
+      return !c.locked && (m === '' || m === 'failed' || m === 'cancelled');
+    })
     .map((c) => c.index);
 }
 

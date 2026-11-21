@@ -20,5 +20,9 @@
   "cancelGroup": "Cancel {{title}}",
   "restored": "From last session",
   "resume": "Load to resume",
-  "resumeLabel": "Load the series with its chapters to do selected"
+  "resumeLabel": "Load the series with its chapters to do selected",
+  "restartAll_one": "Restart {{count}} unfinished",
+  "restartAll_other": "Restart {{count}} unfinished",
+  "restartAllLabel": "Download again the chapters of this download that failed, were cancelled or are still to do",
+  "restartRow": "Download {{title}} again"
 }

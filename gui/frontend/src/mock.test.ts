@@ -190,6 +190,19 @@ describe('createMockApi', () => {
     expect(jobsOf(state).length).toBeLessThan(runOf(state).chapters);
   });
 
+  it('restarts a failed row of a running download into its queue, its failed row gone', async () => {
+    const api = createMockApi({ scenario: 'running', freeze: true, fail: true });
+    const before = (await api.state()).groups[0];
+    const failed = before.jobs.find((j) => j.state === 'failed');
+    expect(failed?.restart).toBe(true);
+    expect(before.unfinished).toBe(1);
+    await api.restart(before.id, failed!.key!);
+    const after = (await api.state()).groups[0];
+    expect(after.jobs.some((j) => j.state === 'failed')).toBe(false);
+    expect(after.unfinished).toBe(0);
+    await expect(api.restart(before.id, '')).rejects.toBeDefined();
+  });
+
   it('has no failures mid-run without the fail flag', async () => {
     const api = createMockApi({ scenario: 'running', freeze: true, fail: false });
     const state = await api.state();

@@ -17,6 +17,27 @@ as they are.
 What the fork changes, and why, is described in the README's
 "About this fork" section. Android details are in [docs/android.md](docs/android.md).
 
+## v25.2.0-series-folders.24 (2026-11-21)
+
+Commit `90a8cf0`, on top of build 22 (build 23 is a separate branch). One click downloads
+whatever of a series is missing, and the Activity tab can restart chapters.
+
+- **Download N missing**: a button above the chapter list, shown once
+  anything of the series was saved or tried. It selects every chapter that
+  isn't saved yet (no file in the folder, failed or cancelled) and starts
+  them at once. Chapters already saved and those downloading now are left
+  alone; while the series downloads, the missing ones join its queue. It
+  replaces build 21's *Pick N unfinished*.
+- **Restart N unfinished** on each download's header in the Activity tab:
+  its failed and cancelled chapters (including the ones a cancel never
+  started), or a last-session download's chapters to do. A failed or to-do
+  row has its own restart button. A download of another series loads that
+  series first, then starts.
+- In a running download, a restarted failed chapter goes back in its queue,
+  and its old failed row and failure are dropped from the summary.
+- A restart downloads the whole chapter again: nothing of a failed try is
+  kept.
+
 ## v25.2.0-series-folders.22 (2026-11-21)
 
 Commit `5ad636c`, on top of build 21. Adds ReadManga (a.zazaza.me) and the

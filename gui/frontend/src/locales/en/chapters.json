@@ -49,9 +49,9 @@
     "failed": "Failed: pick it to download it again",
     "cancelled": "Cancelled before it was saved: pick it to download it again"
   },
-  "pickUnfinished_one": "Pick {{count}} unfinished",
-  "pickUnfinished_other": "Pick {{count}} unfinished",
-  "pickUnfinishedHint": "Select only the chapters that failed or were cancelled, ready to download again",
+  "downloadMissing_one": "Download {{count}} missing",
+  "downloadMissing_other": "Download {{count}} missing",
+  "downloadMissingHint": "Download every chapter of this series that isn't in the folder yet, the failed and cancelled ones included. Chapters already saved and those downloading now are left alone.",
   "duplicates": {
     "language": "Some numbers are listed once per language; the language tag tells them apart.",
     "group": "Some numbers are listed once per group; the group tag tells them apart."

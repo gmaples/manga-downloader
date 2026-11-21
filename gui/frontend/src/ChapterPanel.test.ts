@@ -11,7 +11,7 @@ import {
   RangeForm,
   canApplyRange,
   partsCount,
-  unfinishedOf,
+  missingOf,
 } from './ChapterPanel';
 import { createMockApi } from './mock';
 
@@ -114,6 +114,7 @@ describe('ChapterPanel of a parts run', () => {
         onSetAll: noop,
         onRange: async () => 0,
         onVolumes: noop,
+        onDownloadMissing: noop,
         onReload: () => {},
         onError: () => {},
       }),
@@ -160,21 +161,21 @@ describe('ChapterMarkIcon', () => {
   });
 });
 
-describe('unfinishedOf', () => {
+describe('missingOf', () => {
   const ch = (index: number, locked = false) => ({ index, number: index + 1, title: '', language: '', group: '', volume: 0, locked });
 
-  it('picks the failed and cancelled chapters, never a locked one', () => {
-    const chapters = [ch(0), ch(1), ch(2), ch(3, true), ch(4), ch(5)];
-    expect(unfinishedOf(chapters, ['done', 'failed', 'cancelled', 'failed', 'downloading', ''])).toEqual([1, 2]);
+  it('picks the chapters not saved, failed and cancelled included, never a locked one or one on its way', () => {
+    const chapters = [ch(0), ch(1), ch(2), ch(3, true), ch(4), ch(5), ch(6)];
+    expect(missingOf(chapters, ['done', 'failed', 'cancelled', 'failed', 'downloading', '', 'queued'])).toEqual([1, 2, 5]);
   });
 
   it('picks nothing before the marks arrive', () => {
-    expect(unfinishedOf([ch(0), ch(1)], [])).toEqual([]);
+    expect(missingOf([ch(0), ch(1)], [])).toEqual([]);
   });
 });
 
 describe('ChapterPanel marks', () => {
-  it('shows each row\'s mark beside its box, and offers to pick the unfinished ones', async () => {
+  it('shows each row\'s mark beside its box, and offers to download the missing ones', async () => {
     const api = createMockApi({ scenario: 'loaded' });
     const state = await api.state();
     const chapters = await api.chapters();
@@ -192,6 +193,7 @@ describe('ChapterPanel marks', () => {
         onSetAll: noop,
         onRange: async () => 0,
         onVolumes: noop,
+        onDownloadMissing: noop,
         onReload: () => {},
         onError: () => {},
       }),
@@ -199,12 +201,13 @@ describe('ChapterPanel marks', () => {
     expect(markup).toMatch(/class="box"[^>]*><\/span><span class="mark mark-done"/);
     expect(markup).toContain('mark mark-failed');
     expect(markup).toContain('mark mark-cancelled');
-    expect(markup).toContain('Pick 2 unfinished');
+    const missing = chapters.filter((c, i) => !c.locked && i !== 0).length;
+    expect(markup).toContain(`Download ${missing} missing`);
   });
 
-  it('offers nothing to pick while the series downloads, as its run never takes a chapter twice', async () => {
+  it('offers nothing before any chapter of the series was saved or tried, as Download says it then', async () => {
     const api = createMockApi({ scenario: 'loaded' });
-    const state = { ...(await api.state()), addTo: 1 };
+    const state = await api.state();
     const chapters = await api.chapters();
     const noop = async () => {};
     const markup = renderToStaticMarkup(
@@ -212,22 +215,22 @@ describe('ChapterPanel marks', () => {
         state,
         chapters,
         selected: [],
-        marks: chapters.map(() => 'failed' as const),
+        marks: chapters.map(() => '' as const),
         disabled: false,
         onToggle: noop,
         onToggleMany: noop,
         onSetAll: noop,
         onRange: async () => 0,
         onVolumes: noop,
+        onDownloadMissing: noop,
         onReload: () => {},
         onError: () => {},
       }),
     );
-    expect(markup).toContain('mark mark-failed');
-    expect(markup).not.toContain('unfinished');
+    expect(markup).not.toContain('missing');
   });
 
-  it('offers nothing to pick while no chapter is unfinished', async () => {
+  it('offers nothing while no chapter is missing', async () => {
     const api = createMockApi({ scenario: 'loaded' });
     const state = await api.state();
     const chapters = await api.chapters();
@@ -244,11 +247,12 @@ describe('ChapterPanel marks', () => {
         onSetAll: noop,
         onRange: async () => 0,
         onVolumes: noop,
+        onDownloadMissing: noop,
         onReload: () => {},
         onError: () => {},
       }),
     );
-    expect(markup).not.toContain('unfinished');
+    expect(markup).not.toContain('missing');
   });
 });
 

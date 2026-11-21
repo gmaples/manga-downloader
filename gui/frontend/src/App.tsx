@@ -259,6 +259,7 @@ export function App({ api, initial }: { api: Api; initial?: State }) {
             onSetAll={(on) => api.setAll(on)}
             onRange={(text) => api.selectRange(text)}
             onVolumes={(text) => api.setVolumes(text)}
+            onDownloadMissing={() => api.downloadMissing()}
             onReload={() => load(state.url)}
             onError={setActionError}
           />
@@ -332,6 +333,10 @@ export function App({ api, initial }: { api: Api; initial?: State }) {
                 onResume={(id) => {
                   setActionError('');
                   api.resume(id).catch((e) => setActionError(errorMessage(e, t)));
+                }}
+                onRestart={(id, key) => {
+                  setActionError('');
+                  api.restart(id, key).catch((e) => setActionError(errorMessage(e, t)));
                 }}
               />
             </div>

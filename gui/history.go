@@ -312,7 +312,7 @@ func (c *Controller) restoreLocked() {
 			c.addAdultTitleLocked(e.Title)
 		}
 		for n, ch := range e.Chapters {
-			j := &Job{Title: ch.Label, Number: float64(n), State: JobTodo}
+			j := &Job{Title: ch.Label, Number: float64(n), State: JobTodo, Key: "todo:" + ch.Label}
 			if ch.Done {
 				j.State = JobDone
 				j.Total, j.Done = 1, 1
@@ -489,6 +489,7 @@ func (c *Controller) Resume(id int) (url string, load bool, err error) {
 	}
 	c.resumeURL = g.url
 	c.resumeTodo = map[string]bool{}
+	c.resumeKeys, c.resumeStart = nil, false
 	for _, j := range g.jobs {
 		if j.State == JobTodo {
 			c.resumeTodo[j.Title] = true
@@ -526,12 +527,17 @@ func (c *Controller) applyResumeLocked(url string) {
 	if c.resumeURL != url || c.series == nil {
 		return
 	}
+	// a restart downloads its chapters alone
+	if c.resumeStart {
+		clear(c.selected)
+	}
 	for i, chap := range c.series.Chapters {
 		label := grabber.ChapterLabel(chap) + core.ReleaseTags(chap, c.hasDuplicates, c.hasGroupDuplicates)
-		if c.resumeTodo[label] && c.selectable(i) {
+		if (c.resumeTodo[label] || c.resumeKeys[chapKey(chap)]) && c.selectable(i) {
 			c.selected[i] = true
 		}
 	}
 	c.selGen++
-	c.resumeURL, c.resumeTodo = "", nil
+	c.startPending = c.resumeStart
+	c.resumeURL, c.resumeTodo, c.resumeKeys, c.resumeStart = "", nil, nil, false
 }

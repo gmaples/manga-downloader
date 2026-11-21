@@ -24,5 +24,7 @@
   "loadTitle": "Couldn't fetch the series title: {{reason}}",
   "loadChapters": "Couldn't fetch the chapter list: {{reason}}",
   "noChapterDownloaded": "no chapter could be downloaded",
-  "noSuchGroup": "that download is no longer listed"
+  "noSuchGroup": "that download is no longer listed",
+  "nothingToRestart": "nothing in that download is left to restart",
+  "nothingMissing": "every chapter of this series is saved or on its way"
 }

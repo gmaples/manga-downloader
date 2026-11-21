@@ -310,6 +310,8 @@ type GroupDTO struct {
 	URL      string `json:"url"`
 	// Adult is set when the site rates the series 18+
 	Adult bool `json:"adult"`
+	// Unfinished counts the chapters Restart(ID, "") downloads again
+	Unfinished int `json:"unfinished"`
 }
 
 // RunDTO describes the run of a group
@@ -343,6 +345,10 @@ type JobDTO struct {
 	StatusMsg *Message `json:"statusMsg,omitempty"`
 	// Volume is set on the row of a volume
 	Volume bool `json:"volume"`
+	// Key names the row's chapter for Restart, and Restart is set when
+	// Restart(group, Key) downloads it again
+	Key     string `json:"key,omitempty"`
+	Restart bool   `json:"restart"`
 }
 
 // FailureDTO is a line of the run summary's failures
@@ -841,6 +847,24 @@ func (a *App) Resume(id int) error {
 	return a.Load(url)
 }
 
+// Restart downloads again the unfinished chapters of group id: the row's
+// with its key, all of them with key "" (see Controller.Restart). When the
+// group's series isn't the one loaded, it's loaded first, and starts once
+// it is.
+func (a *App) Restart(id int, key string) error {
+	url, load, err := a.ctrl.Restart(id, key)
+	if err != nil || !load {
+		return err
+	}
+	return a.Load(url)
+}
+
+// DownloadMissing selects and downloads every chapter of the loaded series
+// that isn't saved, or failed or was cancelled (see Controller.DownloadMissing)
+func (a *App) DownloadMissing() error {
+	return a.ctrl.DownloadMissing()
+}
+
 // Start downloads the selected chapters in the background, as a new group
 // beside any running. Refusals (nothing selected, invalid options, a series
 // loading) are returned here.
@@ -984,6 +1008,7 @@ func groupDTO(g GroupState) GroupDTO {
 		Restored:   g.Restored,
 		URL:        g.URL,
 		Adult:      g.Adult,
+		Unfinished: g.Unfinished,
 	}
 	for _, j := range g.Jobs {
 		out.Jobs = append(out.Jobs, JobDTO{
@@ -999,6 +1024,8 @@ func groupDTO(g GroupState) GroupDTO {
 			Status:    j.Status,
 			StatusMsg: j.StatusMsg,
 			Volume:    j.Volume,
+			Key:       j.Key,
+			Restart:   j.Restart,
 		})
 	}
 

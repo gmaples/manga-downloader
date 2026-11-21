@@ -74,6 +74,10 @@ export interface Job {
   statusMsg?: Message;
   /** The row of a volume rather than a chapter */
   volume: boolean;
+  /** Names the row's chapter for restart(); unset on a volume's or bundle's row */
+  key?: string;
+  /** restart(group, key) downloads its chapter again: it failed, or is a restored one to do */
+  restart?: boolean;
 }
 
 /** A line of the run's failures: what failed, and why */
@@ -152,6 +156,8 @@ export interface Group {
   url: string;
   /** The site rates the series 18+: its title is masked until clicked */
   adult: boolean;
+  /** The chapters restart(id, '') downloads again: failed, cancelled or still to do */
+  unfinished?: number;
 }
 
 /** One series of the history pop-up, newest first */

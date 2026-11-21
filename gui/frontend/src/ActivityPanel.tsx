@@ -4,12 +4,14 @@
 // per chapter (or the single bundle job). Rows are windowed like the chapter
 // list, since "select all" on a long series makes thousands of them. A group
 // of the last session (restored) shows what was done and what's still to do,
-// with a button that loads the series with those chapters selected.
+// with a button that loads the series with those chapters selected. A group's
+// unfinished chapters (failed, cancelled or to do) restart from its header,
+// and a row's own from the row.
 
 import { say } from './i18n';
 import { useI18n } from './i18n/react';
 import { jobFraction, jobShortStatus, jobStatus, summaryHeadline, summarySentence } from './format';
-import { AlertIcon, CheckIcon, ErrorIcon, FolderIcon, PackageIcon, SkipIcon, Spinner, TodoIcon, XIcon } from './icons';
+import { AlertIcon, CheckIcon, ErrorIcon, FolderIcon, PackageIcon, RefreshIcon, SkipIcon, Spinner, TodoIcon, XIcon } from './icons';
 import { MaskedTitle, useMask } from './Masked';
 import { overallProgress, summaryTone } from './run';
 import type { Group, Job, State, Summary } from './types';
@@ -26,9 +28,11 @@ interface Props {
   onCancelGroup: (id: number) => void;
   /** Loads restored group id's series with its chapters to do selected */
   onResume: (id: number) => void;
+  /** Downloads again group id's unfinished chapters: the row's with its key, all with '' */
+  onRestart: (id: number, key: string) => void;
 }
 
-export function ActivityPanel({ state, onOpenFolder, onCancelGroup, onResume }: Props) {
+export function ActivityPanel({ state, onOpenFolder, onCancelGroup, onResume, onRestart }: Props) {
   const { t } = useI18n();
 
   if (state.groups.length === 0) {
@@ -53,6 +57,7 @@ export function ActivityPanel({ state, onOpenFolder, onCancelGroup, onResume }: 
           onOpenFolder={() => onOpenFolder(g.id)}
           onCancel={() => onCancelGroup(g.id)}
           onResume={() => onResume(g.id)}
+          onRestart={(key) => onRestart(g.id, key)}
           busy={state.loading}
         />
       ))}
@@ -67,14 +72,16 @@ function GroupSection({
   onOpenFolder,
   onCancel,
   onResume,
+  onRestart,
 }: {
   group: Group;
   multi: boolean;
-  /** A series is loading, which a resume would be refused during */
+  /** A series is loading, which a resume or restart would be refused during */
   busy: boolean;
   onOpenFolder: () => void;
   onCancel: () => void;
   onResume: () => void;
+  onRestart: (key: string) => void;
 }) {
   const { t } = useI18n();
   const mask = useMask(group.title, group.adult);
@@ -85,6 +92,17 @@ function GroupSection({
         <h3 className="run-group-title" title={mask(group.title)}>
           <MaskedTitle title={group.title} adult={group.adult} />
         </h3>
+        {(group.unfinished ?? 0) > 0 && (
+          <button
+            type="button"
+            className="btn small restart-all"
+            title={t('activity.restartAllLabel')}
+            disabled={busy}
+            onClick={() => onRestart('')}
+          >
+            <RefreshIcon size={13} /> {t('activity.restartAll', { count: group.unfinished ?? 0 })}
+          </button>
+        )}
         {todo && (
           <button
             type="button"
@@ -118,7 +136,7 @@ function GroupSection({
         (group.run.bundle ? (
           <BundleCard job={group.jobs[0]} chapters={group.run.chapters} />
         ) : (
-          <JobList group={group} multi={multi} mask={mask} />
+          <JobList group={group} multi={multi} mask={mask} busy={busy} onRestart={onRestart} />
         ))}
     </section>
   );
@@ -207,7 +225,19 @@ function BundleCard({ job, chapters }: { job: Job; chapters: number }) {
   );
 }
 
-function JobList({ group, multi, mask }: { group: Group; multi: boolean; mask: (text: string) => string }) {
+function JobList({
+  group,
+  multi,
+  mask,
+  busy,
+  onRestart,
+}: {
+  group: Group;
+  multi: boolean;
+  mask: (text: string) => string;
+  busy: boolean;
+  onRestart: (key: string) => void;
+}) {
   const { t } = useI18n();
   const overall = overallProgress(group);
   const queued = group.running ? overall.queued : 0;
@@ -244,7 +274,7 @@ function JobList({ group, multi, mask }: { group: Group; multi: boolean; mask: (
                 </div>
               );
             }
-            return <JobRow key={pos} job={job} style={style} mask={mask} />;
+            return <JobRow key={pos} job={job} style={style} mask={mask} busy={busy} onRestart={onRestart} />;
           })}
         </div>
       </div>
@@ -252,7 +282,19 @@ function JobList({ group, multi, mask }: { group: Group; multi: boolean; mask: (
   );
 }
 
-function JobRow({ job, style, mask }: { job: Job; style: React.CSSProperties; mask: (text: string) => string }) {
+export function JobRow({
+  job,
+  style,
+  mask,
+  busy,
+  onRestart,
+}: {
+  job: Job;
+  style: React.CSSProperties;
+  mask: (text: string) => string;
+  busy: boolean;
+  onRestart: (key: string) => void;
+}) {
   const { t, lang } = useI18n();
   const fraction = jobFraction(job);
   const status = mask(jobStatus(job, t));
@@ -268,6 +310,18 @@ function JobRow({ job, style, mask }: { job: Job; style: React.CSSProperties; ma
           <span className="job-title">{title}</span>
           {job.tags && <span className="job-tags">{job.tags}</span>}
           <span className="job-status">{jobShortStatus(job, t, lang)}</span>
+          {job.restart && job.key && (
+            <button
+              type="button"
+              className="btn ghost small icon-only job-restart"
+              aria-label={t('activity.restartRow', { title: mask(title) })}
+              title={t('activity.restartRow', { title: mask(title) })}
+              disabled={busy}
+              onClick={() => onRestart(job.key ?? '')}
+            >
+              <RefreshIcon size={13} />
+            </button>
+          )}
         </div>
         {job.state === 'failed' || job.state === 'skipped' || job.state === 'todo' ? (
           <span className="job-reason">{mask(say(t, job.reasonMsg, job.reason))}</span>

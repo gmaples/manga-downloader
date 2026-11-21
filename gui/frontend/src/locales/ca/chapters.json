@@ -49,9 +49,9 @@
     "failed": "Ha fallat: selecciona'l per descarregar-lo de nou",
     "cancelled": "Cancel·lat abans de desar-se: selecciona'l per descarregar-lo de nou"
   },
-  "pickUnfinished_one": "Tria {{count}} sense acabar",
-  "pickUnfinished_other": "Tria {{count}} sense acabar",
-  "pickUnfinishedHint": "Selecciona només els capítols que han fallat o s'han cancel·lat, a punt per descarregar de nou",
+  "downloadMissing_one": "Descarrega'n {{count}} que falten",
+  "downloadMissing_other": "Descarrega'n {{count}} que falten",
+  "downloadMissingHint": "Descarrega tots els capítols d'aquesta sèrie que encara no són a la carpeta, inclosos els que han fallat o s'han cancel·lat. Els ja desats i els que es descarreguen ara no es toquen.",
   "duplicates": {
     "language": "Alguns números apareixen una vegada per idioma; l'etiqueta d'idioma els distingeix.",
     "group": "Alguns números apareixen una vegada per grup; l'etiqueta de grup els distingeix."
