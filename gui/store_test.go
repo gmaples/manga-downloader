@@ -30,6 +30,8 @@ func TestOptionsSaveAndLoadRoundTrip(t *testing.T) {
 		SkipExisting:     true,
 		FilenameTemplate: "{{.Series}} {{.Number}}",
 		BrowserVisible:   true,
+		AgeCheck:         true,
+		Age:              grabber.AgeTeen,
 	}
 	if err := saveOptions(path, want, defaultPrefs()); err != nil {
 		t.Fatal(err)
@@ -516,5 +518,24 @@ func TestApplyPackAsParts(t *testing.T) {
 	applyPackAs(s, PackChapters)
 	if s.Volumes != "" || s.Bundle {
 		t.Errorf("chapters after parts: %q bundle %v", s.Volumes, s.Bundle)
+	}
+}
+
+func TestAgeCheckOptions(t *testing.T) {
+	s := defaultSettings()
+	if o := optionsOf(*s); o.AgeCheck || o.Age != grabber.AgeAdult {
+		t.Errorf("default age check %v, age %d; want off, 18", o.AgeCheck, o.Age)
+	}
+	o := optionsOf(*s)
+	o.AgeCheck, o.Age = true, grabber.AgeTeen
+	applyOptions(s, o)
+	if !s.AgeCheck || s.Age != grabber.AgeTeen {
+		t.Errorf("applied age check %v, age %d; want on, 16", s.AgeCheck, s.Age)
+	}
+	// a file from before the check (or a hand edit) has no age it offers
+	o.Age = 0
+	applyOptions(s, o)
+	if s.Age != grabber.AgeAdult {
+		t.Errorf("age 0 applied as %d, want 18", s.Age)
 	}
 }

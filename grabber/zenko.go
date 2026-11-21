@@ -85,8 +85,16 @@ func (z *Zenko) FetchTitle() (string, error) {
 		Name         string `json:"name"`
 		EngName      string `json:"engName"`
 		OriginalName string `json:"originalName"`
+		// AgeLimit is the title's minimum age (0, 16, 18). The nested
+		// author object has its own, a string, which is the uploader's
+		AgeLimit int `json:"ageLimit"`
 	}{}
 	if err = json.Unmarshal([]byte(body), &feed); err != nil {
+		return "", err
+	}
+	// the site's own age gate is on its pages only: the api serves every
+	// title, so the user's age check is applied here
+	if err = z.Settings.AgeAllows(feed.AgeLimit); err != nil {
 		return "", err
 	}
 
@@ -129,6 +137,10 @@ func zenkoName(name string) (volume, number, title string) {
 
 // FetchChapters returns the series' chapters
 func (z *Zenko) FetchChapters() (chapters Filterables, errs []error) {
+	// the title carries the age rating, so it's checked before the list
+	if _, err := z.FetchTitle(); err != nil {
+		return nil, []error{err}
+	}
 	id, err := z.seriesID()
 	if err != nil {
 		return nil, []error{err}

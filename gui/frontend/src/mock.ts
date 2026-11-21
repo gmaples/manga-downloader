@@ -269,6 +269,8 @@ function defaultOptions(shot: boolean, epub: boolean): Options {
     browserVisible: false,
     seriesFolders: false,
     guessLanguage: false,
+    ageCheck: false,
+    age: 18,
   };
 }
 

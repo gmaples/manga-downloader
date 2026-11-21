@@ -96,6 +96,13 @@ func Run(cmd *cobra.Command, args []string) {
 	defer browser.SetAttentionHandler(nil)
 	browser.SetVisible(settings.BrowserVisible)
 
+	// --age turns the age check on
+	if settings.Age != 0 && settings.Age != grabber.AgeTeen && settings.Age != grabber.AgeAdult {
+		red("Error: invalid --age value %d, must be %d or %d", settings.Age, grabber.AgeTeen, grabber.AgeAdult)
+		exit(1)
+	}
+	settings.AgeCheck = settings.Age != 0
+
 	// validated before anything is fetched, so a typo fails fast
 	skipPages, err := core.Validate(&settings)
 	if err != nil {
@@ -396,6 +403,7 @@ func init() {
 	// -1` works just like `--skip-pages=-1`. A shorthand wouldn't: "-S-1"
 	// would have to be spelled that way, with no space
 	rootCmd.Flags().StringVar(&settings.SkipPages, "skip-pages", "", `pages to exclude from every chapter, as a range ("2", "2,5-7"); negative positions count from the end of each chapter, so "-1" is its last page`)
+	rootCmd.Flags().IntVar(&settings.Age, "age", 0, "age check: refuse titles a site rates above this age, 16 or 18 (0, the default, loads every title)")
 	rootCmd.Flags().BoolVar(&settings.SkipExisting, "skip-existing", false, "skip the chapters, volumes and bundles whose file is already in the output directory, without fetching them; nothing is deleted or overwritten, so to download a broken file again, delete it first")
 	rootCmd.Flags().BoolP("version", "v", false, "show version information (alias of the version command)")
 	// set as persistent, so version command does not complain about the -o flag set via docker

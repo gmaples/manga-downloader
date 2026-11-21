@@ -44,7 +44,9 @@ button, *Load* and *Settings*. (To open on the full window instead, turn off
    declares (when the title is written in its script), or letters used by one
    language alone (Ukrainian Ї Є Ґ, Russian Ы Э Ъ, kana, Hangul); mixed languages are
    `[mul]`, and otherwise no tag is added; it needs *Series folders*), *Skip existing files* (chapters already in the folder aren't
-   downloaded again), the format (CBZ, CBR, Folder or EPUB; EPUB adds a *Reading
+   downloaded again), *Age check* with *I am over* 16 or 18 (titles a site
+   rates above that age aren't loaded; off, every title loads; for now only
+   zenko.online publishes a rating), the format (CBZ, CBR, Folder or EPUB; EPUB adds a *Reading
    direction*) and *Pack as*: *Chapters* (a file each), *Merged* (a chapter's
    parts in one file), *Volumes* (a file per volume) or *One file* (everything
    together). Under *Pages*, *Convert to JPEG* ticks *AVIF* (on by default,

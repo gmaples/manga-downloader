@@ -170,6 +170,29 @@ describe('Series folders and Guess language', () => {
   });
 });
 
+describe('Age check', () => {
+  /** the fieldset of the "I am over" choice */
+  const ageChoice = (markup: string) => markup.match(/<fieldset[^>]*>\s*<legend>I am over<\/legend>[\s\S]*?<\/fieldset>/)?.[0] ?? '';
+
+  it('greys out the age while the check is off, keeping it', async () => {
+    const base = await createMockApi({ scenario: 'empty', freeze: true }).state();
+    const off: State = { ...base, options: { ...base.options, ageCheck: false, age: 16 } };
+    const markup = options(off);
+    expect(markup).toContain('>Age check<');
+    expect(ageChoice(markup)).toMatch(/^<fieldset[^>]*disabled=""/);
+    expect(ageChoice(markup)).toMatch(/class="on"><input[^>]*value="16"/);
+    const on: State = { ...off, options: { ...off.options, ageCheck: true } };
+    expect(ageChoice(options(on))).not.toMatch(/^<fieldset[^>]*disabled=""/);
+    expect(ageChoice(options(on))).toMatch(/class="on"><input[^>]*value="16"/);
+  });
+
+  it('shows 18 for an age it does not offer', async () => {
+    const base = await createMockApi({ scenario: 'empty', freeze: true }).state();
+    const odd: State = { ...base, options: { ...base.options, ageCheck: true, age: 0 } };
+    expect(ageChoice(options(odd))).toMatch(/class="on"><input[^>]*value="18"/);
+  });
+});
+
 describe('Filename template', () => {
   it('offers the reset button only when the template differs from the default', async () => {
     const base = await createMockApi({ scenario: 'empty', freeze: true }).state();

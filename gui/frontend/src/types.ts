@@ -33,6 +33,10 @@ export interface Options {
   seriesFolders: boolean;
   /** Adds the run's language tag to that folder's name ("Title [en]"); only read with seriesFolders */
   guessLanguage: boolean;
+  /** Refuses titles a site rates above age; off, every title loads */
+  ageCheck: boolean;
+  /** The user's age for ageCheck: 16 or 18, kept while the check is off */
+  age: number;
 }
 
 export interface Run {

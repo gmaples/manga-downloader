@@ -76,6 +76,11 @@ type Settings struct {
 	// "Title [en]" (see core.FolderLanguage). Only read with SeriesFolders.
 	// Desktop app only: the CLI has no flag.
 	GuessLanguage bool
+	// AgeCheck refuses titles a site rates above Age (see AgeAllows). Off,
+	// every title loads, whatever its rating.
+	AgeCheck bool
+	// Age is the user's own age declaration, 16 or 18, read with AgeCheck
+	Age int
 	// BrowserVisible shows the browser window for sites that need one, so
 	// interactive challenges (e.g. cloudflare) can be solved manually
 	BrowserVisible bool

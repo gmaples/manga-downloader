@@ -57,7 +57,7 @@ func zenkoServer(t *testing.T) *httptest.Server {
 		}
 	}
 	mux.HandleFunc("/titles/1225", withReferer(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprint(w, `{"id":1225,"name":"Назва","engName":"Name","coverImg":"c.jpg"}`)
+		fmt.Fprint(w, `{"id":1225,"name":"Назва","engName":"Name","coverImg":"c.jpg","ageLimit":16,"author":{"ageLimit":"18"}}`)
 	}))
 	mux.HandleFunc("/titles/1225/chapters", withReferer(func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, `[`+
@@ -124,5 +124,58 @@ func TestZenkoSeries(t *testing.T) {
 		if p := chapter.Pages[i]; p.URL != "https://storage.example/"+name+".webp" || p.Number != int64(i+1) {
 			t.Errorf("page %d = %d %q", i, p.Number, p.URL)
 		}
+	}
+}
+
+// the api serves rated titles to anyone, so the age check is the app's
+func TestZenkoAgeCheck(t *testing.T) {
+	server := zenkoServer(t)
+	old := zenkoApi
+	zenkoApi = server.URL
+	defer func() { zenkoApi = old }()
+
+	cases := []struct {
+		check bool
+		age   int
+		ok    bool
+	}{
+		{false, AgeTeen, true},
+		{true, AgeTeen, true}, // rated 16; the author's "18" isn't the title's
+		{true, AgeAdult, true},
+	}
+	for _, c := range cases {
+		z := NewZenko(&Grabber{URL: "https://zenko.online/titles/1225", Settings: &Settings{AgeCheck: c.check, Age: c.age}})
+		if _, err := z.FetchTitle(); (err == nil) != c.ok {
+			t.Errorf("check %v, age %d: FetchTitle() = %v", c.check, c.age, err)
+		}
+	}
+}
+
+func TestZenkoAgeCheckRefusesAbove(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/titles/2779", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, `{"id":2779,"name":"Доджінші","ageLimit":18}`)
+	})
+	mux.HandleFunc("/titles/2779/chapters", func(w http.ResponseWriter, r *http.Request) {
+		t.Error("the chapter list of a refused title was fetched")
+		fmt.Fprint(w, `[]`)
+	})
+	server := httptest.NewServer(mux)
+	defer server.Close()
+	old := zenkoApi
+	zenkoApi = server.URL
+	defer func() { zenkoApi = old }()
+
+	z := NewZenko(&Grabber{URL: "https://zenko.online/titles/2779", Settings: &Settings{AgeCheck: true, Age: AgeTeen}})
+	if _, err := z.FetchTitle(); err == nil {
+		t.Error("FetchTitle() of an 18+ title with the check at 16 succeeded")
+	}
+	if _, errs := z.FetchChapters(); len(errs) != 1 {
+		t.Errorf("FetchChapters() errors = %v, want the age error", errs)
+	}
+
+	z = NewZenko(&Grabber{URL: "https://zenko.online/titles/2779", Settings: &Settings{AgeCheck: true, Age: AgeAdult}})
+	if title, err := z.FetchTitle(); err != nil || title != "Доджінші" {
+		t.Errorf("FetchTitle() with the check at 18 = %q, %v", title, err)
 	}
 }

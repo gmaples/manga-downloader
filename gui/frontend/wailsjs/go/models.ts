@@ -199,6 +199,8 @@ export namespace main {
 	    browserVisible: boolean;
 	    seriesFolders: boolean;
 	    guessLanguage: boolean;
+	    ageCheck: boolean;
+	    age: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new OptionsDTO(source);
@@ -221,6 +223,8 @@ export namespace main {
 	        this.browserVisible = source["browserVisible"];
 	        this.seriesFolders = source["seriesFolders"];
 	        this.guessLanguage = source["guessLanguage"];
+	        this.ageCheck = source["ageCheck"];
+	        this.age = source["age"];
 	    }
 	}
 	export class PrefsDTO {
