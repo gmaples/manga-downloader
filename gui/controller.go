@@ -61,6 +61,9 @@ const (
 	// JobFetching is a chapter whose page list is being fetched, before any
 	// page is known
 	JobFetching
+	// JobTodo is a chapter of a group restored from history.txt that wasn't
+	// saved yet (see restoreLocked)
+	JobTodo
 )
 
 // Job is the progress of one chapter. In bundle mode there's a single Job for
@@ -272,6 +275,24 @@ type Controller struct {
 	// flightSeq orders the chapters in flight across groups (see flight)
 	flightSeq uint64
 	log       []LogLine
+
+	// history is history.txt's series, newest first, and historyPath where
+	// it's saved, "" for nowhere (see history.go)
+	history     []HistoryEntry
+	historyPath string
+	// histSave serialises the saves of history; histKick asks the saver
+	// goroutine for one, nil when there's no saver
+	histSave sync.Mutex
+	histKick chan struct{}
+	// resumeURL is the URL whose load selects resumeTodo, the to-do chapters
+	// of a restored group by label (see Resume)
+	resumeURL  string
+	resumeTodo map[string]bool
+	// adult is set when the site rates the loaded series 18+, and
+	// adultTitles holds the titles of the adult series seen this session,
+	// which the log masks (see maskLineLocked)
+	adult       bool
+	adultTitles map[string]bool
 }
 
 // group is one press of Download: its chapters' rows, its cancel and its
@@ -329,6 +350,19 @@ type group struct {
 	siteKey  string
 	flights  map[*grabber.Chapter]*flight
 	flightOf map[grabber.Filterable]*flight
+	// restored is set on a group read back from history.txt at startup: its
+	// rows are the done and to-do chapters of the last session, and it
+	// downloads nothing
+	restored bool
+	// adult is set when the site rates the series 18+
+	adult bool
+	// chapters are the listed chapters of the group's run, every pass, and
+	// done those of them saved (or already in the folder), by chapKey;
+	// listedOf maps a fetched chapter to its listing entry. They're what
+	// history.txt records (see recordGroupLocked).
+	chapters grabber.Filterables
+	done     map[string]bool
+	listedOf map[*grabber.Chapter]grabber.Filterable
 }
 
 // flight is the progress of one chapter of a group from its fetch to its end,
@@ -372,6 +406,8 @@ func newGroup() *group {
 		keys:      map[string]bool{},
 		flights:   map[*grabber.Chapter]*flight{},
 		flightOf:  map[grabber.Filterable]*flight{},
+		done:      map[string]bool{},
+		listedOf:  map[*grabber.Chapter]grabber.Filterable{},
 	}
 }
 
@@ -436,6 +472,11 @@ type GroupState struct {
 	Run        RunInfo
 	Jobs       []Job
 	Summary    *Summary
+	// Restored is set on a group of the last session (see group.restored),
+	// URL is its series' URL, and Adult is set when the site rates it 18+
+	Restored bool
+	URL      string
+	Adult    bool
 }
 
 // NewController returns a controller that works on its own copy of settings
@@ -555,6 +596,7 @@ func (c *Controller) appendMsgLocked(level LogLevel, m Message) {
 }
 
 func (c *Controller) appendLineLocked(line LogLine) {
+	line = c.maskLineLocked(line)
 	c.logGen++
 	c.log = append(c.log, line)
 	if len(c.log) > maxLogLines {
@@ -807,6 +849,16 @@ func (c *Controller) load(url string, s *grabber.Settings) error {
 	c.siteVolumes = core.SiteVolumes(series.Chapters)
 	c.listedVolumes = core.ListedVolumes(series.Chapters)
 	c.volumesText = ""
+	c.adult = false
+	if r, ok := series.Site.(grabber.AgeRated); ok {
+		c.adult = r.AgeLimit() >= grabber.AgeAdult
+	}
+	if c.adult {
+		c.addAdultTitleLocked(series.Title)
+	}
+	c.touchLocked(url, series.Title, c.adult)
+	c.applyResumeLocked(url)
+	c.kickHistory()
 	c.appendMsgLocked(LogInfo, msg("log.loaded", map[string]any{"title": series.Title, "count": len(series.Chapters)}))
 	return nil
 }
@@ -1204,6 +1256,8 @@ func (c *Controller) Clear() error {
 	loadRelease := c.loadRelease
 	c.loadRelease = nil
 	c.dropFinishedLocked()
+	c.closeHistoryLocked()
+	c.kickHistory()
 	if c.runningLocked() {
 		// a running group may still use the browser: it closes when the last
 		// group releases it (see browser.Hold), so this release never closes it
@@ -1329,7 +1383,14 @@ func (c *Controller) Running() bool {
 	return c.runningLocked()
 }
 
-// Title is the loaded series' title
+// Adult reports whether the site rates the loaded series 18+
+func (c *Controller) Adult() bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.series != nil && c.adult
+}
+
+// Title returns the loaded series' title
 func (c *Controller) Title() string {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -1567,7 +1628,7 @@ func (c *Controller) Groups() []GroupState {
 
 // state is a copy of the group. The caller holds c.mu.
 func (g *group) state() GroupState {
-	st := GroupState{ID: g.id, Title: g.title, Running: g.running, Cancelling: g.cancelling, Run: g.runinfo}
+	st := GroupState{ID: g.id, Title: g.title, Running: g.running, Cancelling: g.cancelling, Run: g.runinfo, Restored: g.restored, URL: g.url, Adult: g.adult}
 	st.Jobs = make([]Job, len(g.jobs))
 	for i, j := range g.jobs {
 		st.Jobs[i] = *j
@@ -1782,6 +1843,11 @@ func (c *Controller) Start() error {
 	for _, chap := range chapters {
 		g.keys[chapKey(chap)] = true
 	}
+	g.adult = c.adult
+	g.chapters = append(g.chapters, chapters...)
+	c.dropRestoredLocked(g.url)
+	c.recordGroupLocked(g)
+	c.kickHistory()
 	c.rememberStartLocked()
 	c.appendMsgLocked(LogInfo, msg("log.downloading", map[string]any{"count": len(chapters), "title": series.Title}))
 	loadRelease := c.loadRelease
@@ -1845,6 +1911,9 @@ func (c *Controller) queueLocked(g *group) error {
 	g.pending = append(g.pending, pass{chapters: fresh, rng: bundleRange(numbers, selected)})
 	g.runinfo.Chapters += len(fresh)
 	g.runinfo.Rows += rows
+	g.chapters = append(g.chapters, fresh...)
+	c.recordGroupLocked(g)
+	c.kickHistory()
 	c.rememberStartLocked()
 	c.appendMsgLocked(LogInfo, msg("log.queued", map[string]any{"count": len(fresh), "title": g.title}))
 	c.mu.Unlock()
@@ -1871,6 +1940,14 @@ func (c *Controller) run(ctx context.Context, g *group, series *core.Series, cha
 
 		c.mu.Lock()
 		f, bundle, exists := c.endPassLocked(g, s, len(chapters), g.stats.saved-saved, file, err)
+		if bundle != "" || exists > 0 {
+			// a bundle saved, or already there, holds every chapter of the pass
+			for _, chap := range chapters {
+				g.done[chapKey(chap)] = true
+			}
+		}
+		c.recordGroupLocked(g)
+		c.kickHistory()
 		extra = append(extra, f...)
 		if bundle != "" {
 			bundles = append(bundles, bundle)
@@ -2026,6 +2103,13 @@ func (c *Controller) Shutdown() {
 	for c.Running() && time.Now().Before(deadline) {
 		time.Sleep(50 * time.Millisecond)
 	}
+	// what the groups got to, for the next launch's Activity pane
+	c.mu.Lock()
+	for _, g := range c.groups {
+		c.recordGroupLocked(g)
+	}
+	c.mu.Unlock()
+	c.saveHistoryNow()
 	done := make(chan struct{})
 	go func() {
 		browser.Close()
@@ -2124,6 +2208,7 @@ func (e events) Fetched(listed grabber.Filterable, ch *grabber.Chapter) {
 		g.flights[ch] = f
 		delete(g.flightOf, listed)
 	}
+	g.listedOf[ch] = listed
 	if j := g.fetching[listed]; j != nil {
 		// the fetched chapter's title can differ from the listing's
 		j.Title, j.Tags = grabber.ChapterLabel(ch), g.releaseTags(ch)
@@ -2173,6 +2258,8 @@ func (e events) Skipped(ch *grabber.Chapter) {
 	c.mu.Lock()
 	delete(g.flights, ch)
 	g.stats.skipped++
+	g.markDone(ch)
+	c.kickHistory()
 	if g.bundle == nil && g.chapVol[ch] == nil {
 		g.endRow(ch, JobSkipped, msg("job.reason.skipped", nil))
 	}
@@ -2188,6 +2275,8 @@ func (e events) Exists(listed grabber.Filterable, name string) {
 	c, g := e.c, e.g
 	c.mu.Lock()
 	g.stats.existing++
+	g.done[chapKey(listed)] = true
+	c.kickHistory()
 	reason := msg("job.reason.exists", map[string]any{"name": name})
 	delete(g.flightOf, listed)
 	j := g.fetching[listed]
@@ -2328,6 +2417,8 @@ func (e events) Packed(ch *grabber.Chapter, name string, err error) {
 		c.appendMsgLocked(LogError, msg("log.packFailed", map[string]any{"label": g.releaseLabel(ch), "reason": err.Error()}))
 	} else {
 		g.stats.saved++
+		g.markDone(ch)
+		c.kickHistory()
 		if j != nil {
 			j.State = JobDone
 			// the skipped pages were never counted, so the bar is exact only now
@@ -2451,6 +2542,7 @@ func (e events) VolumePacked(v *core.Volume, name string, err error) {
 		}
 	case errors.Is(err, core.ErrSkippedVolume):
 		// its chapters were each counted as skipped already
+		g.markVolumeDone(v)
 		if j != nil {
 			j.State = JobSkipped
 			j.setReasonErr(err)
@@ -2458,6 +2550,7 @@ func (e events) VolumePacked(v *core.Volume, name string, err error) {
 	case errors.Is(err, core.ErrExists):
 		// its file is already there, so none of its chapters was fetched
 		g.stats.existing += len(v.Chapters)
+		g.markVolumeDone(v)
 		if j != nil {
 			j.State = JobSkipped
 			j.setReason(msg("job.reason.exists", map[string]any{"name": name}))
@@ -2472,6 +2565,7 @@ func (e events) VolumePacked(v *core.Volume, name string, err error) {
 		c.appendMsgLocked(LogError, msg("log.errorPacking", map[string]any{"label": label, "reason": err.Error()}))
 	default:
 		g.stats.volumes++
+		g.markVolumeDone(v)
 		if j != nil {
 			j.State = JobDone
 			j.Done = j.Total
@@ -2481,6 +2575,7 @@ func (e events) VolumePacked(v *core.Volume, name string, err error) {
 	if j != nil {
 		j.clearStatus()
 	}
+	c.kickHistory()
 	c.mu.Unlock()
 	c.emit()
 }

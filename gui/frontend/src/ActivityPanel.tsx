@@ -2,12 +2,15 @@
 // press of Download), in the order they started, under a header with the
 // series and its own Cancel. Each has its summary once it ended, then one row
 // per chapter (or the single bundle job). Rows are windowed like the chapter
-// list, since "select all" on a long series makes thousands of them.
+// list, since "select all" on a long series makes thousands of them. A group
+// of the last session (restored) shows what was done and what's still to do,
+// with a button that loads the series with those chapters selected.
 
 import { say } from './i18n';
 import { useI18n } from './i18n/react';
 import { jobFraction, jobShortStatus, jobStatus, summaryHeadline, summarySentence } from './format';
-import { AlertIcon, CheckIcon, ErrorIcon, FolderIcon, PackageIcon, SkipIcon, Spinner, XIcon } from './icons';
+import { AlertIcon, CheckIcon, ErrorIcon, FolderIcon, PackageIcon, SkipIcon, Spinner, TodoIcon, XIcon } from './icons';
+import { MaskedTitle, useMask } from './Masked';
 import { overallProgress, summaryTone } from './run';
 import type { Group, Job, State, Summary } from './types';
 import { useVirtualList } from './virtual';
@@ -21,9 +24,11 @@ interface Props {
   /** Opens the folder group id saved into */
   onOpenFolder: (id: number) => void;
   onCancelGroup: (id: number) => void;
+  /** Loads restored group id's series with its chapters to do selected */
+  onResume: (id: number) => void;
 }
 
-export function ActivityPanel({ state, onOpenFolder, onCancelGroup }: Props) {
+export function ActivityPanel({ state, onOpenFolder, onCancelGroup, onResume }: Props) {
   const { t } = useI18n();
 
   if (state.groups.length === 0) {
@@ -47,6 +52,8 @@ export function ActivityPanel({ state, onOpenFolder, onCancelGroup }: Props) {
           multi={multi}
           onOpenFolder={() => onOpenFolder(g.id)}
           onCancel={() => onCancelGroup(g.id)}
+          onResume={() => onResume(g.id)}
+          busy={state.loading}
         />
       ))}
     </div>
@@ -56,21 +63,39 @@ export function ActivityPanel({ state, onOpenFolder, onCancelGroup }: Props) {
 function GroupSection({
   group,
   multi,
+  busy,
   onOpenFolder,
   onCancel,
+  onResume,
 }: {
   group: Group;
   multi: boolean;
+  /** A series is loading, which a resume would be refused during */
+  busy: boolean;
   onOpenFolder: () => void;
   onCancel: () => void;
+  onResume: () => void;
 }) {
   const { t } = useI18n();
+  const mask = useMask(group.title, group.adult);
+  const todo = group.restored && group.jobs.some((j) => j.state === 'todo');
   return (
-    <section className="run-group" aria-label={group.title}>
+    <section className="run-group" aria-label={mask(group.title)}>
       <div className="run-group-head">
-        <h3 className="run-group-title" title={group.title}>
-          {group.title}
+        <h3 className="run-group-title" title={mask(group.title)}>
+          <MaskedTitle title={group.title} adult={group.adult} />
         </h3>
+        {todo && (
+          <button
+            type="button"
+            className="btn small"
+            title={t('activity.resumeLabel')}
+            disabled={busy}
+            onClick={onResume}
+          >
+            {t('activity.resume')}
+          </button>
+        )}
         {group.running && (
           // aria-disabled, not disabled: a disabled button drops its focus
           <button
@@ -88,18 +113,27 @@ function GroupSection({
           </button>
         )}
       </div>
-      {group.summary && <SummaryCard summary={group.summary} onOpenFolder={onOpenFolder} />}
+      {group.summary && <SummaryCard summary={group.summary} mask={mask} onOpenFolder={onOpenFolder} />}
       {group.jobs.length > 0 &&
         (group.run.bundle ? (
           <BundleCard job={group.jobs[0]} chapters={group.run.chapters} />
         ) : (
-          <JobList group={group} multi={multi} />
+          <JobList group={group} multi={multi} mask={mask} />
         ))}
     </section>
   );
 }
 
-function SummaryCard({ summary, onOpenFolder }: { summary: Summary; onOpenFolder: () => void }) {
+function SummaryCard({
+  summary,
+  mask,
+  onOpenFolder,
+}: {
+  summary: Summary;
+  /** Hides the series' title while it's masked (the folder and file names carry it) */
+  mask: (text: string) => string;
+  onOpenFolder: () => void;
+}) {
   const { t } = useI18n();
   const tone = summaryTone(summary);
   const ToneIcon =
@@ -113,8 +147,8 @@ function SummaryCard({ summary, onOpenFolder }: { summary: Summary; onOpenFolder
         </span>
         <h3>{summaryHeadline(summary, t)}</h3>
       </div>
-      <p className="summary-text">{summarySentence(summary, t)}</p>
-      {summary.error !== '' && <p className="error-text small">{say(t, summary.errorMsg, summary.error)}</p>}
+      <p className="summary-text">{mask(summarySentence(summary, t))}</p>
+      {summary.error !== '' && <p className="error-text small">{mask(say(t, summary.errorMsg, summary.error))}</p>}
       {summary.skipped > 0 && (
         <p className="muted small">
           {t('activity.skippedNote', { count: summary.skipped })}
@@ -130,7 +164,7 @@ function SummaryCard({ summary, onOpenFolder }: { summary: Summary; onOpenFolder
           {summary.failures.map((f, i) => (
             <li key={i}>
               {f.label !== '' && <strong>{f.label}</strong>}
-              <span>{say(t, f.reasonMsg, f.reason)}</span>
+              <span>{mask(say(t, f.reasonMsg, f.reason))}</span>
             </li>
           ))}
         </ul>
@@ -173,7 +207,7 @@ function BundleCard({ job, chapters }: { job: Job; chapters: number }) {
   );
 }
 
-function JobList({ group, multi }: { group: Group; multi: boolean }) {
+function JobList({ group, multi, mask }: { group: Group; multi: boolean; mask: (text: string) => string }) {
   const { t } = useI18n();
   const overall = overallProgress(group);
   const queued = group.running ? overall.queued : 0;
@@ -184,7 +218,7 @@ function JobList({ group, multi }: { group: Group; multi: boolean }) {
   return (
     <section className="jobs-section" aria-label={t('activity.chaptersInRun')}>
       <h3 className="jobs-title">
-        {group.running ? t('activity.thisRun') : t('activity.lastRun')}
+        {group.running ? t('activity.thisRun') : group.restored ? t('activity.restored') : t('activity.lastRun')}
         <span className="muted">
           {' '}
           {t('activity.progress', { finished: overall.finished, total: overall.total })}
@@ -210,7 +244,7 @@ function JobList({ group, multi }: { group: Group; multi: boolean }) {
                 </div>
               );
             }
-            return <JobRow key={pos} job={job} style={style} />;
+            return <JobRow key={pos} job={job} style={style} mask={mask} />;
           })}
         </div>
       </div>
@@ -218,10 +252,10 @@ function JobList({ group, multi }: { group: Group; multi: boolean }) {
   );
 }
 
-function JobRow({ job, style }: { job: Job; style: React.CSSProperties }) {
+function JobRow({ job, style, mask }: { job: Job; style: React.CSSProperties; mask: (text: string) => string }) {
   const { t, lang } = useI18n();
   const fraction = jobFraction(job);
-  const status = jobStatus(job, t);
+  const status = mask(jobStatus(job, t));
   const title = say(t, job.titleMsg, job.title);
 
   return (
@@ -235,8 +269,8 @@ function JobRow({ job, style }: { job: Job; style: React.CSSProperties }) {
           {job.tags && <span className="job-tags">{job.tags}</span>}
           <span className="job-status">{jobShortStatus(job, t, lang)}</span>
         </div>
-        {job.state === 'failed' || job.state === 'skipped' ? (
-          <span className="job-reason">{say(t, job.reasonMsg, job.reason)}</span>
+        {job.state === 'failed' || job.state === 'skipped' || job.state === 'todo' ? (
+          <span className="job-reason">{mask(say(t, job.reasonMsg, job.reason))}</span>
         ) : (
           <div
             className="bar"
@@ -267,5 +301,7 @@ function JobIcon({ state }: { state: Job['state'] }) {
       return <ErrorIcon size={15} />;
     case 'skipped':
       return <SkipIcon size={15} />;
+    case 'todo':
+      return <TodoIcon size={15} />;
   }
 }

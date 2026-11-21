@@ -7,8 +7,10 @@ import { App } from '../App';
 import { BrowserAlert } from '../BrowserAlert';
 import { ChapterPanel } from '../ChapterPanel';
 import { DownloadDock } from '../DownloadDock';
+import { HistoryDialog, HistoryRow } from '../HistoryDialog';
 import { Check, SelectField, Segmented, Switch, TextField } from '../fields';
 import { LogDrawer, StatusBar } from '../LogPanel';
+import { MaskedTitle } from '../Masked';
 import { createMockApi, type MockSetup } from '../mock';
 import { OptionsPanel } from '../OptionsPanel';
 import { SettingsDialog } from '../SettingsDialog';
@@ -80,6 +82,7 @@ const SCREENS: Array<[string, Partial<MockSetup>]> = [
   ['locked chapters, and no volumes', { scenario: 'loaded', locked: true, novolumes: true }],
   ['a run with skipped chapters, fetching their pages', { scenario: 'running', skip: true, fetching: true }],
   ['a finished EPUB run that failed', { scenario: 'done', fail: true, epub: true }],
+  ['the last session restored, with an adult title', { scenario: 'restored' }],
 ];
 
 interface Snapshot {
@@ -156,7 +159,7 @@ function components({ state, chapters, selected, log }: Snapshot): Screen[] {
     {
       file: 'ActivityPanel.tsx',
       name: 'ActivityPanel',
-      element: createElement(ActivityPanel, { state, onOpenFolder: noop, onCancelGroup: noop }),
+      element: createElement(ActivityPanel, { state, onOpenFolder: noop, onCancelGroup: noop, onResume: noop }),
     },
     {
       file: 'DownloadDock.tsx',
@@ -253,6 +256,30 @@ function components({ state, chapters, selected, log }: Snapshot): Screen[] {
       element: createElement(Check, { label: t('common.all'), checked: false, onChange: noop }),
     },
   ];
+  list.push(
+    {
+      file: 'HistoryDialog.tsx',
+      name: 'HistoryDialog',
+      element: createElement(HistoryDialog, { load: async () => [], onClear: later, onClose: noop, onOpenURL: noop }),
+    },
+    {
+      file: 'HistoryDialog.tsx',
+      name: 'HistoryRow',
+      element: createElement(
+        'ul',
+        null,
+        createElement(HistoryRow, {
+          item: { title: 'Night Garden', url: 'https://example.com/n', site: 'https://example.com/', adult: true, when: 0, done: 3, todo: 1 },
+          onOpenURL: noop,
+        }),
+      ),
+    },
+    {
+      file: 'Masked.tsx',
+      name: 'MaskedTitle',
+      element: createElement(MaskedTitle, { title: 'Night Garden', adult: true }),
+    },
+  );
   if (state.update?.oneClick) {
     list.push({
       file: 'UpdateDialog.tsx',

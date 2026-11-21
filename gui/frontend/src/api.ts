@@ -5,7 +5,7 @@
 import * as app from '../wailsjs/go/main/App';
 import { BrowserOpenURL, ClipboardGetText, EventsOn } from '../wailsjs/runtime/runtime';
 import type { LangPref } from './i18n';
-import type { Chapter, LogLine, Options, State } from './types';
+import type { Chapter, HistoryItem, LogLine, Options, State } from './types';
 
 export type Unsubscribe = () => void;
 
@@ -60,6 +60,12 @@ export interface Api {
   setSimpleStart(on: boolean): Promise<void>;
   /** Saves the side panel's width and the log drawer's height the user dragged them to; 0 keeps the default */
   setPaneSizes(sideWidth: number, logHeight: number): Promise<void>;
+  /** The series of history.txt, newest first (the last 100) */
+  history(): Promise<HistoryItem[]>;
+  /** Empties the history, and with it what the next launch shows in the Activity pane */
+  clearHistory(): Promise<void>;
+  /** Loads the series of restored group id with its chapters to do selected; downloads nothing */
+  resume(id: number): Promise<void>;
 
   // Pushes. Each returns a function that stops the callback.
   onState(cb: (s: State) => void): Unsubscribe;
@@ -132,6 +138,9 @@ export function createWailsApi(): Api {
     setCheckUpdates: (on) => app.SetCheckUpdates(on),
     setSimpleStart: (on) => app.SetSimpleStart(on),
     setPaneSizes: (side, log) => app.SetPaneSizes(side, log),
+    history: () => app.History(),
+    clearHistory: () => app.ClearHistory(),
+    resume: (id) => app.Resume(id),
 
     onState: (cb) => state.subscribe(cb),
     onChapters: (cb) => chapters.subscribe(cb),

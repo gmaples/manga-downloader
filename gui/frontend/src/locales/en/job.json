@@ -5,7 +5,8 @@
     "archiving": "archiving",
     "done": "done",
     "failed": "failed: {{reason}}",
-    "skipped": "skipped: {{reason}}"
+    "skipped": "skipped: {{reason}}",
+    "todo": "to do: {{reason}}"
   },
   "short": {
     "fetching": "Fetching pages…",
@@ -14,7 +15,8 @@
     "downloading": "Downloading",
     "done": "Saved",
     "failed": "Failed",
-    "skipped": "Skipped"
+    "skipped": "Skipped",
+    "todo": "To do"
   },
   "title": {
     "bundle": "Bundle: chapters {{range}}",
@@ -39,6 +41,7 @@
     "locked": "locked chapter",
     "emptyVolume": "none of its chapters could be downloaded",
     "exists": "{{name}} already exists",
-    "noPages": "no pages found"
+    "noPages": "no pages found",
+    "todo": "not downloaded yet"
   }
 }

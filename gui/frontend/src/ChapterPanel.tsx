@@ -9,6 +9,7 @@ import type { T as Translator } from './i18n';
 import { T, useI18n } from './i18n/react';
 import { AlertIcon, ChevronIcon, LinkIcon, LockIcon, RefreshIcon } from './icons';
 import { Mascot } from './Mascot';
+import { MaskedTitle, useMask } from './Masked';
 import { extendsSpan, moveActive, pickable, spanIndices } from './listKeys';
 import { hostOf } from './run';
 import type { Chapter, State } from './types';
@@ -137,6 +138,7 @@ function ChapterList({
   onError,
 }: Props) {
   const { t } = useI18n();
+  const mask = useMask(state.title, state.adult);
   const [rangeText, setRangeText] = useState('');
   const [rangeNote, setRangeNote] = useState<{ text: string; bad: boolean } | null>(null);
   const [active, setActive] = useState(-1);
@@ -355,8 +357,8 @@ function ChapterList({
     <section className="panel chapters" aria-label={t('chapters.section')}>
       <div className="series-head">
         <div className="series-id">
-          <h2 className="series-title" title={state.title}>
-            {state.title}
+          <h2 className="series-title" title={mask(state.title)}>
+            <MaskedTitle title={state.title} adult={state.adult} />
           </h2>
           <p className="series-meta">
             {host !== '' && (
@@ -450,7 +452,7 @@ function ChapterList({
         ref={list.ref}
         onScroll={list.onScroll}
         role="listbox"
-        aria-label={t('chapters.listLabel', { title: state.title })}
+        aria-label={t('chapters.listLabel', { title: mask(state.title) })}
         aria-multiselectable="true"
         aria-disabled={disabled || undefined}
         aria-activedescendant={

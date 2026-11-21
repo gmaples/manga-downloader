@@ -2707,3 +2707,83 @@ a.version:hover {
   font-size: 11px;
   color: var(--text-3);
 }
+
+/* ---------- adult titles, masked until clicked ---------- */
+.adult-mask {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-style: italic;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.adult-mask:hover {
+  color: var(--accent);
+}
+
+/* ---------- history pop-up ---------- */
+.history-dialog {
+  width: min(560px, 100vw - 48px);
+}
+
+.history-dialog .settings-body {
+  padding: 4px 16px 12px;
+}
+
+.history-list {
+  display: grid;
+  gap: 2px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.history-item {
+  display: grid;
+  gap: 2px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.history-item:last-child {
+  border-bottom: 0;
+}
+
+.history-title {
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history-item a {
+  color: var(--text);
+  text-decoration: none;
+}
+
+.history-item a:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.history-meta a {
+  color: var(--text-2);
+}
+
+.history-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+
+.history-foot {
+  display: flex;
+  justify-content: flex-end;
+  flex: none;
+  padding: 10px 16px 12px;
+  border-top: 1px solid var(--border);
+}

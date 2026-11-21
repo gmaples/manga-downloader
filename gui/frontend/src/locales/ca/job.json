@@ -5,7 +5,8 @@
     "archiving": "empaquetant",
     "done": "fet",
     "failed": "fallit: {{reason}}",
-    "skipped": "omès: {{reason}}"
+    "skipped": "omès: {{reason}}",
+    "todo": "pendent: {{reason}}"
   },
   "short": {
     "fetching": "Obtenint pàgines…",
@@ -14,7 +15,8 @@
     "downloading": "Descarregant",
     "done": "Desat",
     "failed": "Fallit",
-    "skipped": "Omès"
+    "skipped": "Omès",
+    "todo": "Pendent"
   },
   "title": {
     "bundle": "Paquet: capítols {{range}}",
@@ -39,6 +41,7 @@
     "locked": "capítol bloquejat",
     "emptyVolume": "no s'ha pogut descarregar cap dels seus capítols",
     "exists": "{{name}} ja existeix",
-    "noPages": "no s'ha trobat cap pàgina"
+    "noPages": "no s'ha trobat cap pàgina",
+    "todo": "encara no descarregat"
   }
 }

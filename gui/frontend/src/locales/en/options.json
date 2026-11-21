@@ -20,6 +20,11 @@
     "label": "Skip existing files",
     "hint": "Files already in the folder aren't downloaded again. To download a broken file again, delete it first."
   },
+  "age": {
+    "label": "Age check",
+    "over": "I am over",
+    "hint": "Titles a site rates above your age aren't loaded. Off, every title loads. Sites that publish a rating are checked; for now that's zenko.online."
+  },
   "format": {
     "label": "Format",
     "cbz": "CBZ",

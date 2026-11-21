@@ -18,6 +18,8 @@ const base: Options = {
   browserVisible: false,
   seriesFolders: false,
   guessLanguage: false,
+  ageCheck: false,
+  age: 18,
 };
 
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));

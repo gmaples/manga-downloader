@@ -17,5 +17,8 @@
   "queued_other": "{{count}} capítols més en espera",
   "progressOf": "Progrés de {{title}}{{tags}}",
   "progressBundle": "Progrés del paquet",
-  "cancelGroup": "Cancel·la {{title}}"
+  "cancelGroup": "Cancel·la {{title}}",
+  "restored": "De l'última sessió",
+  "resume": "Carrega per continuar",
+  "resumeLabel": "Carrega la sèrie amb els capítols pendents seleccionats"
 }

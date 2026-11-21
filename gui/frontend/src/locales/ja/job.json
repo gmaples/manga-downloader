@@ -5,7 +5,8 @@
     "archiving": "書き出し中",
     "done": "完了",
     "failed": "失敗: {{reason}}",
-    "skipped": "スキップ: {{reason}}"
+    "skipped": "スキップ: {{reason}}",
+    "todo": "未完了: {{reason}}"
   },
   "short": {
     "fetching": "ページを取得中…",
@@ -14,7 +15,8 @@
     "downloading": "ダウンロード中",
     "done": "保存済み",
     "failed": "失敗",
-    "skipped": "スキップ"
+    "skipped": "スキップ",
+    "todo": "未完了"
   },
   "title": {
     "bundle": "まとめファイル: 第{{range}}話",
@@ -39,6 +41,7 @@
     "locked": "ロック中の話",
     "emptyVolume": "どの話もダウンロードできませんでした",
     "exists": "{{name}}はすでに存在します",
-    "noPages": "ページが見つかりません"
+    "noPages": "ページが見つかりません",
+    "todo": "未ダウンロード"
   }
 }

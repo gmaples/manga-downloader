@@ -43,6 +43,7 @@ func newSession(notify func()) (*Controller, string) {
 	}
 	// nothing else holds the controller yet, so it's set without the lock
 	ctrl.prefs = loadPrefs(prefsPath)
+	ctrl.SetHistory(historyPath(prefsPath), loadHistory(historyPath(prefsPath)))
 
 	return ctrl, prefsPath
 }

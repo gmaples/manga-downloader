@@ -20,6 +20,11 @@
     "label": "Omet els fitxers existents",
     "hint": "Els fitxers que ja són a la carpeta no es tornen a descarregar. Si vols tornar a descarregar un fitxer malmès, esborra'l primer."
   },
+  "age": {
+    "label": "Control d'edat",
+    "over": "Soc major de",
+    "hint": "No es carreguen els títols que un lloc classifica per sobre de la teva edat. Desactivat, es carreguen tots. Es comproven els llocs que publiquen una classificació; ara per ara, zenko.online."
+  },
   "format": {
     "label": "Format",
     "cbz": "CBZ",

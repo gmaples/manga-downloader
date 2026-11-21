@@ -37,5 +37,6 @@
   "errorDownload": "error al descargar {{label}}: {{reason}}",
   "packFailed": "{{label}}: error al empaquetar: {{reason}}",
   "errorPacking": "error al empaquetar {{label}}: {{reason}}",
-  "saved": "guardado {{name}}"
+  "saved": "guardado {{name}}",
+  "historyFailed": "no se pudo guardar el historial: {{reason}}"
 }

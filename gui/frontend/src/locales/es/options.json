@@ -20,6 +20,11 @@
     "label": "Omitir archivos existentes",
     "hint": "Los archivos que ya están en la carpeta no se vuelven a descargar. Si quieres volver a descargar un archivo dañado, bórralo primero."
   },
+  "age": {
+    "label": "Control de edad",
+    "over": "Soy mayor de",
+    "hint": "No se cargan los títulos que un sitio clasifica por encima de tu edad. Desactivado, se cargan todos. Se comprueban los sitios que publican una clasificación; por ahora, zenko.online."
+  },
   "format": {
     "label": "Formato",
     "cbz": "CBZ",

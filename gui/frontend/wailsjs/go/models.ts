@@ -96,6 +96,31 @@ export namespace main {
 	        this.selected = source["selected"];
 	    }
 	}
+	export class HistoryDTO {
+	    title: string;
+	    url: string;
+	    site: string;
+	    adult: boolean;
+	    when: number;
+	    done: number;
+	    todo: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new HistoryDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.title = source["title"];
+	        this.url = source["url"];
+	        this.site = source["site"];
+	        this.adult = source["adult"];
+	        this.when = source["when"];
+	        this.done = source["done"];
+	        this.todo = source["todo"];
+	    }
+	}
+	
 	export class JobDTO {
 	    title: string;
 	    titleMsg?: Message;
@@ -199,6 +224,8 @@ export namespace main {
 	    browserVisible: boolean;
 	    seriesFolders: boolean;
 	    guessLanguage: boolean;
+	    ageCheck: boolean;
+	    age: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new OptionsDTO(source);
@@ -221,6 +248,8 @@ export namespace main {
 	        this.browserVisible = source["browserVisible"];
 	        this.seriesFolders = source["seriesFolders"];
 	        this.guessLanguage = source["guessLanguage"];
+	        this.ageCheck = source["ageCheck"];
+	        this.age = source["age"];
 	    }
 	}
 	export class PrefsDTO {
@@ -353,6 +382,9 @@ export namespace main {
 	    run: RunDTO;
 	    jobs: JobDTO[];
 	    summary?: SummaryDTO;
+	    restored: boolean;
+	    url: string;
+	    adult: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new GroupDTO(source);
@@ -367,6 +399,9 @@ export namespace main {
 	        this.run = this.convertValues(source["run"], RunDTO);
 	        this.jobs = this.convertValues(source["jobs"], JobDTO);
 	        this.summary = this.convertValues(source["summary"], SummaryDTO);
+	        this.restored = source["restored"];
+	        this.url = source["url"];
+	        this.adult = source["adult"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -416,6 +451,7 @@ export namespace main {
 	    loadError: string;
 	    loadErrorMsg?: Message;
 	    title: string;
+	    adult: boolean;
 	    chapterCount: number;
 	    hasDuplicates: boolean;
 	    hasGroupDuplicates: boolean;
@@ -458,6 +494,7 @@ export namespace main {
 	        this.loadError = source["loadError"];
 	        this.loadErrorMsg = this.convertValues(source["loadErrorMsg"], Message);
 	        this.title = source["title"];
+	        this.adult = source["adult"];
 	        this.chapterCount = source["chapterCount"];
 	        this.hasDuplicates = source["hasDuplicates"];
 	        this.hasGroupDuplicates = source["hasGroupDuplicates"];

@@ -13,6 +13,9 @@ const group = (id: number, chapters: number): Group => ({
   running: true,
   cancelling: false,
   run: { chapters, bundle: false, volumes: false, rows: 0 },
+  restored: false,
+  url: `https://example.com/manga/${id}`,
+  adult: false,
   jobs: [],
   summary: null,
 });

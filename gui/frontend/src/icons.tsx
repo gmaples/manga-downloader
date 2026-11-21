@@ -138,6 +138,18 @@ export const GearIcon = icon(
 
 export const ActivityIcon = icon(<path d="M3 12h4l3 7 4-14 3 7h4" />);
 
+// a clock turning back: the history of past series
+export const HistoryIcon = icon(
+  <>
+    <path d="M3.5 12a8.5 8.5 0 1 0 2.5-6L3.5 8.5" />
+    <path d="M3.5 3.5v5h5" />
+    <path d="M12 7.5V12l3 2" />
+  </>,
+);
+
+// an empty ring: a chapter still to do
+export const TodoIcon = icon(<circle cx="12" cy="12" r="6.5" />);
+
 // Ko-fi's own mark (from Simple Icons, CC0), filled rather than stroked
 export const KofiIcon = icon(
   <path

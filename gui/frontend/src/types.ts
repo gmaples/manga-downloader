@@ -3,7 +3,8 @@
 
 import type { LangPref } from './i18n';
 
-export type JobState = 'fetching' | 'downloading' | 'archiving' | 'done' | 'failed' | 'skipped';
+/** todo is a chapter of a group from the last session that wasn't saved */
+export type JobState = 'fetching' | 'downloading' | 'archiving' | 'done' | 'failed' | 'skipped' | 'todo';
 
 export type LogLevel = 'info' | 'warn' | 'error';
 
@@ -33,6 +34,10 @@ export interface Options {
   seriesFolders: boolean;
   /** Adds the run's language tag to that folder's name ("Title [en]"); only read with seriesFolders */
   guessLanguage: boolean;
+  /** Refuses titles a site rates above age; off, every title loads */
+  ageCheck: boolean;
+  /** The user's age for ageCheck: 16 or 18, kept while the check is off */
+  age: number;
 }
 
 export interface Run {
@@ -139,6 +144,27 @@ export interface Group {
   jobs: Job[];
   /** null while it runs */
   summary: Summary | null;
+  /** A group of the last session, read back from history.txt: its rows are done or to do, and resume() loads it */
+  restored: boolean;
+  /** The series' URL */
+  url: string;
+  /** The site rates the series 18+: its title is masked until clicked */
+  adult: boolean;
+}
+
+/** One series of the history pop-up, newest first */
+export interface HistoryItem {
+  title: string;
+  url: string;
+  /** The site's home page; "" when the URL has none */
+  site: string;
+  /** The site rates it 18+: masked until clicked */
+  adult: boolean;
+  /** When it was last loaded or downloaded, in Unix ms; 0 when unknown */
+  when: number;
+  /** Its chapters saved and still to do */
+  done: number;
+  todo: number;
 }
 
 /** The window's state, without the chapter list, selection and log */
@@ -150,6 +176,8 @@ export interface State {
   /** loadError as a message, when the GUI wrote it */
   loadErrorMsg?: Message;
   title: string;
+  /** The site rates the loaded series 18+: its title is masked until clicked */
+  adult: boolean;
   chapterCount: number;
   hasDuplicates: boolean;
   /** One number is listed more than once in a language, and the groups tell the copies apart */

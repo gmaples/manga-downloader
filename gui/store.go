@@ -36,6 +36,10 @@ type OptionsDTO struct {
 	// series inside OutputDir, and the run's language tag on its name
 	SeriesFolders bool `json:"seriesFolders"`
 	GuessLanguage bool `json:"guessLanguage"`
+	// AgeCheck refuses titles a site rates above Age (16 or 18), which is
+	// kept while the check is off
+	AgeCheck bool `json:"ageCheck"`
+	Age      int  `json:"age"`
 }
 
 // PrefsDTO are the app-only preferences, which the CLI has no flag for, so they
@@ -143,6 +147,7 @@ func defaultSettings() *grabber.Settings {
 		JPEGQuality:      grabber.JPEGQualityDefault,
 		FilenameTemplate: packer.FilenameTemplateDefault,
 		OutputDir:        defaultOutputDir(),
+		Age:              grabber.AgeAdult,
 	}
 }
 
@@ -178,6 +183,8 @@ func optionsOf(s grabber.Settings) OptionsDTO {
 		BrowserVisible:   s.BrowserVisible,
 		SeriesFolders:    s.SeriesFolders,
 		GuessLanguage:    s.GuessLanguage,
+		AgeCheck:         s.AgeCheck,
+		Age:              grabber.NormalizeAge(s.Age),
 	}
 }
 
@@ -198,6 +205,8 @@ func applyOptions(s *grabber.Settings, o OptionsDTO) {
 	s.FilenameTemplate = o.FilenameTemplate
 	s.BrowserVisible = o.BrowserVisible
 	s.SeriesFolders = o.SeriesFolders
+	s.AgeCheck = o.AgeCheck
+	s.Age = grabber.NormalizeAge(o.Age)
 	s.GuessLanguage = o.GuessLanguage
 }
 

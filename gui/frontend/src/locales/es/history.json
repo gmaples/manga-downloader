@@ -1,0 +1,9 @@
+{
+  "open": "Historial",
+  "title": "Series anteriores",
+  "close": "Cerrar el historial",
+  "empty": "Aún no hay series. Las series que cargues aparecerán aquí.",
+  "hint": "Haz clic en una serie para abrir su página en el navegador, o en su sitio para abrir el sitio. Se guardan las 100 últimas.",
+  "clear": "Borrar",
+  "counts": "{{done}} guardados, {{todo}} pendientes"
+}

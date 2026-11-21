@@ -17,5 +17,8 @@
   "queued_other": "{{count}} capítulos más en espera",
   "progressOf": "Progreso de {{title}}{{tags}}",
   "progressBundle": "Progreso del paquete",
-  "cancelGroup": "Cancelar {{title}}"
+  "cancelGroup": "Cancelar {{title}}",
+  "restored": "De la última sesión",
+  "resume": "Cargar para continuar",
+  "resumeLabel": "Cargar la serie con sus capítulos pendientes seleccionados"
 }

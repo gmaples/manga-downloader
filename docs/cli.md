@@ -372,6 +372,7 @@ the check.
 | `--jpeg-quality`      |       | JPEG quality of re-encoded pages (1-100); lower shrinks JPEG pages more | `90`           |
 | `--skip-pages`        |       | Pages to exclude from every chapter (`-1` is the last)         | none           |
 | `--skip-existing`     |       | Skip chapters, volumes or bundles already in the output folder | off            |
+| `--age`               |       | Refuse titles a site rates above this age: `16` or `18`        | off            |
 | `--concurrency`       | `-c`  | Number of chapters downloaded at once (max 5)                  | 5              |
 | `--concurrency-pages` | `-C`  | Number of pages downloaded at once per chapter (max 10)        | 10             |
 | `--retry`             | `-r`  | Retries per failed page (max 3, `0` disables retrying)         | 1              |

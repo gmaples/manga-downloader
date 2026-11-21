@@ -4,5 +4,7 @@
   "copy": "Copiar",
   "copied": "Copiado",
   "all": "Todos",
-  "none": "Ninguno"
+  "none": "Ninguno",
+  "adultTitle": "[Título para adultos]",
+  "adultReveal": "Título para adultos: haz clic para mostrarlo"
 }

@@ -4,5 +4,7 @@
   "copy": "Copy",
   "copied": "Copied",
   "all": "All",
-  "none": "None"
+  "none": "None",
+  "adultTitle": "[Adult Title]",
+  "adultReveal": "Adult title: click to show it"
 }

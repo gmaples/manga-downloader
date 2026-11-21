@@ -110,6 +110,26 @@ export function OptionsPanel({ state, onOptions, onChooseFolder, onError }: Prop
           onChange={(skipExisting) => set({ skipExisting })}
         />
 
+        <Check
+          label={t('options.age.label')}
+          checked={o.ageCheck}
+          disabled={locked}
+          onChange={(ageCheck) => set({ ageCheck })}
+        />
+        <div className="field-stack">
+          <Segmented<'16' | '18'>
+            label={t('options.age.over')}
+            value={o.age === 16 ? '16' : '18'}
+            disabled={locked || !o.ageCheck}
+            options={[
+              { value: '16', label: '16' },
+              { value: '18', label: '18' },
+            ]}
+            onChange={(age) => set({ age: Number(age) })}
+          />
+          <p className="hint">{t('options.age.hint')}</p>
+        </div>
+
         <Segmented<Options['format']>
           label={t('options.format.label')}
           value={o.format}

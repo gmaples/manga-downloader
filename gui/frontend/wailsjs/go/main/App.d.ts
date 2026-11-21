@@ -12,7 +12,11 @@ export function ChooseFolder(arg1:string):Promise<string>;
 
 export function Clear():Promise<void>;
 
+export function ClearHistory():Promise<void>;
+
 export function DismissBrowserAlert():Promise<void>;
+
+export function History():Promise<Array<main.HistoryDTO>>;
 
 export function Load(arg1:string):Promise<void>;
 
@@ -21,6 +25,8 @@ export function Log():Promise<Array<main.LogDTO>>;
 export function OpenFolder(arg1:number):Promise<void>;
 
 export function Options():Promise<main.OptionsDTO>;
+
+export function Resume(arg1:number):Promise<void>;
 
 export function SelectRange(arg1:string):Promise<number>;
 

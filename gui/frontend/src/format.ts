@@ -108,6 +108,8 @@ export function jobStatus(j: Job, t: T): string {
       return t('job.status.failed', { reason: say(t, j.reasonMsg, j.reason) });
     case 'skipped':
       return t('job.status.skipped', { reason: say(t, j.reasonMsg, j.reason) });
+    case 'todo':
+      return t('job.status.todo', { reason: say(t, j.reasonMsg, j.reason) });
   }
 }
 
@@ -132,6 +134,8 @@ export function jobShortStatus(j: Job, t: T, lang: Lang): string {
       return t('job.short.failed');
     case 'skipped':
       return t('job.short.skipped');
+    case 'todo':
+      return t('job.short.todo');
   }
 }
 

@@ -44,7 +44,9 @@ button, *Load* and *Settings*. (To open on the full window instead, turn off
    declares (when the title is written in its script), or letters used by one
    language alone (Ukrainian Ї Є Ґ, Russian Ы Э Ъ, kana, Hangul); mixed languages are
    `[mul]`, and otherwise no tag is added; it needs *Series folders*), *Skip existing files* (chapters already in the folder aren't
-   downloaded again), the format (CBZ, CBR, Folder or EPUB; EPUB adds a *Reading
+   downloaded again), *Age check* with *I am over* 16 or 18 (titles a site
+   rates above that age aren't loaded; off, every title loads; for now only
+   zenko.online publishes a rating), the format (CBZ, CBR, Folder or EPUB; EPUB adds a *Reading
    direction*) and *Pack as*: *Chapters* (a file each), *Merged* (a chapter's
    parts in one file), *Volumes* (a file per volume) or *One file* (everything
    together). Under *Pages*, *Convert to JPEG* ticks *AVIF* (on by default,
@@ -164,6 +166,28 @@ sizes for the next launch (`sideWidth` and `logHeight` in `gui.json`).
 The mouse wheel scrolls a pane wherever the pointer is over it: over the
 series' title or the toolbar it scrolls the chapter list, and over a run's
 summary or the Download button it scrolls the Activity tab's chapters.
+
+## History and the last session
+
+The app keeps `history.txt` next to `gui.json`: the last 100 series you loaded
+or downloaded, newest first, written as it runs. It's plain text, one
+`key: value` line each (`title`, `url`, `adult`, `when`, `open`, then a `done`
+or `todo` line per chapter), so it can be read or edited with the app closed.
+
+When the app starts, the Activity tab shows again the series that were in it
+when it closed, under *From last session*: the chapters saved and the ones
+still to do. The newest one with chapters to do is loaded with them selected,
+so Download carries on with it; nothing downloads by itself. *Load to resume*
+does the same for another series. Clear (the × in the URL box) takes them off
+the tab, and the next launch won't show them.
+
+The clock icon beside the gear opens the list of past series. A series opens
+its page in your browser, and its site the site's home page. Clear there
+empties the list.
+
+A title the site rates 18+ (zenko.online gives a rating) shows as
+*[Adult Title]* until you click it, which shows it until the app closes. The
+log always writes *[Adult Title]* for it, in file and folder names too.
 
 ## Rate limits
 
