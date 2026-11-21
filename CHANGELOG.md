@@ -17,6 +17,20 @@ as they are.
 What the fork changes, and why, is described in the README's
 "About this fork" section. Android details are in [docs/android.md](docs/android.md).
 
+## v25.2.0-series-folders.26 (2026-11-21)
+
+Commit `0dff8c8`, on top of builds 24 (download missing, restart) and 25
+(the generic reader), merged together.
+
+- **History in the URL box**: the arrow at the box's right end, or ↓ in the
+  box, drops down the past series (the clock button's list). Typing narrows
+  it by title or address, ↑/↓ move, Enter or a click puts the series in the
+  box and loads it, Esc closes it. Adult titles stay *[Adult Title]* with
+  their address shown; Clear is at the bottom. Typing or pasting a new link
+  works as before.
+- Tested by `make test`, `make test/demo`, `make test/gui` and in the browser
+  mock; not yet run as the Windows app.
+
 ## v25.2.0-series-folders.25 (2026-11-21)
 
 Commits `33cf3a6` and `445c4a6`, on top of build 24.
