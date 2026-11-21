@@ -17,6 +17,26 @@ as they are.
 What the fork changes, and why, is described in the README's
 "About this fork" section. Android details are in [docs/android.md](docs/android.md).
 
+## v25.2.0-series-folders.19 (2026-11-21)
+
+Commit `5ef0851`, on top of build 18. The Windows desktop app remembers its
+downloads between launches, lists past series, and masks adult titles.
+
+- **Last session**: `history.txt`, next to `gui.json`, keeps the last 100
+  series loaded or downloaded, as plain `key: value` lines with a `done` or
+  `todo` line per chapter. At the next launch the Activity tab shows the
+  series that were in it, under *From last session*, and the newest with
+  chapters to do is loaded with them selected, so Download carries on.
+  Nothing downloads by itself. *Load to resume* does the same for another one.
+- **Past series**: the clock button beside the gear lists them. A series
+  opens its page in the browser, its site the site's home page, and Clear
+  empties the list.
+- **Adult titles**: a title the site rates 18+ (zenko.online) shows as
+  *[Adult Title]* until clicked, in the window and the list; the log always
+  masks it.
+- Tested by `make test`, `make test/demo`, `make test/gui` and in the browser
+  mock; not yet run as the Windows app.
+
 ## v25.2.0-series-folders.18 (2026-11-20)
 
 Commits `4a90f43` and `2e50e27`, on top of build 17. Adds an age check, on the
