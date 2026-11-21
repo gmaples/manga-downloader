@@ -195,6 +195,11 @@ so Download carries on with it; nothing downloads by itself. *Load to resume*
 does the same for another series. Clear (the × in the URL box) takes them off
 the tab, and the next launch won't show them.
 
+The same list drops down from the URL box: click the arrow at its right end,
+or press ↓ in the box. Typing then narrows it by title or address, ↑ and ↓
+move through it, Enter (or a click) puts that series in the box and loads it,
+and Esc closes it. A new link can still be typed or pasted as before.
+
 The clock icon beside the gear opens the list of past series. A series opens
 its page in your browser, and its site the site's home page. Clear there
 empties the list.

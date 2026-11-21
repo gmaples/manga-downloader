@@ -5,5 +5,7 @@
   "empty": "Encara no hi ha sèries. Les sèries que carreguis apareixeran aquí.",
   "hint": "Fes clic en una sèrie per obrir-ne la pàgina al navegador, o en el lloc per obrir el lloc. Es desen les 100 últimes.",
   "clear": "Esborra",
-  "counts": "{{done}} desats, {{todo}} pendents"
+  "counts": "{{done}} desats, {{todo}} pendents",
+  "dropdown": "Sèries anteriors",
+  "noMatch": "Cap sèrie anterior no coincideix."
 }

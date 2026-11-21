@@ -5,5 +5,7 @@
   "empty": "No series yet. The series you load show up here.",
   "hint": "Click a series to open its page in your browser, or its site to open the site. The last 100 are kept.",
   "clear": "Clear",
-  "counts": "{{done}} saved, {{todo}} to do"
+  "counts": "{{done}} saved, {{todo}} to do",
+  "dropdown": "Past series",
+  "noMatch": "No past series match."
 }

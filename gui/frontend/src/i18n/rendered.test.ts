@@ -11,6 +11,7 @@ import { HistoryDialog, HistoryRow } from '../HistoryDialog';
 import { Check, SelectField, Segmented, Switch, TextField } from '../fields';
 import { LogDrawer, StatusBar } from '../LogPanel';
 import { MaskedTitle } from '../Masked';
+import { UrlHistoryButton, UrlHistoryList, type UrlHistory } from '../UrlHistory';
 import { createMockApi, type MockSetup } from '../mock';
 import { OptionsPanel } from '../OptionsPanel';
 import { SettingsDialog } from '../SettingsDialog';
@@ -277,6 +278,17 @@ function components({ state, chapters, selected, log }: Snapshot): Screen[] {
       ),
     },
     {
+      file: 'UrlHistory.tsx',
+      name: 'UrlHistory',
+      element: createElement(
+        'div',
+        null,
+        createElement(UrlHistoryButton, { history: openHistory }),
+        createElement(UrlHistoryList, { history: openHistory }),
+        createElement(UrlHistoryList, { history: { ...openHistory, shown: [] } }),
+      ),
+    },
+    {
       file: 'Masked.tsx',
       name: 'MaskedTitle',
       element: createElement(MaskedTitle, { title: 'Night Garden', adult: true }),
@@ -308,6 +320,22 @@ function components({ state, chapters, selected, log }: Snapshot): Screen[] {
   }
   return list;
 }
+
+/** The URL box's drop-down, open on two past series, one of them adult */
+const openHistory: UrlHistory = {
+  open: true,
+  shown: [
+    { title: 'One Piece', url: 'https://example.com/op', site: 'https://example.com/', adult: false, when: 0, done: 1, todo: 0 },
+    { title: 'Night Garden', url: 'https://example.com/n', site: 'https://example.com/', adult: true, when: 0, done: 0, todo: 2 },
+  ],
+  active: 0,
+  toggle: noop,
+  close: noop,
+  typed: noop,
+  onKeyDown: () => false,
+  pick: noop,
+  clear: noop,
+};
 
 function render(element: ReactElement): string {
   return renderToStaticMarkup(

@@ -10,8 +10,9 @@ import { say } from './i18n';
 import { useI18n } from './i18n/react';
 import { shortcutLabel, isMac } from './settingsShortcut';
 import { AlertIcon, GearIcon, HistoryIcon, LinkIcon, RefreshIcon, Spinner } from './icons';
+import { URL_HISTORY_ID, UrlHistoryButton, UrlHistoryList, useUrlHistory } from './UrlHistory';
 import { Mascot, useExpression, Wordmark } from './Mascot';
-import type { FilterChoice, Options, State } from './types';
+import type { FilterChoice, HistoryItem, Options, State } from './types';
 
 /** What the clipboard's text means for the URL box: trimmed, or '' when there is nothing to paste */
 export function pasteValue(clipboard: string): string {
@@ -39,6 +40,9 @@ interface Props {
   /** Opens the history pop-up of past series */
   onOpenHistory?: () => void;
   historyOpen?: boolean;
+  /** Reads the past series for the URL box's drop-down; without it the box has none */
+  loadHistory?: () => Promise<HistoryItem[]>;
+  onClearHistory?: () => Promise<void>;
   /** The gear button, so the dialog can hand focus back to it when it closes */
   settingsRef?: Ref<HTMLButtonElement>;
   /** The simple view: the logo over the URL box and the settings button, no filters */
@@ -59,6 +63,8 @@ export function SourceBar({
   settingsOpen,
   onOpenHistory,
   historyOpen = false,
+  loadHistory,
+  onClearHistory,
   settingsRef,
   simple = false,
 }: Props) {
@@ -91,6 +97,16 @@ export function SourceBar({
     }, AUTO_LOAD_DELAY_MS);
   };
   const input = useRef<HTMLInputElement>(null);
+  // a past series picked from the drop-down loads at once, as a paste does
+  const history = useUrlHistory(
+    loadHistory ?? (async () => []),
+    onClearHistory ?? (async () => undefined),
+    (picked) => {
+      clearTimeout(timer.current);
+      setTyped(picked);
+      onLoad(picked);
+    },
+  );
   // the pasted text goes through changeUrl like typed text, marked as pasted; the
   // field keeps the focus whether or not there was anything to paste
   const paste = () => {
@@ -158,7 +174,22 @@ export function SourceBar({
               onChange={(e) => {
                 changeUrl(e.target.value, pasting.current);
                 pasting.current = false;
+                history.typed(e.target.value);
               }}
+              onKeyDown={(e) => {
+                if (loadHistory && history.onKeyDown(e)) e.preventDefault();
+              }}
+              onBlur={history.close}
+              {...(loadHistory
+                ? {
+                    role: 'combobox',
+                    'aria-autocomplete': 'list' as const,
+                    'aria-expanded': history.open,
+                    'aria-controls': history.open ? URL_HISTORY_ID : undefined,
+                    'aria-activedescendant':
+                      history.open && history.active >= 0 ? `${URL_HISTORY_ID}-${history.active}` : undefined,
+                  }
+                : {})}
               onPaste={() => {
                 pasting.current = true;
                 // a paste that changes nothing fires no change, so the mark is dropped after it
@@ -195,6 +226,8 @@ export function SourceBar({
                 {t('source.url.paste')}
               </button>
             )}
+            {loadHistory && !busy && <UrlHistoryButton history={history} />}
+            {loadHistory && <UrlHistoryList history={history} />}
           </div>
           <button
             type="submit"

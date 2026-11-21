@@ -2836,3 +2836,92 @@ a.version:hover {
   padding: 10px 16px 12px;
   border-top: 1px solid var(--border);
 }
+
+/* ---------- the URL box's history drop-down ---------- */
+.url-box {
+  position: relative;
+}
+
+.url-history-btn {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-3);
+  cursor: pointer;
+}
+
+.url-history-btn svg {
+  transform: rotate(90deg);
+  transition: transform 0.15s;
+}
+
+.url-history-btn.open svg {
+  transform: rotate(-90deg);
+}
+
+.url-history-btn:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+
+.url-history {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 4px);
+  right: 0;
+  left: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+}
+
+.url-history ul {
+  max-height: min(360px, 60vh);
+  margin: 0;
+  padding: 4px;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.url-history-item {
+  display: grid;
+  gap: 1px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.url-history-item:hover,
+.url-history-item.active {
+  background: var(--hover);
+}
+
+.url-history-title,
+.url-history-url {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.url-history-title {
+  font-weight: 600;
+}
+
+.url-history-empty {
+  margin: 0;
+  padding: 10px 12px;
+}
+
+.url-history-foot {
+  display: flex;
+  justify-content: flex-end;
+  padding: 4px 6px;
+  border-top: 1px solid var(--border);
+}
