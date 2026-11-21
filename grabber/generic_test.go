@@ -354,3 +354,12 @@ func TestGenericChapterLinksByID(t *testing.T) {
 		t.Errorf("links %+v", links)
 	}
 }
+
+// A row's trailing date and counters aren't part of its title
+func TestGenericChapterTitleDropsDates(t *testing.T) {
+	html := `<body><a href="/s/x/1">Том 1 - Розділ 1 27 груд 2023 р., 22:46|211</a><a href="/s/x/2">Chapter 2 - The Fight 2025-03-02</a></body>`
+	links := genericChapterLinks(mustDoc(t, html), "https://site.example/s/x")
+	if len(links) != 2 || links[0].Title != "Том 1 - Розділ 1" || links[1].Title != "Chapter 2 - The Fight" {
+		t.Errorf("links %+v", links)
+	}
+}

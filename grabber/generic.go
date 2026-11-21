@@ -531,7 +531,11 @@ func genericChapterLinks(doc *goquery.Document, pageURL string) []genericLink {
 		if err != nil {
 			continue
 		}
+		// a row often ends in its date and counters ("… 27 груд 2023 р., 22:46|211")
 		title := c.text
+		if loc := genericDateRe.FindStringIndex(title); loc != nil {
+			title = strings.TrimRight(title[:loc[0]], " -–—|·•,")
+		}
 		// a text that's only the number ("Chapter 12", "12") is no title:
 		// the label says it already
 		if !genericLetterRe.MatchString(genericLinkNumberRe.ReplaceAllString(title, "")) {
@@ -547,6 +551,9 @@ func genericChapterLinks(doc *goquery.Document, pageURL string) []genericLink {
 	}
 	return links
 }
+
+// genericDateRe is a date or a time in a chapter row's text
+var genericDateRe = regexp.MustCompile(`\b\d{4}-\d{2}-\d{2}\b|\b\d{1,2}[./]\d{1,2}[./]\d{2,4}\b|\b\d{1,2}\s+\pL{3,}\.?\s+\d{4}\b|\b\d{1,2}:\d{2}\b`)
 
 // genericLetterRe is a letter, in any script
 var genericLetterRe = regexp.MustCompile(`\pL`)
