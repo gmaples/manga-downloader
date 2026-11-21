@@ -17,6 +17,25 @@ as they are.
 What the fork changes, and why, is described in the README's
 "About this fork" section. Android details are in [docs/android.md](docs/android.md).
 
+## v25.2.0-series-folders.24 (2026-11-21)
+
+Commit `7f49ed1`, on top of build 23. The generic reader learns two common
+layouts that build 23 missed on its first live run.
+
+- **A chapter list on its own page**: a series page that links to its list
+  (".../chapters", or a tab named Chapters, Главы, Розділи, Capítulos...)
+  is followed there.
+- **A chapter list behind a tab**: in the hidden browser, a tab or button
+  named like that is clicked before the page is read.
+- **Page addresses inside a script's data** are found even when written
+  escaped (`https:\u002F\u002F...`).
+- Live on a Windows PC with the command line: **senkuro.com** (no built-in
+  support) chapter 1 downloaded through the generic reader, 58 real JPEG
+  pages, the same 58 the site's page lists; the hidden browser ran headless,
+  no window. **honey-manga.com.ua** still fails: its chapter rows are buttons,
+  not links. mangabuff.ru (geoblocked on that connection) and desu.me (no
+  DNS there) couldn't be tried.
+
 ## v25.2.0-series-folders.23 (2026-11-21)
 
 Commits `6696128` and `5cf65fd`, on top of build 22. A site with no built-in
