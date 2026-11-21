@@ -17,6 +17,24 @@ as they are.
 What the fork changes, and why, is described in the README's
 "About this fork" section. Android details are in [docs/android.md](docs/android.md).
 
+## v25.2.0-series-folders.21 (2026-11-21)
+
+Commit `8c48712`, on top of build 20. The chapter list shows what became of
+each chapter.
+
+- **A mark beside each checkbox**: a green tick when the chapter's file is
+  already in the folder (the same name *Skip existing files* looks for) or it
+  was saved this session; a spinner while it downloads; a grey dot while it
+  waits its turn; an amber (!) when it failed; an amber circled dash when a
+  cancel left it unsaved. No mark means no file and no download. Hover a mark
+  for its meaning. The marks update live as chapters finish.
+- **Pick N unfinished**: a button above the list, shown when chapters failed
+  or were cancelled, selects just those, so Download tries them again. It's
+  hidden while the series is still downloading.
+- The folder is checked for the whole list's series folder, chapter by
+  chapter; a volume or one-file run's chapters are marked from this session
+  only. The last session's restored download doesn't mark the list.
+
 ## v25.2.0-series-folders.20 (2026-11-21)
 
 Commit `8d294e6`, on top of build 19. Each site learns how many pages to
