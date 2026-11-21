@@ -86,6 +86,7 @@ describe('DownloadDock', () => {
       done: 4,
       total: 10,
       until: 0,
+      parallel: 8,
       ...over,
     });
     const html = await render('en', {
@@ -96,9 +97,13 @@ describe('DownloadDock', () => {
         site({ site: 'b.example', until: Date.now() + 60_000 }),
         site({ site: 'c.example', title: '' }),
         site({ site: 'd.example', total: 0 }),
+        site({ site: 'e.example', parallel: 0 }),
       ],
     });
-    expect(html.match(/class="site-bar( waiting)?"/g)).toHaveLength(4);
+    expect(html.match(/class="site-bar( waiting)?"/g)).toHaveLength(5);
+    // how many run at once, but not while paused, nor before the first request
+    expect(html.match(/8 parallel/g)).toHaveLength(3);
+    expect(html).toContain('learned from how fast it answers');
     expect(html).toContain('a.example');
     expect(html).toContain('Chapter 12');
     expect(html).toContain('40%');
@@ -110,6 +115,7 @@ describe('DownloadDock', () => {
     expect(await render('ja', { running: true, groups: [one], sites: [site({ until: Date.now() + 5000 })] })).toMatch(
       /[45]秒待機中/,
     );
+    expect(await render('ja', { running: true, groups: [one], sites: [site({})] })).toContain('同時8件');
     expect(await render('en', { running: true, groups: [one], sites: [] })).not.toContain('site-bars');
   });
 

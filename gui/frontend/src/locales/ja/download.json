@@ -50,6 +50,8 @@
     "label": "{{site}}の進行状況",
     "waiting": "{{seconds}}秒待機中: リクエストが多すぎます",
     "next": "次の話を開始中",
-    "fetching": "ページ一覧を取得中"
+    "fetching": "ページ一覧を取得中",
+    "parallel": "同時{{count}}件",
+    "parallelHint": "このサイトの同時ダウンロード数（応答速度から学習）"
   }
 }

@@ -208,6 +208,7 @@ func TestWaitPaces(t *testing.T) {
 		if _, err := s.Wait(context.Background()); err != nil {
 			t.Fatal(err)
 		}
+		s.Done(0, false)
 	}
 	if elapsed := time.Since(start); elapsed < 120*time.Millisecond {
 		t.Errorf("4 requests took %v, want at least 3 gaps of 40ms", elapsed)
@@ -220,6 +221,7 @@ func TestWaitUnlisted(t *testing.T) {
 	start := time.Now()
 	for range 100 {
 		s.Wait(context.Background())
+		s.Done(0, false)
 	}
 	if elapsed := time.Since(start); elapsed > 50*time.Millisecond {
 		t.Errorf("100 unlisted requests took %v", elapsed)
@@ -234,12 +236,14 @@ func TestWaitSitsOutTheCooldown(t *testing.T) {
 	s.Hit(0, 0)
 	start := time.Now()
 	s.Wait(context.Background())
+	s.Done(0, false)
 	if elapsed := time.Since(start); elapsed < 50*time.Millisecond {
 		t.Errorf("waited %v after a 429, want the 60ms cooldown", elapsed)
 	}
 	s.Hit(s.gen, time.Hour)
 	start = time.Now()
 	s.Wait(context.Background())
+	s.Done(0, false)
 	if elapsed := time.Since(start); elapsed < 140*time.Millisecond || elapsed > time.Second {
 		t.Errorf("waited %v after an hour's Retry-After, want MaxWait (150ms)", elapsed)
 	}
@@ -253,11 +257,13 @@ func TestWaitersTakeUpAChange(t *testing.T) {
 	os.WriteFile(filepath.Join(dir, FileName), []byte("x.org: 10s\n"), 0o644)
 	s := Open(dir, nil, nil).Site("x.org")
 	s.Wait(context.Background()) // the first goes at once, the next is 10s away
+	s.Done(0, false)
 
 	done := make(chan time.Duration)
 	start := time.Now()
 	go func() {
 		s.Wait(context.Background())
+		s.Done(0, false)
 		done <- time.Since(start)
 	}()
 	time.Sleep(10 * time.Millisecond)

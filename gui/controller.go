@@ -413,13 +413,16 @@ func newGroup() *group {
 
 // SiteBar is the progress of one site that's downloading: the first chapter
 // in flight of its running groups (Title and Tags, Done of Total, Total 0
-// while its page list is fetched, Title "" between chapters), and Until, the
-// end of its pause after a 429, zero when it isn't paused
+// while its page list is fetched, Title "" between chapters), Until, the
+// end of its pause after a 429, zero when it isn't paused, and Parallel, how
+// many of its requests may be under way at once as learned from its speed
+// (see ratelimit.Parallel)
 type SiteBar struct {
 	Site        string
 	Title, Tags string
 	Done, Total int64
 	Until       time.Time
+	Parallel    int
 }
 
 // SiteBars returns a bar for each site a running group downloads from, in the
@@ -457,6 +460,7 @@ func (c *Controller) SiteBars() []SiteBar {
 	// read outside c.mu: the pacing has locks of its own
 	for i := range bars {
 		bars[i].Until = ratelimit.Cooling(bars[i].Site)
+		bars[i].Parallel = ratelimit.Parallel(bars[i].Site)
 	}
 	return bars
 }

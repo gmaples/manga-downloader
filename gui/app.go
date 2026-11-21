@@ -455,7 +455,8 @@ func (a *App) State() State {
 
 // SiteBarDTO is a SiteBar for the window. Until is the end of the site's
 // pause after a 429 in Unix milliseconds, 0 when it isn't paused, so the
-// window can count it down on its own.
+// window can count it down on its own. Parallel is how many of the site's
+// requests may be under way at once, 0 before its first request.
 type SiteBarDTO struct {
 	Site  string `json:"site"`
 	Title string `json:"title"`
@@ -463,10 +464,12 @@ type SiteBarDTO struct {
 	Done  int64  `json:"done"`
 	Total int64  `json:"total"`
 	Until int64  `json:"until"`
+	// Parallel is SiteBar.Parallel
+	Parallel int `json:"parallel"`
 }
 
 func siteBarDTO(b SiteBar) SiteBarDTO {
-	d := SiteBarDTO{Site: b.Site, Title: b.Title, Tags: b.Tags, Done: b.Done, Total: b.Total}
+	d := SiteBarDTO{Site: b.Site, Title: b.Title, Tags: b.Tags, Done: b.Done, Total: b.Total, Parallel: b.Parallel}
 	if !b.Until.IsZero() {
 		d.Until = b.Until.UnixMilli()
 	}

@@ -50,6 +50,8 @@
     "label": "Progress of {{site}}",
     "waiting": "Waiting {{seconds}}s: too many requests",
     "next": "Starting the next chapter",
-    "fetching": "Getting the page list"
+    "fetching": "Getting the page list",
+    "parallel": "{{count}} parallel",
+    "parallelHint": "Downloads running at once for this site, learned from how fast it answers"
   }
 }

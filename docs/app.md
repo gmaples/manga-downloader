@@ -108,9 +108,10 @@ button, *Load* and *Settings*. (To open on the full window instead, turn off
    the selection changes. *Clear* removes the groups that ended and leaves the
    running ones. Above the overall progress, each site that's downloading
    has a bar of its own showing the chapter it's on (the first one, when
-   it has several going), or how long it's still waiting after a 429. Groups
-   from the same site share its bar and its pace from `site-rate-limits.txt` (see
-   [Rate limits](#rate-limits)). This is an app feature: on the command line,
+   it has several going) and how many of its pages download at once, or how
+   long it's still waiting after a 429. Groups from the same site share its
+   bar, its pace from `site-rate-limits.txt` and its learned level from
+   `site-parallel.txt` (see [Rate limits](#rate-limits)). This is an app feature: on the command line,
    each run is its own process.
 
    <picture>
@@ -196,6 +197,14 @@ When a site answers 429 Too Many Requests, the downloader slows down for that si
 After a 429, every download from that site pauses: 15s after the first one, then 1.5 times longer after each further one, up to 5m. Only the pages that got the 429 are fetched again, so the chapter's file is still complete. A site's time also grows 1.5 times on each 429, up to 5m. A page that still gets a 429 after the 5m pause fails, and so does its chapter.
 
 The file is plain text and can be edited: one `site: time` line per site, with times such as `500ms`, `15s` or `1m30s`, and `#` for comments. A site's line replaces any pacing built into the downloader for it. Because the file sits next to your series, it travels with the folder or card to another device.
+
+### How many downloads run at once
+
+Each site also learns how many of its pages to download at once. Its bar shows the level, as in *8 parallel*. A site seen for the first time starts at 4 and doubles (8, 16, 32, up to 50) as long as each doubling makes it at least 25% faster, then goes back to the fastest level and stays there. Every so often it tries one more and keeps it when that's at least 5% faster. Speed is measured in bytes per second over a few seconds at a time, and only while more pages are waiting than are running, so the last pages of a run teach it nothing.
+
+When a site struggles (a 429, a 502, 503 or 504, a Cloudflare 520-524, a timeout or a dropped connection), its level is halved at once, no rise is tried for 30s, and for the rest of the run it stays below the level that had the trouble. The 429 pause and the time in `site-rate-limits.txt` above still apply, so the level never makes requests go out faster than that file allows. The concurrency limits still apply too (at most 5 chapters at once, 10 pages each).
+
+The level is shared by every download from the site that runs at once (several groups of one site share one level), and it's saved in `site-parallel.txt`, next to `site-rate-limits.txt`, as one `site: number` line per site (for example `mangadex.org: 8`). It's written when the downloads end and right after a cut, and only for a site whose level moved. The next run starts from it. The file is plain text: change a number to make that site start there, or remove its line to have it learned again.
 
 ## Settings and the update check
 

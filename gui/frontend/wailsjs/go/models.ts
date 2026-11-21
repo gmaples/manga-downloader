@@ -429,6 +429,7 @@ export namespace main {
 	    done: number;
 	    total: number;
 	    until: number;
+	    parallel: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new SiteBarDTO(source);
@@ -442,6 +443,7 @@ export namespace main {
 	        this.done = source["done"];
 	        this.total = source["total"];
 	        this.until = source["until"];
+	        this.parallel = source["parallel"];
 	    }
 	}
 	export class State {

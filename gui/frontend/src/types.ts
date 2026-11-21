@@ -122,8 +122,9 @@ export interface FilterChoice {
 /**
  * The progress of a site that's downloading: the first chapter in flight of
  * its running groups (title "" between chapters, total 0 while its page list
- * is fetched), and until, the end of its pause after a 429 in Unix ms, 0 when
- * it isn't paused
+ * is fetched), until, the end of its pause after a 429 in Unix ms, 0 when
+ * it isn't paused, and parallel, how many of its requests may be under way at
+ * once as learned from its speed (0 before its first request)
  */
 export interface SiteBar {
   site: string;
@@ -132,6 +133,7 @@ export interface SiteBar {
   done: number;
   total: number;
   until: number;
+  parallel: number;
 }
 
 export interface Group {

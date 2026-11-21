@@ -15,6 +15,10 @@
 // of the site waits a cooldown before going on: StartWait after the run's
 // first 429 for the site, times Growth after each further one, up to MaxWait.
 // A 429 that comes when the cooldown is already at MaxWait gives up.
+//
+// Beside the gap, each site learns how many of its requests to have under way
+// at once from how fast it answers, saved in ParallelFileName (see
+// parallel.go).
 package ratelimit
 
 import (
@@ -72,6 +76,7 @@ type Book struct {
 
 	mu    sync.Mutex
 	gaps  map[string]time.Duration
+	pars  map[string]int
 	sites map[string]*Site
 }
 
@@ -84,7 +89,8 @@ func Open(dir string, warn, info func(format string, a ...any)) *Book {
 	if info == nil {
 		info = func(string, ...any) {}
 	}
-	b := &Book{path: filepath.Join(dir, FileName), warn: warn, info: info, gaps: map[string]time.Duration{}, sites: map[string]*Site{}}
+	b := &Book{path: filepath.Join(dir, FileName), warn: warn, info: info, gaps: map[string]time.Duration{}, pars: map[string]int{}, sites: map[string]*Site{}}
+	b.readParallel()
 	data, err := os.ReadFile(b.path)
 	if err != nil {
 		if !os.IsNotExist(err) {
@@ -121,8 +127,9 @@ type sharedBook struct {
 // Share returns the book of dir that every download running in this process
 // shares, opening it (reading the file) when no download uses it yet. release
 // ends this use. Once the last user releases, the next Share reads the file
-// again, so an edit made between downloads is taken up. release is safe to call
-// more than once.
+// again, so an edit made between downloads is taken up. The last release
+// saves the learned levels (see Parallel). release is safe to call more than
+// once.
 func Share(dir string, warn, info func(format string, a ...any)) (b *Book, release func()) {
 	key := filepath.Clean(dir)
 	if abs, err := filepath.Abs(key); err == nil {
@@ -140,10 +147,14 @@ func Share(dir string, warn, info func(format string, a ...any)) (b *Book, relea
 	return sb.book, func() {
 		once.Do(func() {
 			sharedMu.Lock()
-			defer sharedMu.Unlock()
 			sb.users--
-			if sb.users == 0 && shared[key] == sb {
+			last := sb.users == 0
+			if last && shared[key] == sb {
 				delete(shared, key)
+			}
+			sharedMu.Unlock()
+			if last {
+				sb.book.saveParallel()
 			}
 		})
 	}
@@ -220,6 +231,8 @@ func (b *Book) Site(key string) *Site {
 	}
 	s := &Site{book: b, key: key, changed: make(chan struct{})}
 	s.gap, s.listed = b.gaps[key]
+	n, ok := b.pars[key]
+	s.startParallel(n, ok)
 	b.sites[key] = s
 	return s
 }
@@ -231,20 +244,32 @@ func (b *Book) save(key string, gap time.Duration) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	b.gaps[key] = gap
-	data, err := os.ReadFile(b.path)
+	match := func(line string) bool {
+		k, _, ok, err := parseLine(line)
+		return err == nil && ok && k == key
+	}
+	if err := writeLine(b.path, header, key+": "+Format(gap), match); err != nil {
+		b.warn("saving %s: %s", FileName, err)
+	}
+}
+
+// writeLine writes entry into the file at path in place of the first line
+// match accepts, or appends it, keeping every other line as it is now on
+// disk, so edits made during the run aren't lost. A new file starts with
+// header.
+func writeLine(path, header, entry string, match func(line string) bool) error {
+	data, err := os.ReadFile(path)
 	if err != nil && !os.IsNotExist(err) {
-		b.warn("%s: %s", FileName, err)
-		return
+		return err
 	}
 	text := string(data)
 	if text == "" {
 		text = header
 	}
-	entry := key + ": " + Format(gap)
 	lines := strings.Split(text, "\n")
 	replaced := false
 	for i, line := range lines {
-		if k, _, ok, err := parseLine(line); err == nil && ok && k == key {
+		if match(line) {
 			lines[i] = entry
 			if strings.HasSuffix(line, "\r") {
 				lines[i] += "\r"
@@ -259,15 +284,15 @@ func (b *Book) save(key string, gap time.Duration) {
 		}
 		lines = append(lines, entry, "")
 	}
-	tmp := b.path + ".tmp"
+	tmp := path + ".tmp"
 	if err := os.WriteFile(tmp, []byte(strings.Join(lines, "\n")), 0o644); err != nil {
-		b.warn("saving %s: %s", FileName, err)
-		return
+		return err
 	}
-	if err := os.Rename(tmp, b.path); err != nil {
+	if err := os.Rename(tmp, path); err != nil {
 		os.Remove(tmp)
-		b.warn("saving %s: %s", FileName, err)
+		return err
 	}
+	return nil
 }
 
 // Site paces the requests of one site. It's safe for concurrent use.
@@ -289,6 +314,32 @@ type Site struct {
 	gen uint64
 	// changed is closed and replaced on each change, waking the waiters
 	changed chan struct{}
+
+	// the learned level, see parallel.go: par requests may be under way at
+	// once, inflight are, waiting are queued for a slot, and free is closed
+	// and replaced when a slot frees or par changes
+	par, inflight, waiting int
+	free                   chan struct{}
+	// savedPar is the level in the file, or the level it started at
+	savedPar int
+	// doubling while the level hasn't settled yet; probing while one more is
+	// being tried; settle counts the windows before the next try
+	doubling, probing bool
+	settle            int
+	// prevRate is the speed (bytes a second) of the last window at prevPar
+	prevRate float64
+	prevPar  int
+	// the measuring window: since winStart, winDone requests downloaded
+	// winBytes, winBusy of them with requests queued for a slot
+	winStart           time.Time
+	winBytes           int64
+	winDone, winBusy   int
+	lastCut, holdUntil time.Time
+	// warm is set by a change of level: the next window is a warm-up
+	warm bool
+	// ceiling is the level that last had trouble, 0 before any: the level
+	// stays below it for the rest of the run
+	ceiling int
 }
 
 // Key is the site's name in the file
@@ -303,8 +354,21 @@ func (s *Site) Listed() bool {
 }
 
 // Wait blocks until a request may go out, and returns its generation, to give
-// Hit if the request gets a 429. Waiters take up a change at once.
+// Hit if the request gets a 429. Waiters take up a change at once. A request
+// Wait lets out holds one of the site's slots (see Parallel) until Done.
 func (s *Site) Wait(ctx context.Context) (uint64, error) {
+	if err := s.acquire(ctx); err != nil {
+		return 0, err
+	}
+	gen, err := s.paced(ctx)
+	if err != nil {
+		s.Done(-1, false)
+	}
+	return gen, err
+}
+
+// paced is Wait without the slot: it sits out the gap and the cooldown
+func (s *Site) paced(ctx context.Context) (uint64, error) {
 	for {
 		s.mu.Lock()
 		now := time.Now()
