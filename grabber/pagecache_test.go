@@ -3,6 +3,7 @@
 package grabber
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"testing"
@@ -58,8 +59,10 @@ func TestIdentifySiteReportsFetchErrorOnce(t *testing.T) {
 			if n := hits.count(path); n != 1 {
 				t.Errorf("GET %s made %d requests, want 1", path, n)
 			}
-			if len(errs) != 1 {
-				t.Errorf("IdentifySite() errs = %v, want exactly one", errs)
+			// the fetch error once, then what the generic reader tried
+			var nr *NotRecognisedError
+			if len(errs) != 2 || !errors.As(errs[1], &nr) {
+				t.Errorf("IdentifySite() errs = %v, want the fetch error and a NotRecognisedError", errs)
 			}
 		})
 	}

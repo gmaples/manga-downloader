@@ -15,6 +15,7 @@
   "updateInstaller": "couldn't start the installer: {{reason}}",
   "notReady": "the window isn't ready yet",
   "siteUnknown": "site not recognised",
+  "siteUnknownTried": "site not recognised: {{reason}}",
   "chapterMissing": "chapter {{index}} is not in the list",
   "partsVolumes": "\"parts\" isn't a Volumes value: pick Merged under Pack as",
   "loadFirst": "load a series first",

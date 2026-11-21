@@ -15,6 +15,7 @@
   "updateInstaller": "no s'ha pogut iniciar l'instal·lador: {{reason}}",
   "notReady": "la finestra encara no és a punt",
   "siteUnknown": "lloc no reconegut",
+  "siteUnknownTried": "lloc no reconegut: {{reason}}",
   "chapterMissing": "el capítol {{index}} no és a la llista",
   "partsVolumes": "\"parts\" no és un valor de Volums: tria Units a Empaqueta com",
   "loadFirst": "carrega primer una sèrie",
