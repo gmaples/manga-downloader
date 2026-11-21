@@ -160,6 +160,17 @@ export interface Group {
   adult: boolean;
   /** The chapters restart(id, '') downloads again: failed, cancelled or still to do */
   unfinished?: number;
+  /** The duplicate files its download moved to the Recycle Bin when it started; null when that didn't run */
+  cleanup?: Cleanup | null;
+}
+
+/** What the correlation of a group's folder did when its download started */
+export interface Cleanup {
+  removed: number;
+  /** Their size in bytes */
+  bytes: number;
+  /** Duplicates that couldn't be moved */
+  failed: number;
 }
 
 /** One series of the history pop-up, newest first */

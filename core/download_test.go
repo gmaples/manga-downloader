@@ -58,7 +58,18 @@ func (r *recorder) Skipped(c *grabber.Chapter) { r.add("skipped %g", c.Number) }
 func (r *recorder) Exists(l grabber.Filterable, name string) {
 	r.add("exists %g %s", l.GetNumber(), name)
 }
-func (r *recorder) Waiting(c *grabber.Chapter, name string)    { r.add("waiting %g %s", c.Number, name) }
+func (r *recorder) Waiting(c *grabber.Chapter, name string) { r.add("waiting %g %s", c.Number, name) }
+
+// Correlated is recorded only when it removed something, so the runs with
+// nothing to correlate read as before
+func (r *recorder) Correlated(c *Correlation) {
+	for _, d := range c.Removed {
+		r.add("removed %s", d.Name)
+	}
+	for _, d := range c.Failed {
+		r.add("remove-failed %s", d.Name)
+	}
+}
 func (r *recorder) FilenameFailed(c *grabber.Chapter, _ error) { r.add("filename-failed %g", c.Number) }
 func (r *recorder) Started(c *grabber.Chapter)                 { r.add("started %g", c.Number) }
 func (r *recorder) Page(c *grabber.Chapter, idx int, err error) {
@@ -1204,16 +1215,18 @@ func TestDownloadSkipExistingBundle(t *testing.T) {
 func TestDownloadSkipExistingNameAfterFetch(t *testing.T) {
 	site := newFakeSite(t, fakeChapter{number: 1, pages: 1})
 	series, dir := newSeries(t, site, false)
-	// the listing has no title, the fetched chapter's is "Chapter 1"
-	site.Settings.FilenameTemplate = "{{.Series}} {{.Number}} {{.SiteTitle}}"
+	// the listing has no title, the fetched chapter's is "Chapter 1"; the
+	// title comes before the number, so the folder's files aren't matched by
+	// their number (see packer.NewNumberMatcher) and only the name finds it
+	site.Settings.FilenameTemplate = "{{.Series}} {{.SiteTitle}} {{.Number}}"
 	site.Settings.SkipExisting = true
-	writeExisting(t, dir, "Test Series 1 Chapter 1.cbz")
+	writeExisting(t, dir, "Test Series Chapter 1 1.cbz")
 	rec := &recorder{}
 
 	if _, err := series.Download(context.Background(), listed(site), nil, "", rec); err != nil {
 		t.Fatalf("Download: %v", err)
 	}
-	if got := strings.Join(rec.events, "|"); got != "exists 1 Test Series 1 Chapter 1.cbz" {
+	if got := strings.Join(rec.events, "|"); got != "exists 1 Test Series Chapter 1 1.cbz" {
 		t.Errorf("events %q", got)
 	}
 	if site.served[1] != 1 {

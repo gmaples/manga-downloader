@@ -43,5 +43,10 @@
   "errorPacking": "error al empaquetar {{label}}: {{reason}}",
   "saved": "guardado {{name}}",
   "historyFailed": "no se pudo guardar el historial: {{reason}}",
-  "restartFailed": "no se pudieron reiniciar los capítulos: {{reason}}"
+  "restartFailed": "no se pudieron reiniciar los capítulos: {{reason}}",
+  "removedSame": "{{name}} movido a la papelera de reciclaje: es el mismo archivo que {{kept}}",
+  "removedNumber": "{{name}} movido a la papelera de reciclaje: el capítulo {{number}} ya es {{kept}}",
+  "removeFailed": "no se pudo mover el duplicado {{name}} a la papelera de reciclaje: {{reason}}",
+  "removed_one": "{{count}} archivo duplicado ({{size}}) de {{folder}} movido a la papelera de reciclaje",
+  "removed_other": "{{count}} archivos duplicados ({{size}}) de {{folder}} movidos a la papelera de reciclaje"
 }

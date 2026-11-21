@@ -13,8 +13,6 @@
   "thisRun": "Aquesta descàrrega",
   "lastRun": "Última descàrrega",
   "progress": "· {{finished}} de {{total}} acabats",
-  "queued_one": "{{count}} capítol més en espera",
-  "queued_other": "{{count}} capítols més en espera",
   "progressOf": "Progrés de {{title}}{{tags}}",
   "progressBundle": "Progrés del paquet",
   "cancelGroup": "Cancel·la {{title}}",
@@ -24,5 +22,25 @@
   "restartAll_one": "Reinicia {{count}} sense acabar",
   "restartAll_other": "Reinicia {{count}} sense acabar",
   "restartAllLabel": "Torna a descarregar els capítols d'aquesta descàrrega que han fallat, s'han cancel·lat o encara estan pendents",
-  "restartRow": "Torna a descarregar {{title}}"
+  "restartRow": "Torna a descarregar {{title}}",
+  "count": {
+    "active_one": "{{count}} baixant",
+    "active_other": "{{count}} baixant",
+    "queued_one": "{{count}} a la cua",
+    "queued_other": "{{count}} a la cua",
+    "saved_one": "{{count}} desat",
+    "saved_other": "{{count}} desats",
+    "had_one": "{{count}} ja a la carpeta",
+    "had_other": "{{count}} ja a la carpeta",
+    "skipped_one": "{{count}} omès",
+    "skipped_other": "{{count}} omesos",
+    "failed_one": "{{count}} fallit",
+    "failed_other": "{{count}} fallits",
+    "todo_one": "{{count}} pendent",
+    "todo_other": "{{count}} pendents"
+  },
+  "cleanup_one": "{{count}} fitxer duplicat ({{size}}) s'ha mogut a la paperera de reciclatge",
+  "cleanup_other": "{{count}} fitxers duplicats ({{size}}) s'han mogut a la paperera de reciclatge",
+  "cleanupFailed_one": "{{count}} duplicat no s'ha pogut moure: mira el registre",
+  "cleanupFailed_other": "{{count}} duplicats no s'han pogut moure: mira el registre"
 }

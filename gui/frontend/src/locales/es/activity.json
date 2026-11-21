@@ -13,8 +13,6 @@
   "thisRun": "Esta descarga",
   "lastRun": "Última descarga",
   "progress": "· {{finished}} de {{total}} terminados",
-  "queued_one": "{{count}} capítulo más en espera",
-  "queued_other": "{{count}} capítulos más en espera",
   "progressOf": "Progreso de {{title}}{{tags}}",
   "progressBundle": "Progreso del paquete",
   "cancelGroup": "Cancelar {{title}}",
@@ -24,5 +22,25 @@
   "restartAll_one": "Reiniciar {{count}} sin terminar",
   "restartAll_other": "Reiniciar {{count}} sin terminar",
   "restartAllLabel": "Descarga de nuevo los capítulos de esta descarga que fallaron, se cancelaron o siguen pendientes",
-  "restartRow": "Descargar {{title}} de nuevo"
+  "restartRow": "Descargar {{title}} de nuevo",
+  "count": {
+    "active_one": "{{count}} descargando",
+    "active_other": "{{count}} descargando",
+    "queued_one": "{{count}} en cola",
+    "queued_other": "{{count}} en cola",
+    "saved_one": "{{count}} guardado",
+    "saved_other": "{{count}} guardados",
+    "had_one": "{{count}} ya en la carpeta",
+    "had_other": "{{count}} ya en la carpeta",
+    "skipped_one": "{{count}} omitido",
+    "skipped_other": "{{count}} omitidos",
+    "failed_one": "{{count}} fallido",
+    "failed_other": "{{count}} fallidos",
+    "todo_one": "{{count}} pendiente",
+    "todo_other": "{{count}} pendientes"
+  },
+  "cleanup_one": "{{count}} archivo duplicado ({{size}}) movido a la papelera de reciclaje",
+  "cleanup_other": "{{count}} archivos duplicados ({{size}}) movidos a la papelera de reciclaje",
+  "cleanupFailed_one": "{{count}} duplicado no se pudo mover: mira el registro",
+  "cleanupFailed_other": "{{count}} duplicados no se pudieron mover: mira el registro"
 }

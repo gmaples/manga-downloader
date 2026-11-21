@@ -13,8 +13,6 @@
   "thisRun": "This run",
   "lastRun": "Last run",
   "progress": "· {{finished}} of {{total}} finished",
-  "queued_one": "{{count}} more chapter waiting",
-  "queued_other": "{{count}} more chapters waiting",
   "progressOf": "Progress of {{title}}{{tags}}",
   "progressBundle": "Progress of the bundle",
   "cancelGroup": "Cancel {{title}}",
@@ -24,5 +22,25 @@
   "restartAll_one": "Restart {{count}} unfinished",
   "restartAll_other": "Restart {{count}} unfinished",
   "restartAllLabel": "Download again the chapters of this download that failed, were cancelled or are still to do",
-  "restartRow": "Download {{title}} again"
+  "restartRow": "Download {{title}} again",
+  "count": {
+    "active_one": "{{count}} downloading",
+    "active_other": "{{count}} downloading",
+    "queued_one": "{{count}} queued",
+    "queued_other": "{{count}} queued",
+    "saved_one": "{{count}} saved",
+    "saved_other": "{{count}} saved",
+    "had_one": "{{count}} already in the folder",
+    "had_other": "{{count}} already in the folder",
+    "skipped_one": "{{count}} skipped",
+    "skipped_other": "{{count}} skipped",
+    "failed_one": "{{count}} failed",
+    "failed_other": "{{count}} failed",
+    "todo_one": "{{count}} to do",
+    "todo_other": "{{count}} to do"
+  },
+  "cleanup_one": "Moved {{count}} duplicate file ({{size}}) to the Recycle Bin",
+  "cleanup_other": "Moved {{count}} duplicate files ({{size}}) to the Recycle Bin",
+  "cleanupFailed_one": "{{count}} duplicate couldn't be moved: see the log",
+  "cleanupFailed_other": "{{count}} duplicates couldn't be moved: see the log"
 }

@@ -122,7 +122,7 @@ func padNumber(number any, width int) string {
 func NewChapterFileTemplateParts(title string, chapter *grabber.Chapter) FilenameTemplateParts {
 	return FilenameTemplateParts{
 		Series:    SanitizeFilename(title),
-		Number:    strings.Replace(fmt.Sprintf("%.1f", chapter.GetNumber()), ".0", "", 1),
+		Number:    NumberText(chapter.GetNumber()),
 		Title:     SanitizeFilename(grabber.ChapterLabel(chapter)),
 		SiteTitle: SanitizeFilename(chapter.GetTitle()),
 		Group:     SanitizeFilename(chapter.Group),

@@ -43,5 +43,10 @@
   "errorPacking": "error packing {{label}}: {{reason}}",
   "saved": "saved {{name}}",
   "historyFailed": "could not save the history: {{reason}}",
-  "restartFailed": "could not restart the chapters: {{reason}}"
+  "restartFailed": "could not restart the chapters: {{reason}}",
+  "removedSame": "moved {{name}} to the Recycle Bin: same file as {{kept}}",
+  "removedNumber": "moved {{name}} to the Recycle Bin: chapter {{number}} is already {{kept}}",
+  "removeFailed": "couldn't move the duplicate {{name}} to the Recycle Bin: {{reason}}",
+  "removed_one": "moved {{count}} duplicate file ({{size}}) from {{folder}} to the Recycle Bin",
+  "removed_other": "moved {{count}} duplicate files ({{size}}) from {{folder}} to the Recycle Bin"
 }

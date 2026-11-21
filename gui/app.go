@@ -136,7 +136,7 @@ func (a *App) launch() {
 // state is small; so are the chapter marks, compared by content.
 func (a *App) pump() {
 	var sentSel, sentLog uint64
-	var sentMarks []string
+	var sentMarks, sentNotes []string
 	for {
 		select {
 		case <-a.dirty:
@@ -158,6 +158,10 @@ func (a *App) pump() {
 		if m := a.Marks(); !slices.Equal(m, sentMarks) {
 			sentMarks = m
 			a.sink.Emit("marks", m)
+		}
+		if n := a.MarkNotes(); !slices.Equal(n, sentNotes) {
+			sentNotes = n
+			a.sink.Emit("markNotes", n)
 		}
 
 		select {
@@ -315,6 +319,17 @@ type GroupDTO struct {
 	Adult bool `json:"adult"`
 	// Unfinished counts the chapters Restart(ID, "") downloads again
 	Unfinished int `json:"unfinished"`
+	// Cleanup is what the correlation of the group's folder did when its
+	// download started, nil when it didn't run
+	Cleanup *CleanupDTO `json:"cleanup"`
+}
+
+// CleanupDTO is the duplicate files a group's download moved to the Recycle
+// Bin when it started: how many, their size in bytes, and how many couldn't be
+type CleanupDTO struct {
+	Removed int   `json:"removed"`
+	Bytes   int64 `json:"bytes"`
+	Failed  int   `json:"failed"`
 }
 
 // RunDTO describes the run of a group
@@ -532,6 +547,17 @@ func (a *App) Marks() []string {
 		return []string{}
 	}
 	return m
+}
+
+// MarkNotes returns, by index, what each chapter's mark can say more: the
+// file of a chapter that's in the folder, the reason of a failed one, else ""
+// (see Controller.ChapterNotes). It's empty when nothing is loaded.
+func (a *App) MarkNotes() []string {
+	n := a.ctrl.ChapterNotes()
+	if n == nil {
+		return []string{}
+	}
+	return n
 }
 
 // ClearLog empties the log; the window gets the empty log in the next push
@@ -1020,6 +1046,9 @@ func groupDTO(g GroupState) GroupDTO {
 		URL:        g.URL,
 		Adult:      g.Adult,
 		Unfinished: g.Unfinished,
+	}
+	if g.Cleanup != nil {
+		out.Cleanup = &CleanupDTO{Removed: g.Cleanup.Removed, Bytes: g.Cleanup.Bytes, Failed: g.Cleanup.Failed}
 	}
 	for _, j := range g.Jobs {
 		out.Jobs = append(out.Jobs, JobDTO{
