@@ -27,6 +27,20 @@ func TestPageLanguage(t *testing.T) {
 	}
 }
 
+// PageLanguage reads the series page a PlainHTML site (and so a
+// PlainHTMLBrowser one) identified with, and says nothing before one is read
+func TestPlainHTMLPageLanguage(t *testing.T) {
+	var _ PageLanguager = (*PlainHTMLBrowser)(nil)
+	m := NewPlainHTML(&Grabber{URL: "https://example.com/manga/x"})
+	if got := m.PageLanguage(); got != "" {
+		t.Errorf("PageLanguage before a page = %q, want none", got)
+	}
+	m.doc = docFromHTML(t, `<html lang="ru-RU"><body><h1>Мир Лидейл</h1></body></html>`)
+	if got := m.PageLanguage(); got != "ru" {
+		t.Errorf("PageLanguage = %q, want ru", got)
+	}
+}
+
 func TestHostMatchesDomain(t *testing.T) {
 	tests := []struct {
 		name   string

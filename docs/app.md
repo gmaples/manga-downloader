@@ -39,8 +39,10 @@ button, *Load* and *Settings*. (To open on the full window instead, turn off
    *Series folders* (each series saved in its own folder, named after the
    series, inside that folder; reruns reuse it), *Guess language* (adds the
    run's language to that folder's name, as `One Piece [en]`, only when it's
-   known: the chapters' own language, the language filter, the site's only
-   language, or a script used by one language alone; mixed languages are
+   known: the chapters' own language, the language filter (when the site
+   offers languages), the site's only language, the language the site's page
+   declares (when the title is written in its script), or letters used by one
+   language alone (Ukrainian Ї Є Ґ, Russian Ы Э Ъ, kana, Hangul); mixed languages are
    `[mul]`, and otherwise no tag is added; it needs *Series folders*), *Skip existing files* (chapters already in the folder aren't
    downloaded again), the format (CBZ, CBR, Folder or EPUB; EPUB adds a *Reading
    direction*) and *Pack as*: *Chapters* (a file each), *Merged* (a chapter's

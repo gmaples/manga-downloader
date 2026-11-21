@@ -592,6 +592,16 @@ func NewPlainHTML(g *Grabber) *PlainHTML {
 	return &PlainHTML{Grabber: g}
 }
 
+// PageLanguage returns the language the series page declares, "" when it
+// declares none or no page was read (see PageLanguager)
+func (m *PlainHTML) PageLanguage() string {
+	if m.doc == nil {
+		return ""
+	}
+
+	return pageLanguage(m.doc)
+}
+
 type SiteSelector struct {
 	Title        string
 	Rows         string

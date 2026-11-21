@@ -105,6 +105,13 @@ type LanguageLister interface {
 	LanguageOptions() FilterOptions
 }
 
+// PageLanguager is implemented by the sites that read the series page, and
+// returns the language the page declares (its <html lang>, see pageLanguage),
+// "" when it declares none
+type PageLanguager interface {
+	PageLanguage() string
+}
+
 // ScanlatorLister is for sites that list one scanlation group's releases per
 // request, so the grabber reads Settings.Scanlator and filters with SelectGroup.
 // Sites whose listing holds every group's releases set Chapter.Group instead.

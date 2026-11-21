@@ -14,7 +14,7 @@
   },
   "guessLanguage": {
     "label": "Adivinar idioma",
-    "hint": "Añade el idioma al nombre de la carpeta de la serie, como [en] o [ru], solo cuando se conoce: el idioma de los capítulos, el filtro de idioma, el único idioma del sitio o una escritura propia de un solo idioma (letras ucranianas, kana, hangul). Varios idiomas son [mul]; si no, no se añade nada. Requiere Carpetas por serie."
+    "hint": "Añade el idioma al nombre de la carpeta de la serie, como [en] o [ru], solo cuando se conoce: el idioma de los capítulos, el filtro de idioma (si el sitio ofrece idiomas), el único idioma del sitio, el idioma que declara la página del sitio (si el título está escrito en su alfabeto) o letras propias de un solo idioma (ucranianas Ї Є Ґ, rusas Ы Э Ъ, kana, hangul). Varios idiomas son [mul]; si no, no se añade nada. Requiere Carpetas por serie."
   },
   "skipExisting": {
     "label": "Omitir archivos existentes",

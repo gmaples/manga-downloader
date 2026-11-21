@@ -27,14 +27,14 @@ func TestSeriesDir(t *testing.T) {
 	tests := []struct {
 		title, lang, want string
 	}{
-		{"One Piece", "", filepath.Join(root, "One Piece")},
-		{"One Piece", "en", filepath.Join(root, "One Piece [en]")},
-		{"Ван-Пис", "ru", filepath.Join(root, "Ван-Пис [ru]")},
-		{"Re:Zero?", "mul", filepath.Join(root, "Re;Zero¿ [mul]")},
-		{"", "", filepath.Join(root, "Untitled")},
-		{"../../escape", "", filepath.Join(root, "_._.._escape")},
-		{"CON", "ja", filepath.Join(root, "CON_ [ja]")},
-		{".hack//Sign", "ja", filepath.Join(root, "_hack__Sign [ja]")},
+		{"One Piece", "", filepath.Join(root, "", "One Piece")},
+		{"One Piece", "en", filepath.Join(root, "", "One Piece [en]")},
+		{"Ван-Пис", "ru", filepath.Join(root, "", "Ван-Пис [ru]")},
+		{"Re:Zero?", "mul", filepath.Join(root, "", "Re;Zero¿ [mul]")},
+		{"", "", filepath.Join(root, "", "Untitled")},
+		{"../../escape", "", filepath.Join(root, "", "_._.._escape")},
+		{"CON", "ja", filepath.Join(root, "", "CON_ [ja]")},
+		{".hack//Sign", "ja", filepath.Join(root, "", "_hack__Sign [ja]")},
 	}
 	for _, tt := range tests {
 		got := SeriesDir(root, tt.title, tt.lang)
@@ -65,42 +65,58 @@ func TestFolderLanguage(t *testing.T) {
 		filter   string
 		options  *grabber.FilterOptions
 		title    string
+		declared string
 		want     string
 	}{
 		// 1. the chapters' own languages
-		{"one chapter language", chaptersIn("en", "Chapter 1", "en", "Chapter 2"), "", nil, "", "en"},
-		{"codes normalised", chaptersIn("pt-br", "Capítulo 1"), "", nil, "", "pt-BR"},
-		{"case ignored for sameness", chaptersIn("EN", "a", "en", "b"), "", nil, "", "en"},
-		{"several languages", chaptersIn("en", "a", "es", "b"), "", nil, "", LanguageMultiple},
-		{"chapter language beats the filter", chaptersIn("en", "a"), "es", one, "Ван-Пис", "en"},
-		{"unusable chapter values skipped", chaptersIn("English", "a", "xx", "b", "ja", "c"), "", nil, "", "ja"},
+		{"one chapter language", chaptersIn("en", "Chapter 1", "en", "Chapter 2"), "", nil, "", "", "en"},
+		{"codes normalised", chaptersIn("pt-br", "Capítulo 1"), "", nil, "", "", "pt-BR"},
+		{"case ignored for sameness", chaptersIn("EN", "a", "en", "b"), "", nil, "", "", "en"},
+		{"several languages", chaptersIn("en", "a", "es", "b"), "", nil, "", "", LanguageMultiple},
+		{"chapter language beats the filter", chaptersIn("en", "a"), "es", one, "Ван-Пис", "", "en"},
+		{"unusable chapter values skipped", chaptersIn("English", "a", "xx", "b", "ja", "c"), "", nil, "", "", "ja"},
 		// 2. the filter
-		{"filter", chaptersIn("", "Chapter 1"), "fr", nil, "", "fr"},
-		{"filter all ignored", chaptersIn("", "Chapter 1"), "all", nil, "", ""},
-		{"filter any ignored", chaptersIn("", "Chapter 1"), "ANY", nil, "", ""},
-		{"unusable filter ignored", chaptersIn("", "Chapter 1"), "Español", one, "", "es"},
+		{"filter", chaptersIn("", "Chapter 1"), "fr", one, "", "", "fr"},
+		{"filter ignored when the site lists no languages", chaptersIn("", "Chapter 1"), "en", nil, "Мир Лидейл", "", ""},
+		{"filter all ignored", chaptersIn("", "Chapter 1"), "all", nil, "", "", ""},
+		{"filter any ignored", chaptersIn("", "Chapter 1"), "ANY", nil, "", "", ""},
+		{"unusable filter ignored", chaptersIn("", "Chapter 1"), "Español", one, "", "", "es"},
 		// 3. a site that lists one language
-		{"single site language", chaptersIn("", "Chapter 1"), "", one, "", "es"},
-		{"two site languages tell nothing", chaptersIn("", "Chapter 1"), "", two, "", ""},
-		// 4. scripts, chapter titles before the series title
-		{"ukrainian letters", chaptersIn("", "Розділ 1: Їжак"), "", nil, "", "uk"},
-		{"і alone is not only ukrainian", chaptersIn("", "Розділ 1: Кінець"), "", nil, "", ""},
-		{"kana", chaptersIn("", "第1話 はじまり"), "", nil, "", "ja"},
-		{"hangul", chaptersIn("", "제1화"), "", nil, "", "ko"},
-		{"other cyrillic tells nothing", chaptersIn("", "Глава 1"), "", nil, "", ""},
-		{"han only tells nothing", chaptersIn("", "第一章"), "", nil, "", ""},
-		{"kana beats han and cyrillic", chaptersIn("", "第一章 Глава の"), "", nil, "", "ja"},
-		{"ukrainian beats kana", chaptersIn("", "の ї"), "", nil, "", "uk"},
-		{"chapter titles before the series title", chaptersIn("", "제1화"), "", nil, "はじまり", "ko"},
-		{"series title when chapters say nothing", chaptersIn("", "Chapter 1"), "", nil, "Єдиний", "uk"},
-		{"cyrillic series title tells nothing", chaptersIn("", "Chapter 1"), "", nil, "Ван-Пис", ""},
-		// 5. nothing tells
-		{"latin is not english", chaptersIn("", "Chapter 1"), "", nil, "One Piece", ""},
-		{"nothing at all", nil, "", nil, "", ""},
+		{"single site language", chaptersIn("", "Chapter 1"), "", one, "", "", "es"},
+		{"two site languages tell nothing", chaptersIn("", "Chapter 1"), "", two, "", "", ""},
+		// 4. the language the site's page declares, when the title fits it
+		{"declared language", chaptersIn("", "Chapter 1"), "", nil, "Мир Лидейл", "ru", "ru"},
+		{"declared region form", chaptersIn("", "Chapter 1"), "", nil, "One Piece", "en-US", "en-US"},
+		{"declared en with a cyrillic title tells nothing", chaptersIn("", "Chapter 1"), "", nil, "Мир Лидейл", "en", ""},
+		{"declared ru with a latin title tells nothing", chaptersIn("", "Chapter 1"), "", nil, "One Piece", "ru", ""},
+		{"declared ja with kanji", chaptersIn("", "Chapter 1"), "", nil, "進撃の巨人", "ja", "ja"},
+		{"declared ko with a latin title tells nothing", chaptersIn("", "Chapter 1"), "", nil, "Solo Leveling", "ko", ""},
+		{"unusable declared value ignored", chaptersIn("", "Chapter 1"), "", nil, "Мир Лидейл", "russian", ""},
+		{"site's one language beats the declared one", chaptersIn("", "Chapter 1"), "", one, "Мир Лидейл", "ru", "es"},
+		{"declared beats the script", chaptersIn("", "Розділ 1: Їжак"), "", nil, "Берсерк", "ru", "ru"},
+		// 5. scripts, chapter titles before the series title
+		{"ukrainian letters", chaptersIn("", "Розділ 1: Їжак"), "", nil, "", "", "uk"},
+		{"і alone is not only ukrainian", chaptersIn("", "Розділ 1: Кінець"), "", nil, "", "", ""},
+		{"kana", chaptersIn("", "第1話 はじまり"), "", nil, "", "", "ja"},
+		{"hangul", chaptersIn("", "제1화"), "", nil, "", "", "ko"},
+		{"other cyrillic tells nothing", chaptersIn("", "Глава 1"), "", nil, "", "", ""},
+		{"russian ы", chaptersIn("", "Chapter 1"), "", nil, "Врата; там бьются наши воины", "", "ru"},
+		{"russian э", chaptersIn("", "Глава 1: Эльфы"), "", nil, "", "", "ru"},
+		{"russian ъ", chaptersIn("", "Chapter 1"), "", nil, "Объявление", "", "ru"},
+		{"ukrainian beats russian letters", chaptersIn("", "Ї ы"), "", nil, "", "", "uk"},
+		{"han only tells nothing", chaptersIn("", "第一章"), "", nil, "", "", ""},
+		{"kana beats han and cyrillic", chaptersIn("", "第一章 Глава の"), "", nil, "", "", "ja"},
+		{"ukrainian beats kana", chaptersIn("", "の ї"), "", nil, "", "", "uk"},
+		{"chapter titles before the series title", chaptersIn("", "제1화"), "", nil, "はじまり", "", "ko"},
+		{"series title when chapters say nothing", chaptersIn("", "Chapter 1"), "", nil, "Єдиний", "", "uk"},
+		{"cyrillic series title tells nothing", chaptersIn("", "Chapter 1"), "", nil, "Ван-Пис", "", ""},
+		// 6. nothing tells
+		{"latin is not english", chaptersIn("", "Chapter 1"), "", nil, "One Piece", "", ""},
+		{"nothing at all", nil, "", nil, "", "", ""},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := FolderLanguage(tt.chapters, tt.filter, tt.options, tt.title)
+			got := FolderLanguage(tt.chapters, tt.filter, tt.options, tt.title, tt.declared)
 			if got != tt.want {
 				t.Errorf("FolderLanguage = %q, want %q", got, tt.want)
 			}

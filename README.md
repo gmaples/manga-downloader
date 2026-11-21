@@ -54,8 +54,10 @@ What this fork adds:
 - **Guess language** (off by default, needs Series folders): adds a
   ` [tag]` such as `[ru]` to the folder name, but only when the language is
   known for sure: from the chapters' own languages (several give `[mul]`), the
-  language filter, the site's only language, or letters that belong to one
-  language (Ukrainian Ї Є Ґ, Japanese kana, Korean Hangul). Otherwise no tag.
+  language filter (only on sites that offer languages), the site's only
+  language, the language the site's page declares (only when the title is
+  written in its script), or letters that belong to one language (Ukrainian
+  Ї Є Ґ, Russian Ы Э Ъ, Japanese kana, Korean Hangul). Otherwise no tag.
 - **Portable file and folder names** that are valid on Windows, macOS, Linux
   and Android: `< > | *` and control characters become `_`, a leading `.`
   becomes `_`, Windows device names such as `CON` get `_`, trailing dots and

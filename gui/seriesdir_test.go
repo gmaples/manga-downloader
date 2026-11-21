@@ -133,9 +133,15 @@ func TestSeriesFoldersRerunSkipsExisting(t *testing.T) {
 	}
 }
 
-// a known language tags the folder: here the language filter, set before the load
+// a known language tags the folder: here the language filter, set before the
+// load, on a site that offers languages
 func TestGuessLanguageTagsFromTheFilter(t *testing.T) {
-	c, _, root := newTestController(t, false, nil, chapters(2, 1)...)
+	c, base, root := newTestController(t, false, nil, chapters(2, 1)...)
+	site := &languageSite{fakeSite: base, options: grabber.FilterOptions{Values: []string{"en", "es"}, All: true}}
+	c.identify = func(_ string, s *grabber.Settings) (grabber.Site, []error) {
+		site.Settings = s
+		return site, nil
+	}
 	if err := c.Configure(func(s *grabber.Settings) {
 		s.SeriesFolders, s.GuessLanguage, s.Language = true, true, "en"
 	}); err != nil {
@@ -150,6 +156,56 @@ func TestGuessLanguageTagsFromTheFilter(t *testing.T) {
 	}
 	if got := cbzNames(t, want); !slices.Equal(got, twoChapters) {
 		t.Errorf("files %q, want %q", got, twoChapters)
+	}
+}
+
+// a site with no language choice ignores the filter, so the filter tells
+// nothing: the saved "en" no longer tags a Russian series [en]
+func TestGuessLanguageIgnoresTheFilterOfASiteWithoutLanguages(t *testing.T) {
+	c, _, root := newTestController(t, false, nil, chapters(2, 1)...)
+	if err := c.Configure(func(s *grabber.Settings) {
+		s.SeriesFolders, s.GuessLanguage, s.Language = true, true, "en"
+	}); err != nil {
+		t.Fatal(err)
+	}
+	want := filepath.Join(root, "Test Series")
+
+	s := runTwoChapters(t, c, func(*grabber.Settings) {})
+
+	if s.Dir != want {
+		t.Errorf("summary dir %q, want %q", s.Dir, want)
+	}
+}
+
+// declaringSite is a site whose series page declares its language
+type declaringSite struct {
+	*fakeSite
+	lang string
+}
+
+func (d *declaringSite) PageLanguage() string { return d.lang }
+
+// the language the site's page declares tags the folder when the title is
+// written in its script, ahead of the saved filter the site ignores
+func TestGuessLanguageTagsFromTheDeclaredLanguage(t *testing.T) {
+	c, base, root := newTestController(t, false, nil, chapters(2, 1)...)
+	base.title = "Мир Лидейл"
+	site := &declaringSite{fakeSite: base, lang: "ru"}
+	c.identify = func(_ string, s *grabber.Settings) (grabber.Site, []error) {
+		site.Settings = s
+		return site, nil
+	}
+	if err := c.Configure(func(s *grabber.Settings) {
+		s.SeriesFolders, s.GuessLanguage, s.Language = true, true, "en"
+	}); err != nil {
+		t.Fatal(err)
+	}
+	want := filepath.Join(root, "Мир Лидейл [ru]")
+
+	s := runTwoChapters(t, c, func(*grabber.Settings) {})
+
+	if s.Dir != want {
+		t.Errorf("summary dir %q, want %q", s.Dir, want)
 	}
 }
 

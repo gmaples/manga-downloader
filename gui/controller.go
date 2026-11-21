@@ -1590,7 +1590,11 @@ func runDir(settings *grabber.Settings, series *core.Series, chapters grabber.Fi
 	}
 	lang := ""
 	if settings.GuessLanguage {
-		lang = core.FolderLanguage(chapters, settings.Language, series.Languages, series.Title)
+		declared := ""
+		if p, ok := series.Site.(grabber.PageLanguager); ok {
+			declared = p.PageLanguage()
+		}
+		lang = core.FolderLanguage(chapters, settings.Language, series.Languages, series.Title, declared)
 	}
 
 	return core.SeriesDir(settings.OutputDir, series.Title, lang)

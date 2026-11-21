@@ -14,7 +14,7 @@
   },
   "guessLanguage": {
     "label": "Guess language",
-    "hint": "Adds the language to the series folder's name, as [en] or [ru], only when it's known: the chapters' own language, the language filter, the site's only language, or a script used by one language alone (Ukrainian letters, kana, Hangul). Mixed languages are [mul]; otherwise no tag is added. Needs Series folders."
+    "hint": "Adds the language to the series folder's name, as [en] or [ru], only when it's known: the chapters' own language, the language filter (when the site offers languages), the site's only language, the language the site's page declares (when the title is written in its script), or letters used by one language alone (Ukrainian Ї Є Ґ, Russian Ы Э Ъ, kana, Hangul). Mixed languages are [mul]; otherwise no tag is added. Needs Series folders."
   },
   "skipExisting": {
     "label": "Skip existing files",
