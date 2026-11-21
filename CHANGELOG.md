@@ -19,6 +19,15 @@ as they are.
 What the fork changes, and why, is described in the README's
 "About this fork" section. Android details are in [docs/android.md](docs/android.md).
 
+## v25.3.0-series-folders.29 (2026-11-21)
+
+A small **VPN?** tag in the desktop app next to a site that might need a VPN:
+on its download bar, by the loaded series and under a failed load, with a
+tooltip saying why. It shows only for a 451, a 403 page naming a country or
+region block, or a site name that didn't resolve or resolved to 127.0.0.1 or
+0.0.0.0. Ordinary 4xx and 5xx answers, 429s and timeouts never show it, and it
+clears once the site works again. No VPN or proxy features; app only.
+
 ## v25.3.0-series-folders.28 (2026-11-21)
 
 Commit `5f403ec`. Upstream's v25.3.0 (`b7c87ef`, six commits since v25.2.0)

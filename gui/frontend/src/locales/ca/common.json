@@ -6,5 +6,10 @@
   "all": "Tots",
   "none": "Cap",
   "adultTitle": "[Títol per a adults]",
-  "adultReveal": "Títol per a adults: fes clic per mostrar-lo"
+  "adultReveal": "Títol per a adults: fes clic per mostrar-lo",
+  "vpn": {
+    "badge": "VPN?",
+    "region": "Potser aquest lloc necessita una VPN: ha respost que no està disponible al teu país o regió.",
+    "dns": "Potser aquest lloc necessita una VPN: la seva adreça no s'ha resolt, o s'ha resolt a una adreça bloquejada, que és una de les maneres com les xarxes bloquegen llocs."
+  }
 }

@@ -73,6 +73,9 @@ type StatusError struct {
 	// RetryAfter is the capped Retry-After delay, zero when the server sent none
 	// (retry loops that can wait it out, like downloader.FetchFile, honour it)
 	RetryAfter time.Duration
+	// Region is set on a 451, and on a 403 whose page says the site isn't
+	// available in the request's country or region (see VPNHint)
+	Region bool
 }
 
 func (e *StatusError) Error() string {
@@ -310,12 +313,17 @@ func doRequest(t string, params Params) (body io.ReadCloser, header http.Header,
 
 	if resp.StatusCode != 200 {
 		// drain a bounded amount before closing so the connection can go
-		// back to the pool instead of being torn down on every failure
-		io.Copy(io.Discard, io.LimitReader(resp.Body, 4<<10))
+		// back to the pool instead of being torn down on every failure. A
+		// 403 or 451 is read further, for a page naming a region block.
+		limit := int64(4 << 10)
+		if resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusUnavailableForLegalReasons {
+			limit = regionBodyLimit
+		}
+		start, _ := io.ReadAll(io.LimitReader(resp.Body, limit))
 		resp.Body.Close()
 
 		ra := ParseRetryAfter(resp.Header.Get("Retry-After"))
-		return nil, nil, ra, isRetryableStatus(resp.StatusCode), &StatusError{Code: resp.StatusCode, RetryAfter: ra}
+		return nil, nil, ra, isRetryableStatus(resp.StatusCode), &StatusError{Code: resp.StatusCode, RetryAfter: ra, Region: statusRegion(resp.StatusCode, start)}
 	}
 
 	return resp.Body, resp.Header, 0, false, nil

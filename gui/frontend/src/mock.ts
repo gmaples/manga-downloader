@@ -622,7 +622,7 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
     for (const g of runs.filter((r) => r.running)) {
       const site = hostOf(g.url);
       if (!bars.has(site)) {
-        bars.set(site, { site, title: '', tags: '', done: 0, total: 0, until: 0, parallel: 8 });
+        bars.set(site, { site, title: '', tags: '', done: 0, total: 0, until: 0, parallel: 8, vpn: '' });
       }
       const bar = bars.get(site)!;
       if (bar.title !== '') {
@@ -656,6 +656,8 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
     loaded,
     loadError: loadError?.text ?? '',
     loadErrorMsg: loadError,
+    // the mock's sites never look blocked
+    vpn: '',
     title,
     adult: false,
     chapterCount: chapters.length,

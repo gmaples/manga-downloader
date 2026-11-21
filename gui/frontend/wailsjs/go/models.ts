@@ -430,6 +430,7 @@ export namespace main {
 	    total: number;
 	    until: number;
 	    parallel: number;
+	    vpn: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new SiteBarDTO(source);
@@ -444,6 +445,7 @@ export namespace main {
 	        this.total = source["total"];
 	        this.until = source["until"];
 	        this.parallel = source["parallel"];
+	        this.vpn = source["vpn"];
 	    }
 	}
 	export class State {
@@ -468,6 +470,7 @@ export namespace main {
 	    cancelling: boolean;
 	    groups: GroupDTO[];
 	    sites: SiteBarDTO[];
+	    vpn: string;
 	    summary?: SummaryDTO;
 	    options: OptionsDTO;
 	    prefs: PrefsDTO;
@@ -511,6 +514,7 @@ export namespace main {
 	        this.cancelling = source["cancelling"];
 	        this.groups = this.convertValues(source["groups"], GroupDTO);
 	        this.sites = this.convertValues(source["sites"], SiteBarDTO);
+	        this.vpn = source["vpn"];
 	        this.summary = this.convertValues(source["summary"], SummaryDTO);
 	        this.options = this.convertValues(source["options"], OptionsDTO);
 	        this.prefs = this.convertValues(source["prefs"], PrefsDTO);

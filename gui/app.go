@@ -235,6 +235,9 @@ type State struct {
 	// Sites are a bar for each site the running groups download from (see
 	// Controller.SiteBars)
 	Sites []SiteBarDTO `json:"sites"`
+	// VPN is why a VPN might help with the site of URL ("region", "dns"), ""
+	// when nothing it answered says so (see Controller.VPNHint)
+	VPN string `json:"vpn"`
 	// Summary is the outcome of the group that ended last, null while any
 	// group runs or before one ended
 	Summary *SummaryDTO `json:"summary"`
@@ -414,6 +417,7 @@ func (a *App) State() State {
 	c := a.ctrl
 	st := State{
 		URL:                c.URL(),
+		VPN:                c.VPNHint(c.URL()),
 		Loading:            c.Loading(),
 		Loaded:             c.Loaded(),
 		Title:              c.Title(),
@@ -478,10 +482,12 @@ type SiteBarDTO struct {
 	Until int64  `json:"until"`
 	// Parallel is SiteBar.Parallel
 	Parallel int `json:"parallel"`
+	// VPN is SiteBar.VPN
+	VPN string `json:"vpn"`
 }
 
 func siteBarDTO(b SiteBar) SiteBarDTO {
-	d := SiteBarDTO{Site: b.Site, Title: b.Title, Tags: b.Tags, Done: b.Done, Total: b.Total, Parallel: b.Parallel}
+	d := SiteBarDTO{Site: b.Site, Title: b.Title, Tags: b.Tags, Done: b.Done, Total: b.Total, Parallel: b.Parallel, VPN: b.VPN}
 	if !b.Until.IsZero() {
 		d.Until = b.Until.UnixMilli()
 	}

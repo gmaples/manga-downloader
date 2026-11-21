@@ -15,6 +15,7 @@ import (
 	"github.com/elboletaire/manga-downloader/browser"
 	"github.com/elboletaire/manga-downloader/core"
 	"github.com/elboletaire/manga-downloader/grabber"
+	"github.com/elboletaire/manga-downloader/http"
 	"github.com/elboletaire/manga-downloader/notice"
 	"github.com/elboletaire/manga-downloader/ranges"
 	"github.com/elboletaire/manga-downloader/ratelimit"
@@ -246,6 +247,10 @@ type Controller struct {
 
 	// loadErr is the last load's error, which the view shows under the URL
 	loadErr error
+	// vpn holds, by site key, why a VPN might help with the site (see
+	// http.VPNHint), from its last failure that was a sign of a block. A load
+	// or a chapter that works clears it.
+	vpn map[string]string
 	// volumesText is the Volumes box, starting empty on each load ("" is the
 	// site's own volumes). siteVolumes is those volumes as ranges, "" when they
 	// can't be written so; listedVolumes counts the volumes the site lists.
@@ -449,6 +454,9 @@ type SiteBar struct {
 	Done, Total int64
 	Until       time.Time
 	Parallel    int
+	// VPN is why a VPN might help with the site, "" when nothing says so
+	// (see Controller.VPNHint)
+	VPN string
 }
 
 // SiteBars returns a bar for each site a running group downloads from, in the
@@ -481,6 +489,9 @@ func (c *Controller) SiteBars() []SiteBar {
 	for key, f := range first {
 		b := &bars[index[key]]
 		b.Title, b.Tags, b.Done, b.Total = f.title, f.tags, f.done, f.total
+	}
+	for i := range bars {
+		bars[i].VPN = c.vpn[bars[i].Site]
 	}
 	c.mu.Unlock()
 	// read outside c.mu: the pacing has locks of its own
@@ -537,6 +548,33 @@ func NewController(settings *grabber.Settings, notifyFn func()) *Controller {
 	})
 	browser.SetAttentionHandler(c.onAttention)
 	return c
+}
+
+// noteVPNLocked records what err says about a VPN for the site key: a sign of
+// a block (http.VPNHint) sets the site's hint, a nil err (the site worked)
+// clears it, and any other failure leaves it as it is. Called with c.mu held.
+func (c *Controller) noteVPNLocked(key string, err error) {
+	if key == "" {
+		return
+	}
+	if err == nil {
+		delete(c.vpn, key)
+		return
+	}
+	if hint := http.VPNHint(err); hint != "" {
+		if c.vpn == nil {
+			c.vpn = map[string]string{}
+		}
+		c.vpn[key] = hint
+	}
+}
+
+// VPNHint returns why a VPN might help with the site of url (http.VPNRegion,
+// http.VPNDNS), "" when nothing the site answered says so
+func (c *Controller) VPNHint(url string) string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.vpn[ratelimit.SiteKey(url)]
 }
 
 // onAttention keeps the browser's attention requests, which the view shows
@@ -769,6 +807,7 @@ func (c *Controller) FinishLoad(url string) error {
 	c.mu.Lock()
 	c.loading = false
 	c.loadErr = err
+	c.noteVPNLocked(ratelimit.SiteKey(url), err)
 	if err != nil {
 		c.series = nil
 		c.selected = nil
@@ -940,10 +979,12 @@ func (c *Controller) listingFor(url string, s *grabber.Settings, reuse grabber.S
 			c.addMsg(LogWarn, msg("log.siteCheck", map[string]any{"reason": err.Error()}))
 		}
 		if site == nil {
+			// the checks' errors stay under the message, for Controller.VPNHint
+			checks := errors.Join(siteErrs...)
 			if unknown != nil {
-				return nil, nil, uiErr("errors.siteUnknownTried", map[string]any{"reason": unknown.Detail()}, nil)
+				return nil, nil, uiErr("errors.siteUnknownTried", map[string]any{"reason": unknown.Detail()}, checks)
 			}
-			return nil, nil, uiErr("errors.siteUnknown", nil, nil)
+			return nil, nil, uiErr("errors.siteUnknown", nil, checks)
 		}
 	}
 
@@ -2310,6 +2351,7 @@ func (e events) FetchFailed(listed grabber.Filterable, err error) {
 	delete(g.flightOf, listed)
 	g.failed[chapKey(listed)] = true
 	g.stats.failures = append(g.stats.failures, newFailure(g.releaseLabel(listed), err))
+	c.noteVPNLocked(g.siteKey, err)
 	if j := g.fetching[listed]; j != nil {
 		j.State = JobFailed
 		j.setReasonErr(err)
@@ -2447,6 +2489,7 @@ func (e events) DownloadFailed(ch *grabber.Chapter, err error) {
 	g.failedC[ch] = true
 	g.failed[g.keyOf(ch)] = true
 	delete(g.flights, ch)
+	c.noteVPNLocked(g.siteKey, err)
 	g.stats.failures = append(g.stats.failures, newFailure(g.releaseLabel(ch), err))
 	// a volume goes on with its other chapters
 	if j := g.byChap[ch]; j != nil && g.bundle == nil {
@@ -2512,6 +2555,7 @@ func (e events) Downloaded(ch *grabber.Chapter) {
 	delete(g.flights, ch)
 	// the pages were counted as they came in; this only tallies the chapter
 	g.stats.saved++
+	c.noteVPNLocked(g.siteKey, nil)
 	c.mu.Unlock()
 	c.emit()
 }
