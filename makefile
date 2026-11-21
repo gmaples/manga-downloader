@@ -428,6 +428,7 @@ grabber: \
 	grabber/readhunters \
 	grabber/readkagura \
 	grabber/readspyxfamilymanga \
+	grabber/readmanga \
 	grabber/remanga \
 	grabber/resetscans \
 	grabber/rimacomiplus \
@@ -589,6 +590,11 @@ grabber/mangaball:
 	go run . https://mangaball.com/title-detail/baki-gaiden-shin-chiharu-6a5ffe5d90273b5b995225d2/ 1
 grabber/mangalib:
 	go run . https://mangalib.me/ru/manga/206--one-piece 1188
+# ReadManga on the GroupLe platform, matched by its pages' markup: plain HTTP,
+# the chapter list in the series page, the images in the reader's rm_h.readerInit
+grabber/readmanga:
+	go run . https://a.zazaza.me/provojaiuchaia_v_poslednii_put_friren 1
+
 grabber/remanga:
 	go run . https://remanga.org/manga/murim-login_ 1
 grabber/mangadenizi:

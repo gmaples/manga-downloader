@@ -17,6 +17,25 @@ as they are.
 What the fork changes, and why, is described in the README's
 "About this fork" section. Android details are in [docs/android.md](docs/android.md).
 
+## v25.2.0-series-folders.22 (2026-11-21)
+
+Commit `5ad636c`, on top of build 21. Adds ReadManga (a.zazaza.me) and the
+GroupLe platform it runs on.
+
+- **a.zazaza.me** (ReadManga, Russian): series links and reader links both
+  work, for example `https://a.zazaza.me/provojaiuchaia_v_poslednii_put_friren/vol1/1`
+  (the whole series loads). Plain HTTP, no browser: the chapter list is in
+  the series page, and the images come from the reader page's own script.
+  The release's group is the chapter's translators.
+- **Found by its pages, not its address**: ReadManga keeps moving to new
+  domains, and its sister sites (MintManga, SelfManga, Usagi) run the same
+  GroupLe engine, so any page with GroupLe's markup is taken. Only ReadManga
+  has been looked at.
+- Checked in a browser on a Windows PC (logged out): the Frieren series page
+  lists all 147 chapters, chapter pages carry their image lists, and an
+  image loads with no cookies or Referer. Not yet checked: this build's own
+  download from the site, the sister sites, chapters that need an account.
+
 ## v25.2.0-series-folders.21 (2026-11-21)
 
 Commit `8c48712`, on top of build 20. The chapter list shows what became of
