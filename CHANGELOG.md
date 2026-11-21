@@ -17,6 +17,32 @@ as they are.
 What the fork changes, and why, is described in the README's
 "About this fork" section. Android details are in [docs/android.md](docs/android.md).
 
+## v25.2.0-series-folders.23 (2026-11-21)
+
+Commits `6696128` and `5cf65fd`, on top of build 22. A site with no built-in
+support is tried anyway, by a generic reader, instead of stopping at "site not
+recognised".
+
+- **Plain page first**: the chapter list is guessed from the page's links (the
+  largest set that differ only in a number, under the series' address or with
+  a word like "chapter" or "read" in them), and a chapter's pages from its
+  images (the largest set from one folder, including image addresses written
+  in the page's scripts).
+- **Then a hidden browser**, when the plain page has no chapter list (sites
+  built as JavaScript apps): it renders and scrolls the page, and also reads
+  the data the page fetched, so a reader that draws only the pages in view
+  still gives all of them. It never opens a browser window by itself, and a
+  site known to need a window is skipped.
+- **A warning** says the chapter numbers and pages are guesses.
+- **When nothing works**, the error says what was tried and what the page
+  showed: a bot check, an age confirmation, a "not available in your
+  country" page, or just no chapter links. The app shows it as the load
+  error; the command line lists it under "Site not recognised".
+- Tested by `make test`, `make test/demo`, `make test/gui`, and with the
+  command line against a small JavaScript test site in the build workspace
+  (2 chapters, 4 pages each, only 2 drawn: both CBZs got all 4 pages). Not
+  yet run against real unknown sites or as the Windows app.
+
 ## v25.2.0-series-folders.22 (2026-11-21)
 
 Commit `5ad636c`, on top of build 21. Adds ReadManga (a.zazaza.me) and the
