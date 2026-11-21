@@ -152,7 +152,12 @@ func (m *mockSite) download(t *testing.T, root string, chapters int) (levels []i
 // may be kept or under way at the end), and that's saved for the next run, which starts there
 func TestLearnsASlowSite(t *testing.T) {
 	learnFast(t)
-	m := newMockSite(t, 8, 4*time.Millisecond, false)
+	// pages slow enough that the server's 8 workers, not the test's own CPU,
+	// cap the speed even on a loaded machine (at 4ms, a CI run sharing its
+	// CPUs with other packages measured 16 as 25% faster than 8), and windows
+	// long enough to hold about 80 pages, so one stall can't swing a window
+	ratelimit.Window = 160 * time.Millisecond
+	m := newMockSite(t, 8, 16*time.Millisecond, false)
 	root := t.TempDir()
 	levels, said := m.download(t, root, 150)
 	t.Logf("levels: %v, most at once on the server: %d, reported: %q", levels, m.most.Load(), said)
