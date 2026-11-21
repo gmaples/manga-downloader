@@ -48,7 +48,8 @@ button, *Load* and *Settings*. (To open on the full window instead, turn off
      <img alt="The language selector open, with English selected" src="../assets/screenshots/03-language-selector-light.webp">
    </picture>
 
-4. **Set the options** in the *Options* tab: the folder the files go to,
+4. **Set the options** in the *Options* tab: the folder the files go to (the
+   app creates it if it's missing),
    *Series folders* (each series saved in its own folder, named after the
    series, inside that folder; reruns reuse it), *Guess language* (adds the
    run's language to that folder's name, as `One Piece [en]`, only when it's
@@ -110,7 +111,8 @@ button, *Load* and *Settings*. (To open on the full window instead, turn off
 
 5. **Press Download.** The *Activity* tab shows each chapter as it's fetched and
    packed. *Cancel* lets the chapters already downloading finish, and starts no
-   new ones. A log is one click away in the status bar.
+   new ones. A log is one click away in the status bar, and its *Clear* button
+   empties it without touching a download that's running.
 
    While it runs you can paste another series, load it, pick its chapters and
    press Download again: each press is a group of its own, listed in the

@@ -150,6 +150,7 @@ describe('Splitter', () => {
       createElement(LogDrawer, {
         log: [],
         onClose: () => undefined,
+        onClear: () => undefined,
         height: 300,
         limits: (): [number, number] => [120, 600],
         onResize: () => undefined,

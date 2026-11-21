@@ -1399,6 +1399,10 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
     async log() {
       return log.slice();
     },
+    async clearLog() {
+      log = [];
+      logBus.emit(log);
+    },
 
     async load(next) {
       await startLoad(next);

@@ -26,6 +26,10 @@ export function ClearHistory() {
   return window['go']['main']['App']['ClearHistory']();
 }
 
+export function ClearLog() {
+  return window['go']['main']['App']['ClearLog']();
+}
+
 export function DismissBrowserAlert() {
   return window['go']['main']['App']['DismissBrowserAlert']();
 }

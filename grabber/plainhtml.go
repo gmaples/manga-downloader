@@ -6,8 +6,10 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/url"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -170,17 +172,27 @@ var plainHTMLSelectors = []SiteSelector{
 		Image:        "[data-image-data] img",
 	},
 	// dynasty-scans.com: chapters are <a class="name"> rows inside a
-	// <dl class="chapter-list">; volume headers are sibling <dt>s so a
-	// plain descendant selector already skips them. The row is the link
-	// itself (empty Chapter/ChapterTitle/Link, like mangapill above).
+	// <dl class="chapter-list">; each volume is a <dt> header before its
+	// <dd> rows (VolumeHeader). The row is the link itself (empty
+	// Chapter/ChapterTitle/Link, like mangapill above).
 	// Reader pages only place the first page's <img> in the DOM; the
 	// rest come from a `var pages = [...]` JSON blob handled in
 	// getPlainHTMLImageURL, so Image here is just a fallback.
 	{
-		Title:      ".tag-title b",
-		Rows:       "dl.chapter-list dd a.name",
-		Image:      "#reader img",
-		SeriesLink: `h3#chapter-title a[href^="/series/"]`,
+		Title:        ".tag-title b",
+		Rows:         "dl.chapter-list dd a.name",
+		Image:        "#reader img",
+		SeriesLink:   `h3#chapter-title a[href^="/series/"]`,
+		VolumeHeader: "dt",
+		VolumeScope:  "dd",
+	},
+	// manhuaplus.top: NetTruyen theme, not Madara like manhuaplus.com below;
+	// the series page lists every chapter and readers ship their images in HTML.
+	{
+		Title:      "h1.title-detail",
+		Rows:       "#nt_listchapter .chapter a",
+		Image:      "#image_container .page-chapter img",
+		SeriesLink: `a.home.backward[href*="/manga/"]`,
 	},
 	// mangaread.org & manhuaplus.com: plain-HTTP Madara wordpress themes
 	// (not cloudflare-walled, unlike the toongod/dragontea/manhuaus group
@@ -275,6 +287,8 @@ var plainHTMLSelectors = []SiteSelector{
 	// fallback/documentation of what a single rendered page looks like
 	// (noranofansub.com renders empty img.page-N placeholders instead).
 	// read.yagami.me also puts a view counter (.visits) inside its h1.title.
+	// noranofansub ("Volúmen 01" .title per .group) and read-nifteam ("Volume 118"
+	// button per .nifpanel) head each volume's rows.
 	{
 		Title:        "h1.title",
 		TitleNoise:   ".visits",
@@ -284,6 +298,8 @@ var plainHTMLSelectors = []SiteSelector{
 		Link:         ".title a",
 		Image:        `img.open, img[class^="page-"], .web_pictures img.web_img`,
 		SeriesLink:   "h1.tbtitle a",
+		VolumeHeader: ".title, button.nifaccordion",
+		VolumeScope:  ".group, .nifpanel",
 	},
 	// madarascans.net (formerly .com/.org, which now 301-redirect to .net):
 	// mangareader WordPress theme. Chapter rows are <li data-num> elements
@@ -369,13 +385,16 @@ var plainHTMLSelectors = []SiteSelector{
 	// branch of getPlainHTMLImageURL. Reader pages link back via a
 	// /series/{slug} link (not the bare /series/ listing).
 	// No Image: the RSC reader renders no <img> tags in SSR HTML, so an
-	// Image guard would suppress the SeriesLink on reader pages.
+	// Image guard would suppress the SeriesLink on reader pages. Each volume is
+	// a <section> whose first div is the header ("Volume N") above its rows.
 	{
 		Title:        "h1",
 		Rows:         `a.grid[href*="-chapter-"]:not([href^="/series/"])`,
 		Chapter:      "span.text-base",
 		ChapterTitle: "span.text-base",
 		SeriesLink:   `a[href^="/series/"]:not([href="/series/"])`,
+		VolumeHeader: "section > div:first-child",
+		VolumeScope:  "section",
 	},
 	// revivalscans.com (Next.js RSC): chapter rows link to /read/{slug}/{n}, paid
 	// ones marked by a crown. The "New" badge sits in the number's span, so the
@@ -410,7 +429,9 @@ var plainHTMLSelectors = []SiteSelector{
 	// fine for goquery. Chapter rows are <a class="chap"> inside one
 	// <div class="chapter"> per chapter, the number in a span ("Capitolo
 	// 835"). The reader renders a single page per chapter unless it gets
-	// ?style=list, which lists every page as img.page-image.
+	// ?style=list, which lists every page as img.page-image. Each volume is
+	// a .volume-element accordion whose .volume header ("Volume 77") sits
+	// before its rows.
 	{
 		Title:        "h1",
 		Rows:         "div.chapter a.chap",
@@ -418,6 +439,8 @@ var plainHTMLSelectors = []SiteSelector{
 		ChapterTitle: "span",
 		Image:        "img.page-image",
 		ChapterQuery: "style=list",
+		VolumeHeader: "div.volume",
+		VolumeScope:  ".volume-element",
 	},
 	// visorotaku.com (Spanish): mangavault's rows, but "Capítulo N" plus a page
 	// count, and plain <img>s on its CDN. Its ul carries divide-line.
@@ -446,6 +469,8 @@ var plainHTMLSelectors = []SiteSelector{
 	// The same CMS runs anzmanga25.com, kangaryu-team.fr and onma.top: their
 	// URLs are /manga/{slug}/{number} and each theme puts the series title in
 	// its own element. The rows' download links go through an ad shortener.
+	// utsukushii-bg.com groups its rows under a sibling <li class="volume">
+	// ("Том 33") per volume (VolumeHeader).
 	{
 		Title:        `h2[style*="inline-block"], .titre-projets, .panel-heading`,
 		Rows:         "h5.chapter-title-rtl",
@@ -454,6 +479,8 @@ var plainHTMLSelectors = []SiteSelector{
 		ChapterTitle: "em",
 		Image:        "img.img-responsive",
 		NumberRe:     `/manga/[^/]+/(\d+(?:\.\d+)?)/?$`,
+		VolumeHeader: "li.volume",
+		VolumeScope:  "li",
 	},
 	// uzaymanga.com, eldermanga.com, eskimangalar.com and limonmanga.com:
 	// one Turkish manga platform, chapter URLs are /manga/{slug}/{n}-bolum-oku.
@@ -480,6 +507,16 @@ var plainHTMLSelectors = []SiteSelector{
 		Chapter:      ".chapter-name",
 		ChapterTitle: ".chapter-name",
 		Image:        ".reading-content img",
+	},
+	// manhwa-online.com (Spanish): an Astro site, not manhwaonline.org above.
+	// Each chapter is a div.chapter-row-full whose link holds the number, and
+	// the reader's pages are img.reader-page in .reader-pages.
+	{
+		Title:        "h1.comic-title",
+		Rows:         "div.chapter-row-full a.chapter-link",
+		Chapter:      ".chapter-num",
+		ChapterTitle: ".chapter-num",
+		Image:        "img.reader-page",
 	},
 	// komikindo.ch: custom WordPress theme. The full list is #chapter_list
 	// (the "Chapter Awal" box above it has different markup). Reader pages
@@ -569,6 +606,15 @@ var plainHTMLSelectors = []SiteSelector{
 		Image:   "img.ts-image-minimal",
 		Locked:  "i.fa-lock",
 	},
+	// manhuaplus.org (English, Liliana theme): the list's #myUL is the theme's own,
+	// and the reader fetches its pages from an AJAX endpoint named by CHAPTER_ID
+	{
+		Title:        "h1",
+		Rows:         "ul#myUL li.chapter[data] a[href*=\"/manga/\"]",
+		Image:        "#chapterContent",
+		PageListPath: "/ajax/image/list/chap/{id}",
+		PageListIDRe: `CHAPTER_ID = (\d+)`,
+	},
 	// w6.dandadan.net (English, single series): every chapter sits in a Shortcodes
 	// Ultimate expander (a second list repeats chapter 1). Last, as the list is
 	// generic WordPress markup.
@@ -577,6 +623,22 @@ var plainHTMLSelectors = []SiteSelector{
 		Rows:              ".su-expand-content li.su-post a",
 		ChapterTitleStrip: `(?i)^Dandadan chapter \d+(\.\d+)?$`,
 		Image:             ".entry-content img",
+	},
+	// mhscans.com (Spanish): the series page renders only the newest 30
+	// chapters (ChaptersPath walks the rest); a paid row links to the login
+	// page, which marks it Locked.
+	{
+		Title:             "h1",
+		Rows:              `a[data-chapter-label][href^="/leer/"], a[data-chapter-label][href^="/auth/login"]`,
+		Chapter:           "span.text-sm.font-semibold",
+		ChapterTitle:      "span.text-sm.font-semibold",
+		ChapterTitleStrip: `^Capítulo\s*\d+(\.\d+)?:?\s*`,
+		Image:             "img.page-img",
+		SeriesLink:        `a.bar-back-link[href^="/comics/"]`,
+		FollowSeriesLink:  true,
+		Locked:            `[href^="/auth/login"]`,
+		Paginated:         true,
+		ChaptersPath:      "/chapters",
 	},
 }
 
@@ -657,8 +719,8 @@ type SiteSelector struct {
 	// rewrite to apply, as Image guards SeriesLink. It isn't Image itself: that
 	// also selects the page images, so a paid chapter's logo would be packed.
 	RewriteGuard string
-	// Locked is a CSS selector searched inside each row: a match means the
-	// listing marks the chapter as paid (Chapter.Locked)
+	// Locked is a CSS selector matched by each row, or searched inside it: a
+	// match means the listing marks the chapter as paid (Chapter.Locked)
 	Locked string
 	// Paginated, when set, reads the chapter list's pages after the first
 	// (PageParam=N) until one has no rows, for series listings split over pages.
@@ -666,10 +728,24 @@ type SiteSelector struct {
 	// PageParam is the query parameter that numbers a Paginated listing's
 	// pages; empty means "page"
 	PageParam string
+	// ChaptersPath, with Paginated, is appended to the series path to reach the
+	// chapter list's pages, for a series page that renders only its first page
+	// of rows. Whenever the X-Pages header is sent, the walk stops at its count.
+	ChaptersPath string
 	// LockedIsland is for Astro sites that state the lock only in the series
 	// page's island props: it reports whether a chapter object there (one with
 	// a "number" and a "slug") is paid; rows with that number become Locked.
 	LockedIsland func(chapter map[string]any) bool
+	// VolumeHeader matches the header naming a row's volume ("Volume 33"): the
+	// nearest one before the row, among the siblings of the row and its
+	// ancestors up to VolumeScope, the row's closest enclosing element.
+	VolumeHeader string
+	VolumeScope  string
+	// PageListPath, when set, POSTs to this path ({id} from PageListIDRe's first
+	// capture on the reader) and reads the pages from its JSON html's a.readImg
+	// links, in data-index order (PlainHTML only, not PlainHTMLBrowser).
+	PageListPath string
+	PageListIDRe string
 }
 
 // PlainHTMLChapter represents a PlainHTML Chapter
@@ -816,16 +892,16 @@ func (m *PlainHTML) testCandidateSeriesURL(candidateURL string) bool {
 	return false
 }
 
-// numberRegexps caches the compiled SiteSelector.NumberRe patterns, which are
-// checked once per row.
-var numberRegexps sync.Map
+// selectorRegexps caches the compiled SiteSelector patterns (NumberRe,
+// PageListIDRe), which are checked once per row or chapter.
+var selectorRegexps sync.Map
 
-func numberRe(pattern string) *regexp.Regexp {
-	if re, ok := numberRegexps.Load(pattern); ok {
+func selectorRe(pattern string) *regexp.Regexp {
+	if re, ok := selectorRegexps.Load(pattern); ok {
 		return re.(*regexp.Regexp)
 	}
 	re := regexp.MustCompile(pattern)
-	numberRegexps.Store(pattern, re)
+	selectorRegexps.Store(pattern, re)
 	return re
 }
 
@@ -838,7 +914,7 @@ func checkRowChapterNumber(s *goquery.Selection, selector SiteSelector) (float64
 		if selector.Link != "" {
 			u = s.Find(selector.Link).AttrOr("href", "")
 		}
-		if m := numberRe(selector.NumberRe).FindStringSubmatch(u); m != nil {
+		if m := selectorRe(selector.NumberRe).FindStringSubmatch(u); m != nil {
 			if n, err := strconv.ParseFloat(m[1], 64); err == nil {
 				return n, true
 			}
@@ -872,6 +948,27 @@ func checkRowChapterNumber(s *goquery.Selection, selector SiteSelector) (float64
 // Test only claims rows FetchChapters can actually number.
 func (m PlainHTML) rowChapterNumber(s *goquery.Selection) (float64, bool) {
 	return checkRowChapterNumber(s, m.site)
+}
+
+// headerRowVolume returns the volume of the nearest VolumeHeader before the
+// row; 0 when no VolumeScope encloses it or no header comes before it.
+func (m PlainHTML) headerRowVolume(s *goquery.Selection) int {
+	if m.site.VolumeHeader == "" {
+		return 0
+	}
+	scope := s.Closest(m.site.VolumeScope)
+	if scope.Length() == 0 {
+		return 0
+	}
+	for node := s; node.Length() > 0; node = node.Parent() {
+		if header := node.PrevAllFiltered(m.site.VolumeHeader); header.Length() > 0 {
+			return headerVolume(header.First().Text())
+		}
+		if node.Get(0) == scope.Get(0) {
+			break
+		}
+	}
+	return 0
 }
 
 // FetchTitle returns the manga title: pageTitle, else the URL's name (urlTitle).
@@ -1217,11 +1314,24 @@ var cyrillicChapterNumberRe = regexp.MustCompile(`(?i)(?:^|\P{L})(?:глава|�
 // volumeNumberRe matches a volume number ("Volume 18", "Vol. 2", the Spanish
 // "Volumen 3"), used as a fallback for sites that list volumes instead of
 // chapters (e.g. sushiscan).
-var volumeNumberRe = regexp.MustCompile(`(?i)\bvol(?:ume|umen)?\.?\s*(\d+\.?\d*)`)
+var volumeNumberRe = regexp.MustCompile(`(?i)\bvol(?:ume|umen|úmen)?\.?\s*(\d+\.?\d*)`)
 
 // cyrillicVolumeNumberRe is volumeNumberRe for the Russian "Том 2", with the
 // same lead-in as cyrillicChapterNumberRe
 var cyrillicVolumeNumberRe = regexp.MustCompile(`(?i)(?:^|\P{L})том\.?\s*(\d+\.?\d*)`)
+
+// headerVolume returns the whole volume number a header names ("Volume 33",
+// "Том 33"), 0 when it names none or only a fraction ("Volume 2.5")
+func headerVolume(text string) int {
+	m := volumeNumberRe.FindStringSubmatch(text)
+	if m == nil {
+		m = cyrillicVolumeNumberRe.FindStringSubmatch(text)
+	}
+	if m == nil {
+		return 0
+	}
+	return parseVolume(strings.TrimSuffix(m[1], "."))
+}
 
 // urlChapterNumberRe is a last-resort fallback for rows whose visible text
 // carries no recognizable chapter/volume keyword (e.g. mangahub.io, whose
@@ -1239,38 +1349,76 @@ var turkishSuffixChapterNumberRe = regexp.MustCompile(`(?i)#?(\d+\.?\d*)\s*\.?\s
 // thaiChapterNumberRe matches the Thai "ตอนที่ 12" ("ตอน 12" too).
 var thaiChapterNumberRe = regexp.MustCompile(`ตอน(?:ที่)?\s*(\d+\.?\d*)`)
 
+// chapterMatch returns the submatch indices of a chapter number in a title,
+// nil when the title names no chapter
+func chapterMatch(text string) []int {
+	match := chapterNumberRe.FindStringSubmatchIndex(text)
+	if match == nil {
+		match = cyrillicChapterNumberRe.FindStringSubmatchIndex(text)
+	}
+	if match == nil {
+		match = turkishChapterNumberRe.FindStringSubmatchIndex(text)
+	}
+	if match == nil {
+		match = turkishSuffixChapterNumberRe.FindStringSubmatchIndex(text)
+	}
+	if match == nil {
+		match = thaiChapterNumberRe.FindStringSubmatchIndex(text)
+	}
+	return match
+}
+
+// volumeMatch returns the submatch indices of a volume number in a title, nil
+// when the title names no volume
+func volumeMatch(text string) []int {
+	match := volumeNumberRe.FindStringSubmatchIndex(text)
+	if match == nil {
+		match = cyrillicVolumeNumberRe.FindStringSubmatchIndex(text)
+	}
+	return match
+}
+
 // parseChapterNumber extracts the chapter number from a chapter title, falling
 // back to a volume number. Returns false if no number could be found (these
 // are usually site announcements rather than actual chapters).
 func parseChapterNumber(text string) (float64, bool) {
-	match := chapterNumberRe.FindStringSubmatch(text)
-	if len(match) == 0 {
-		match = cyrillicChapterNumberRe.FindStringSubmatch(text)
-	}
-	if len(match) == 0 {
-		match = turkishChapterNumberRe.FindStringSubmatch(text)
-	}
-	if len(match) == 0 {
-		match = turkishSuffixChapterNumberRe.FindStringSubmatch(text)
-	}
-	if len(match) == 0 {
-		match = thaiChapterNumberRe.FindStringSubmatch(text)
-	}
-	if len(match) == 0 {
+	match := chapterMatch(text)
+	if match == nil {
 		// only checked as fallback so "Vol.2 Chapter 15" still prefers the chapter
-		match = volumeNumberRe.FindStringSubmatch(text)
+		match = volumeMatch(text)
 	}
-	if len(match) == 0 {
-		match = cyrillicVolumeNumberRe.FindStringSubmatch(text)
-	}
-	if len(match) == 0 {
+	if match == nil {
 		return 0, false
 	}
-	number, err := strconv.ParseFloat(match[1], 64)
+	number, err := strconv.ParseFloat(text[match[2]:match[3]], 64)
 	if err != nil {
 		return 0, false
 	}
 	return number, true
+}
+
+// rowVolume returns the volume a row states before its chapter ("Vol.2
+// Chapter 15"), or a volume-only row's own number (sushiscan's "Volume 18").
+// 0 when it isn't whole or disagrees with the number.
+func rowVolume(text string, number float64) int {
+	match := volumeMatch(text)
+	if match == nil {
+		return 0
+	}
+	// "Vol. 2." takes the dot as a sentence end, not a decimal
+	volume := parseVolume(strings.TrimSuffix(text[match[2]:match[3]], "."))
+	chapter := chapterMatch(text)
+	if chapter == nil {
+		if float64(volume) == number {
+			return volume
+		}
+		return 0
+	}
+	// a volume after the chapter is title text ("Chapter 120 - Vol. 13 Cover")
+	if match[1] <= chapter[0] {
+		return volume
+	}
+	return 0
 }
 
 // FetchChapters returns a slice of chapters, one per release: a row whose
@@ -1321,7 +1469,11 @@ func (m PlainHTML) FetchChapters() (chapters Filterables, errs []error) {
 				title = ""
 			}
 
-			locked := lockedNumbers[number] || (m.site.Locked != "" && s.Find(m.site.Locked).Length() > 0)
+			locked := lockedNumbers[number] || (m.site.Locked != "" && (s.Is(m.site.Locked) || s.Find(m.site.Locked).Length() > 0))
+			volume := rowVolume(chapterText, number)
+			if volume == 0 {
+				volume = m.headerRowVolume(s)
+			}
 			for _, upload := range m.rowUploads(s) {
 				u := m.resolveURL(upload.href)
 				if !strings.HasPrefix(u, "http") {
@@ -1340,6 +1492,7 @@ func (m PlainHTML) FetchChapters() (chapters Filterables, errs []error) {
 				chapter := &PlainHTMLChapter{
 					Chapter{
 						Number: number,
+						Volume: volume,
 						Title:  title,
 						ID:     id,
 						Locked: locked,
@@ -1361,24 +1514,29 @@ func (m PlainHTML) FetchChapters() (chapters Filterables, errs []error) {
 const maxListingPages = 100
 
 // listingPages fetches the chapter list's pages after the first, as
-// PageParam=N on m.URL's query, until one has no rows. It returns each
-// page's rows.
+// PageParam=N on m.URL's query (on the ChaptersPath under it, when set), until
+// one has no rows or the X-Pages count is reached. It returns each page's rows.
 func (m PlainHTML) listingPages() (pages []*goquery.Selection, errs []error) {
 	base, err := url.Parse(m.URL)
 	if err != nil {
 		return nil, []error{err}
 	}
+	if m.site.ChaptersPath != "" {
+		base.Path = strings.TrimSuffix(base.Path, "/") + m.site.ChaptersPath
+	}
 	param := m.site.PageParam
 	if param == "" {
 		param = "page"
 	}
-	for page := 2; page <= maxListingPages; page++ {
+	last := maxListingPages
+	prevKey := ""
+	for page := 2; page <= last; page++ {
 		u := *base
 		query := u.Query()
 		query.Set(param, strconv.Itoa(page))
 		u.RawQuery = query.Encode()
 
-		body, err := http.Get(http.RequestParams{URL: u.String()})
+		body, header, err := http.GetWithHeader(http.RequestParams{URL: u.String()})
 		if err != nil {
 			return pages, append(errs, err)
 		}
@@ -1387,14 +1545,40 @@ func (m PlainHTML) listingPages() (pages []*goquery.Selection, errs []error) {
 		if err != nil {
 			return pages, append(errs, err)
 		}
+		// past the last page a list repeats it rather than going empty, so
+		// the count is what ends the walk, before this page's rows are read
+		if n, err := strconv.Atoi(header.Get("X-Pages")); err == nil && n > 0 && n < last {
+			last = n
+		}
+		if page > last {
+			break
+		}
 		rows := doc.Find(m.site.Rows)
 		if rows.Length() == 0 {
 			break
 		}
+		// a page repeating the one before it ends the walk too: without a
+		// usable X-Pages, a list past its end can keep answering with its last page
+		key := m.pageKey(rows)
+		if key == prevKey {
+			break
+		}
+		prevKey = key
 		pages = append(pages, rows)
 	}
 
 	return pages, errs
+}
+
+// pageKey identifies a listing page by its first row's link, or by the row's
+// markup when it has none
+func (m PlainHTML) pageKey(rows *goquery.Selection) string {
+	first := rows.First()
+	if href := m.rowUploads(first)[0].href; href != "" {
+		return href
+	}
+	markup, _ := goquery.OuterHtml(first)
+	return markup
 }
 
 // islandLockedNumbers returns the numbers of the chapters LockedIsland marks
@@ -1569,18 +1753,93 @@ func (m PlainHTML) FetchChapter(f Filterable) (*Chapter, error) {
 
 	authorizeMadaradex(doc)
 
-	return m.chapterFromDoc(f, doc), nil
+	pimages, err := m.readerImages(doc, mchap.URL)
+	if err != nil {
+		return nil, err
+	}
+	return m.chapterFromImages(f, pimages), nil
+}
+
+// readerImages returns a reader page's image URLs: from the selector's AJAX
+// page list when it has one, else from the markup
+func (m PlainHTML) readerImages(doc *goquery.Document, pageURL string) ([]string, error) {
+	if m.site.PageListPath == "" {
+		return getPlainHTMLImageURL(m.site.Image, doc), nil
+	}
+	html, err := doc.Html()
+	if err != nil {
+		return nil, err
+	}
+	match := selectorRe(m.site.PageListIDRe).FindStringSubmatch(html)
+	if len(match) < 2 {
+		return nil, fmt.Errorf("no page list id on %s", pageURL)
+	}
+	body, err := http.PostText(http.RequestParams{
+		URL:     m.BaseUrl() + strings.Replace(m.site.PageListPath, "{id}", match[1], 1),
+		Referer: pageURL,
+		Headers: map[string]string{"X-Requested-With": "XMLHttpRequest"},
+	})
+	if err != nil {
+		return nil, err
+	}
+	return pageListURLs(body)
+}
+
+// pageListURLs reads the pages out of a PageListPath answer: the readImg
+// links of its html, ordered by their row's data-index
+func pageListURLs(body string) ([]string, error) {
+	var answer struct {
+		Status bool   `json:"status"`
+		Msg    string `json:"msg"`
+		HTML   string `json:"html"`
+	}
+	if err := json.Unmarshal([]byte(body), &answer); err != nil {
+		return nil, err
+	}
+	if !answer.Status {
+		if answer.Msg != "" {
+			return nil, fmt.Errorf("page list refused: %s", answer.Msg)
+		}
+		return nil, errors.New("the page list answered no status")
+	}
+	frag, err := goquery.NewDocumentFromReader(strings.NewReader(answer.HTML))
+	if err != nil {
+		return nil, err
+	}
+	type pageLink struct {
+		index int
+		url   string
+	}
+	var links []pageLink
+	frag.Find("a.readImg").Each(func(i int, s *goquery.Selection) {
+		index, err := strconv.Atoi(s.Parent().AttrOr("data-index", ""))
+		if err != nil {
+			index = i
+		}
+		links = append(links, pageLink{index, s.AttrOr("href", "")})
+	})
+	sort.SliceStable(links, func(i, j int) bool { return links[i].index < links[j].index })
+	urls := make([]string, 0, len(links))
+	for _, l := range links {
+		urls = append(urls, l.url)
+	}
+	return urls, nil
 }
 
 // chapterFromDoc builds a Chapter from an already parsed reader page
 func (m PlainHTML) chapterFromDoc(f Filterable, doc *goquery.Document) *Chapter {
-	pimages := getPlainHTMLImageURL(m.site.Image, doc)
+	return m.chapterFromImages(f, getPlainHTMLImageURL(m.site.Image, doc))
+}
+
+// chapterFromImages builds a Chapter from its reader's image URLs
+func (m PlainHTML) chapterFromImages(f Filterable, pimages []string) *Chapter {
 	pcount := len(pimages)
 
 	chapter := &Chapter{
 		Title:      f.GetTitle(),
 		Label:      labelOf(f),
 		Number:     f.GetNumber(),
+		Volume:     VolumeOf(f),
 		PagesCount: int64(pcount),
 		Language:   "en",
 	}
