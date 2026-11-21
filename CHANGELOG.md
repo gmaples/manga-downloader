@@ -21,14 +21,28 @@ What the fork changes, and why, is described in the README's
 
 ## v25.3.0-series-folders.31 (2026-11-21)
 
-Includes build 29. A page that fails on one server can be fetched from
+Includes builds 29 and 30 (merged in). A page that fails on one server can be fetched from
 others named in `site-mirrors.txt`, a new plain-text file next to
 `site-rate-limits.txt`: one `host: other host, other host` line per server,
 tried in order with the same path once the page's retries are used up.
 Nothing is built in and the file is only read. App and command line alike.
 Made for mangalib, whose main image server answers 400 for some old pages
-(Gintama vol. 17 ch. 141-144) that its second server has. Build 30 is the
-number another change was given.
+(Gintama vol. 17 ch. 141-144) that its second server has.
+
+## v25.3.0-series-folders.30 (2026-11-21)
+
+Commit `3753bd8`, with build 29 (`54d9b02`) merged in. Two fixes for slow
+downloads that were measured on Greg's PC.
+
+- **A site's saved time comes back down.** `site-rate-limits.txt` held
+  `mangalib.org: 2.25s` from a few 429s a week earlier, so every MangaLib
+  page waited 2.25s whatever the learned level (about 1,600 pages an hour,
+  where single page loads took about 1s). Now, after 5m of downloads from a
+  site with no 429, its time is divided by 1.5 and saved, again after each
+  further 5m, and once it would drop below 1s the line is taken out.
+- **The app's log is saved.** Every log line also goes to `log.txt` next to
+  `gui.json`, with its date and time; past 5 MB at a start it becomes
+  `log-old.txt`. The command line already prints its log to the terminal.
 
 ## v25.3.0-series-folders.29 (2026-11-21)
 
