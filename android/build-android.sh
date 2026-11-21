@@ -5,7 +5,7 @@
 #
 #   ANDROID_HOME=<sdk> ANDROID_NDK_HOME=<ndk> android/build-android.sh <build number>
 #
-# PRODUCT_VERSION (25.2.0.<n>) and TAG (v25.2.0-series-folders.<n>) follow the
+# PRODUCT_VERSION (25.3.0.<n>) and TAG (v25.3.0-series-folders.<n>) follow the
 # build number unless set. MD_KEYSTORE (and MD_KEYSTORE_PASSWORD) sign it with
 # a kept key, so each build installs over the last; without, the debug key.
 set -euo pipefail
@@ -15,8 +15,8 @@ here=$(cd "$(dirname "$0")" && pwd)
 repo=$(dirname "$here")
 : "${ANDROID_HOME:?set ANDROID_HOME to the Android SDK}"
 : "${ANDROID_NDK_HOME:?set ANDROID_NDK_HOME to the Android NDK}"
-PRODUCT_VERSION=${PRODUCT_VERSION:-25.2.0.$n}
-TAG=${TAG:-v25.2.0-series-folders.$n}
+PRODUCT_VERSION=${PRODUCT_VERSION:-25.3.0.$n}
+TAG=${TAG:-v25.3.0-series-folders.$n}
 API=24
 
 # The frontend is built for Chrome 83 (Android 11's own WebView), not the

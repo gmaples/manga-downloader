@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       build:
-        description: Build number N (tag v25.2.0-series-folders.N)
+        description: Build number N (tag v25.3.0-series-folders.N)
         required: true
 
 permissions:
@@ -19,8 +19,8 @@ jobs:
     name: macOS universal
     runs-on: macos-latest
     env:
-      TAG: v25.2.0-series-folders.${{ inputs.build }}
-      PRODUCT_VERSION: 25.2.0.${{ inputs.build }}
+      TAG: v25.3.0-series-folders.${{ inputs.build }}
+      PRODUCT_VERSION: 25.3.0.${{ inputs.build }}
     steps:
     - uses: actions/checkout@v7
     - uses: actions/setup-go@v7

@@ -52,7 +52,7 @@ If Android has a proxy set (Settings, or `settings put global http_proxy`),
 the app passes it to the backend; a PAC proxy isn't followed.
 
 The build number sets the app's version code, `PRODUCT_VERSION`
-(`25.2.0.<n>`) and `TAG` (`v25.2.0-series-folders.<n>`). With `MD_KEYSTORE`
+(`25.3.0.<n>`) and `TAG` (`v25.3.0-series-folders.<n>`). With `MD_KEYSTORE`
 and `MD_KEYSTORE_PASSWORD` set, the APK is signed with that key, so a new build
 installs over the last one; without them it's signed with the debug key.
 

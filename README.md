@@ -36,16 +36,17 @@ Linux, and as a **command line tool** for scripts, servers and Docker.
 
 This is a personal fork of
 [elboletaire/manga-downloader](https://github.com/elboletaire/manga-downloader),
-based on v25.2.0. **The changes in this fork were vibe coded.** AI coding
+based on v25.3.0 (v25.2.0 up to build 27). **The changes in this fork were vibe coded.** AI coding
 agents wrote them from plain-language requests, and they were checked by
 tests and by trying the builds, not by reading every line. The original
 project's own note on AI, further down, describes upstream's process; it
 doesn't cover the changes listed here. Please report problems with these
 changes to this fork, not upstream.
 
-Builds from this fork are numbered `v25.2.0-series-folders.N`, and each one
-is a git tag. [CHANGELOG.md](CHANGELOG.md) lists what each build changed; the
-latest is v25.2.0-series-folders.10, the Android app.
+Builds from this fork are numbered `vX.Y.Z-series-folders.N`, where X.Y.Z is
+the upstream release merged in, and each one is a git tag.
+[CHANGELOG.md](CHANGELOG.md) lists what each build changed; the latest is
+v25.3.0-series-folders.28.
 
 What this fork adds:
 
