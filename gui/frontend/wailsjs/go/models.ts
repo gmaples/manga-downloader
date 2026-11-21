@@ -227,6 +227,8 @@ export namespace main {
 	    uiLanguage?: string;
 	    checkUpdates: boolean;
 	    simpleStart: boolean;
+	    sideWidth?: number;
+	    logHeight?: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new PrefsDTO(source);
@@ -237,6 +239,8 @@ export namespace main {
 	        this.uiLanguage = source["uiLanguage"];
 	        this.checkUpdates = source["checkUpdates"];
 	        this.simpleStart = source["simpleStart"];
+	        this.sideWidth = source["sideWidth"];
+	        this.logHeight = source["logHeight"];
 	    }
 	}
 	export class RunDTO {

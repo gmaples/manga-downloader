@@ -6,6 +6,7 @@
     "options": "Opciones",
     "activity": "Actividad"
   },
+  "resizeSide": "Cambiar el tamaño del panel lateral",
   "download": "Descarga",
   "running": "en curso",
   "finished": "terminado"

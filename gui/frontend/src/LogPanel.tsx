@@ -4,6 +4,7 @@
 
 import { useEffect, useRef, useState, type MouseEvent } from "react";
 import { useI18n } from "./i18n/react";
+import { Splitter } from "./panes";
 import {
   AlertIcon,
   CopyIcon,
@@ -205,11 +206,20 @@ export function StatusBar({
 interface DrawerProps {
   log: LogLine[];
   onClose: () => void;
+  /** The height the user dragged the drawer to; absent keeps the default */
+  height?: number;
+  /** The smallest and largest height the drawer may take now */
+  limits?: () => [number, number];
+  /** Each height while dragging its top edge */
+  onResize?: (px: number) => void;
+  /** The height the user left it at */
+  onCommit?: (px: number) => void;
 }
 
-export function LogDrawer({ log, onClose }: DrawerProps) {
+export function LogDrawer({ log, onClose, height, limits, onResize, onCommit }: DrawerProps) {
   const { t } = useI18n();
   const box = useRef<HTMLDivElement>(null);
+  const drawer = useRef<HTMLElement>(null);
   const [copied, setCopied] = useState(false);
 
   // follow the newest line, unless the reader has scrolled up to read older ones
@@ -251,6 +261,8 @@ export function LogDrawer({ log, onClose }: DrawerProps) {
     <section
       className="log-drawer"
       id="log-drawer"
+      ref={drawer}
+      style={height ? ({ "--log-height": `${height}px` } as React.CSSProperties) : undefined}
       aria-label={t("log.title")}
       onKeyDown={(e) => {
         if (e.key === "Escape") {
@@ -258,6 +270,17 @@ export function LogDrawer({ log, onClose }: DrawerProps) {
         }
       }}
     >
+      {limits && onResize && onCommit && (
+        <Splitter
+          orientation="horizontal"
+          className="log-resize"
+          label={t("log.resize")}
+          size={() => drawer.current?.offsetHeight ?? 0}
+          limits={limits}
+          onResize={onResize}
+          onCommit={onCommit}
+        />
+      )}
       <div className="log-head">
         <h2>{t("log.title")}</h2>
         <button

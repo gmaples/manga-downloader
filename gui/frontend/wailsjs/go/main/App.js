@@ -66,6 +66,10 @@ export function SetOptionsAndLoad(arg1, arg2) {
   return window['go']['main']['App']['SetOptionsAndLoad'](arg1, arg2);
 }
 
+export function SetPaneSizes(arg1, arg2) {
+  return window['go']['main']['App']['SetPaneSizes'](arg1, arg2);
+}
+
 export function SetSelected(arg1, arg2) {
   return window['go']['main']['App']['SetSelected'](arg1, arg2);
 }

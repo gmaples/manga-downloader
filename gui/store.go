@@ -47,6 +47,22 @@ type PrefsDTO struct {
 	CheckUpdates bool `json:"checkUpdates"`
 	// SimpleStart is whether the window opens on the bare URL box, until a load starts
 	SimpleStart bool `json:"simpleStart"`
+	// SideWidth and LogHeight are the sizes, in CSS pixels, the user dragged the
+	// side panel and the log drawer to; 0 keeps the window's default
+	SideWidth int `json:"sideWidth,omitempty"`
+	LogHeight int `json:"logHeight,omitempty"`
+}
+
+// maxPaneSize bounds a saved pane size; anything past it, or below 0, is the default (0)
+const maxPaneSize = 10000
+
+// paneSize returns px as a saved pane size: 0 (the default) when out of range
+func paneSize(px int) int {
+	if px < 0 || px > maxPaneSize {
+		return 0
+	}
+
+	return px
 }
 
 // guiFile is what gui.json holds: the options and the preferences, flat
@@ -280,6 +296,7 @@ func loadPrefs(path string) PrefsDTO {
 		notice.Warn("ignoring the saved ui-language %q, following the system", p.UILanguage)
 		p.UILanguage = ""
 	}
+	p.SideWidth, p.LogHeight = paneSize(p.SideWidth), paneSize(p.LogHeight)
 
 	return p
 }

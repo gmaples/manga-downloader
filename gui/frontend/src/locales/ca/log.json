@@ -3,6 +3,7 @@
   "show": "Mostra el registre",
   "hide": "Amaga el registre",
   "closeLog": "Tanca el registre",
+  "resize": "Canvia la mida del registre",
   "empty": "Encara no hi ha res al registre.",
   "ready": "Preparat",
   "updateAvailable": "Actualització disponible: {{latest}}",

@@ -3,6 +3,7 @@
   "show": "ログを表示",
   "hide": "ログを隠す",
   "closeLog": "ログを閉じる",
+  "resize": "ログのサイズを変更",
   "empty": "まだログはありません。",
   "ready": "準備完了",
   "updateAvailable": "アップデートがあります: {{latest}}",

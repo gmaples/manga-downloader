@@ -58,6 +58,8 @@ export interface Api {
   setCheckUpdates(on: boolean): Promise<void>;
   /** Saves whether the window shows the simple view while nothing is loaded; a load started keeps the full one */
   setSimpleStart(on: boolean): Promise<void>;
+  /** Saves the side panel's width and the log drawer's height the user dragged them to; 0 keeps the default */
+  setPaneSizes(sideWidth: number, logHeight: number): Promise<void>;
 
   // Pushes. Each returns a function that stops the callback.
   onState(cb: (s: State) => void): Unsubscribe;
@@ -129,6 +131,7 @@ export function createWailsApi(): Api {
     setSystemLocale: (locale) => app.SetSystemLocale(locale),
     setCheckUpdates: (on) => app.SetCheckUpdates(on),
     setSimpleStart: (on) => app.SetSimpleStart(on),
+    setPaneSizes: (side, log) => app.SetPaneSizes(side, log),
 
     onState: (cb) => state.subscribe(cb),
     onChapters: (cb) => chapters.subscribe(cb),
