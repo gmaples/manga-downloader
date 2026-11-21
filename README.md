@@ -95,7 +95,7 @@ work was planned from.
 
 ## Features
 
-- **[583 supported sites](#supported-sites)**, from big aggregators to small
+- **[584 supported sites](#supported-sites)**, from big aggregators to small
   scanlation groups.
 - In the app, **paste a URL and it loads**: the series, its chapters and the
   languages and scanlation groups it offers appear on their own.
@@ -389,7 +389,7 @@ environment variables.
 ## Supported sites
 
 <details>
-<summary><b>Show all 583 supported sites</b></summary>
+<summary><b>Show all 584 supported sites</b></summary>
 <br>
 
 | Site | Notes | Last verified |
@@ -975,6 +975,7 @@ environment variables.
 | [yurimoonsub.blogspot.com](https://yurimoonsub.blogspot.com) | Arabic, mostly NSFW | 2026-11-02 |
 | [yurionair.top](https://yurionair.top) | Yuri Verso, Portuguese, yuri, some NSFW | 2026-10-29 |
 | [zenithscans.com](https://zenithscans.com) | Turkish | 2026-11-09 |
+| [zenko.online](https://zenko.online) | Zenko, Ukrainian | — |
 | [zinmanga.net](https://www.zinmanga.net) | ZinManga, English | 2026-10-29 |
 | [zonatmo.org](https://zonatmo.org) | TuMangaOnline, former zonatmo.com | 2026-10-29 |
 

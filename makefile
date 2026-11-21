@@ -491,6 +491,7 @@ grabber: \
 	grabber/yurimoonsub \
 	grabber/yurionline \
 	grabber/yurionair \
+	grabber/zenko \
 	grabber/zinmanga \
 	grabber/html
 
@@ -1140,6 +1141,8 @@ grabber/turkcemanga:
 grabber/yurionair:
 	go run . https://yurionair.top/manga/adachi-to-shimamura/ 46
 
+grabber/zenko:
+	go run . https://zenko.online/titles/1225 1
 # plain HTTP, chapters from a paginated JSON api, images in data-src
 grabber/zinmanga:
 	go run . https://www.zinmanga.net/manga/academy-idolmaster-gold-rush 12
