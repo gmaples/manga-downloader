@@ -17,5 +17,8 @@
   "queued_other": "あと{{count}}話が待機中",
   "progressOf": "{{title}}の進行状況{{tags}}",
   "progressBundle": "まとめファイルの進行状況",
-  "cancelGroup": "{{title}}をキャンセル"
+  "cancelGroup": "{{title}}をキャンセル",
+  "restored": "前回のセッション",
+  "resume": "読み込んで再開",
+  "resumeLabel": "未完了の話を選択した状態で作品を読み込む"
 }

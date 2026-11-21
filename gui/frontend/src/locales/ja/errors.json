@@ -23,5 +23,6 @@
   "noVolumes": "サイトに巻の情報がないため、巻は話の範囲で指定してください（例: 「1-7/8-16」）",
   "loadTitle": "作品のタイトルを取得できませんでした: {{reason}}",
   "loadChapters": "話の一覧を取得できませんでした: {{reason}}",
-  "noChapterDownloaded": "どの話もダウンロードできませんでした"
+  "noChapterDownloaded": "どの話もダウンロードできませんでした",
+  "noSuchGroup": "そのダウンロードは一覧にありません"
 }

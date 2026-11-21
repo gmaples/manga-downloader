@@ -9,7 +9,9 @@
 // volumes-running (a run by volume in progress), parts (loaded, packing each
 // chapter with its parts merged, as &parts lists them) or two-groups (a first
 // series' download that ended, and the loaded series' one running after it,
-// each under the header of its group). update is loaded too, as a
+// each under the header of its group), restored (loaded, with two groups of the
+// last session back from history.txt: Vinland Saga with chapters to do, and an
+// adult title, masked until clicked, all done). update is loaded too, as a
 // release build (v1.17.0 with &shot, v1.12.0 without) with a newer release
 // (v1.18.0 with &shot, v1.13.0 without): the status bar shows the yellow "!".
 // check is loading a site that needs the browser window, with the alert asking
@@ -52,7 +54,20 @@
 
 import type { Api, Unsubscribe } from './api';
 import { createT, LANGS, resolveLanguage, type Lang, type LangPref, type Vars } from './i18n';
-import type { Chapter, FilterChoice, Job, LogLine, Message, Options, Prefs, SiteBar, State, Summary, Update } from './types';
+import type {
+  Chapter,
+  FilterChoice,
+  HistoryItem,
+  Job,
+  LogLine,
+  Message,
+  Options,
+  Prefs,
+  SiteBar,
+  State,
+  Summary,
+  Update,
+} from './types';
 import { hostOf } from './run';
 import { groupChapters, groupParts, listedVolumes, parseVolumes, siteVolumes } from './volumes';
 import { OP_TITLES, OP_TITLES_JA } from './mock-onepiece';
@@ -97,11 +112,23 @@ const SCENARIOS = [
   'volumes-running',
   'parts',
   'two-groups',
+  'restored',
 ] as const;
 
 export type Scenario = (typeof SCENARIOS)[number];
 
 const SITES = ['multi', 'plus', 'groups', 'none'] as const;
+
+const HOUR = 3600 * 1000;
+// a fixed time, so screenshots don't change from day to day
+const MOCK_NOW = Date.UTC(2026, 10, 21, 18, 30);
+
+/** The history pop-up's series: one adult title among them, masked until clicked */
+const MOCK_HISTORY: HistoryItem[] = [
+  { title: 'One Piece', url: 'https://example.com/manga/one-piece', site: 'https://example.com/', adult: false, when: MOCK_NOW, done: 24, todo: 0 },
+  { title: 'Vinland Saga', url: 'https://example.com/manga/vinland-saga', site: 'https://example.com/', adult: false, when: MOCK_NOW - 3 * HOUR, done: 3, todo: 4 },
+  { title: 'Night Garden', url: 'https://example.com/manga/night-garden', site: 'https://example.com/', adult: true, when: MOCK_NOW - 30 * HOUR, done: 3, todo: 0 },
+];
 
 export type MockSite = (typeof SITES)[number];
 
@@ -411,6 +438,9 @@ interface MockGroup {
   ext: string;
   running: boolean;
   cancelling: boolean;
+  // a group of the last session, back from history.txt; adult masks its title
+  restored: boolean;
+  adult: boolean;
   runChapters: number;
   // the bundle option as the run started with it, as the backend's RunInfo
   runBundle: boolean;
@@ -496,6 +526,8 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
   let identified = false;
   // the downloads started, in the order they started (see MockGroup)
   let runs: MockGroup[] = [];
+  // the history pop-up's series, newest first, as history.txt keeps them
+  let history: HistoryItem[] = MOCK_HISTORY.map((h) => ({ ...h }));
   let lastRunID = 0;
   // the selection Download was last pressed with, by URL, as the backend's started
   const started = new Map<string, Set<number>>();
@@ -623,6 +655,7 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
     loadError: loadError?.text ?? '',
     loadErrorMsg: loadError,
     title,
+    adult: false,
     chapterCount: chapters.length,
     hasDuplicates: chapters.some((c) => c.language !== ''),
     hasGroupDuplicates: chapters.some(
@@ -645,6 +678,9 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
       run: { chapters: g.runChapters, bundle: g.runBundle, volumes: g.runVolumes, rows: g.runRows },
       jobs: g.jobs.map((j) => ({ ...j })),
       summary: copySummary(g.summary),
+      restored: g.restored,
+      url: g.url,
+      adult: g.adult,
     })),
     sites: siteBars(),
     summary: runs.some((g) => g.running) ? null : copySummary(lastSummary()),
@@ -695,6 +731,8 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
       ext: EXTENSIONS[options.format],
       running: true,
       cancelling: false,
+      restored: false,
+      adult: false,
       runChapters: 0,
       runBundle: false,
       runVolumes: false,
@@ -1203,6 +1241,32 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
       g.timer = setInterval(() => tick(g), TICK_MS);
     }
   }
+  if (scenario === 'restored') {
+    // as the backend's restoreLocked: rows done or to do, nothing running
+    const restore = (name: string, address: string, adult: boolean, done: number, todo: number) => {
+      const g = newRun();
+      Object.assign(g, { title: name, url: address, adult, restored: true, running: false });
+      // rows named after the mock's list, which every load lists, so a resume finds them
+      g.jobs = chapters.slice(0, done + todo).map((c, i): Job => {
+        const reason = msgOf('job.reason.todo');
+        return {
+          title: c.title,
+          tags: '',
+          number: c.number,
+          total: i < done ? 1 : 0,
+          done: i < done ? 1 : 0,
+          state: i < done ? 'done' : 'todo',
+          reason: i < done ? '' : reason.text,
+          reasonMsg: i < done ? undefined : reason,
+          status: '',
+          volume: false,
+        };
+      });
+      g.runChapters = g.runRows = done + todo;
+    };
+    restore('Night Garden', 'https://example.com/manga/night-garden', true, 3, 0);
+    restore('Vinland Saga', 'https://example.com/manga/vinland-saga', false, 3, 4);
+  }
   if (scenario === 'two-groups') {
     // a first series' group that ended, then the loaded one's, running
     const first = newRun();
@@ -1464,6 +1528,8 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
       }
       pushLog('info', msgOf('log.downloading', { count: picked.length, title }));
       started.set(url, new Set(selected));
+      // a download takes the place of the series' group of the last session
+      runs = runs.filter((g) => !(g.restored && g.url === url));
       simulateRun(picked);
     },
     async update() {
@@ -1505,6 +1571,25 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
     },
     async cancelGroup(id) {
       cancelRuns((g) => g.id === id);
+    },
+    async history() {
+      return history.map((h) => ({ ...h }));
+    },
+    async clearHistory() {
+      history = [];
+    },
+    async resume(id) {
+      const g = runs.find((r) => r.id === id && r.restored);
+      if (!g) {
+        throw reject('errors.noSuchGroup');
+      }
+      // the backend matches the rows' labels; the mock's list is titled
+      // from One Piece, so it matches their numbers
+      const todo = new Set(g.jobs.filter((j) => j.state === 'todo').map((j) => j.number));
+      await startLoad(g.url);
+      selected = new Set(chapters.filter((c) => !c.locked && todo.has(c.number)).map((c) => c.index));
+      selectionBus.emit(selectionOf());
+      push();
     },
 
     onState: (cb) => stateBus.subscribe(cb),

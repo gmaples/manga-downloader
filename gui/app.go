@@ -122,6 +122,11 @@ func (a *App) notify() {
 // launch starts pushing state to the frontend. Call it once the window is up.
 func (a *App) launch() {
 	go a.pump()
+	// the last session's series with chapters to do is loaded with them
+	// selected, so Download is one click away; nothing downloads by itself
+	if id := a.ctrl.ResumeCandidate(); id != 0 {
+		_ = a.Resume(id)
+	}
 }
 
 // pump emits a "state" event after each change, at most once per interval.
@@ -188,14 +193,16 @@ func (a *App) shutdown(context.Context) {
 // State is everything the window shows except the chapter list, the
 // selection and the log, which have their own calls and events
 type State struct {
-	URL           string   `json:"url"`
-	Loading       bool     `json:"loading"`
-	Loaded        bool     `json:"loaded"`
-	LoadError     string   `json:"loadError"`
-	LoadErrorMsg  *Message `json:"loadErrorMsg,omitempty"`
-	Title         string   `json:"title"`
-	ChapterCount  int      `json:"chapterCount"`
-	HasDuplicates bool     `json:"hasDuplicates"`
+	URL          string   `json:"url"`
+	Loading      bool     `json:"loading"`
+	Loaded       bool     `json:"loaded"`
+	LoadError    string   `json:"loadError"`
+	LoadErrorMsg *Message `json:"loadErrorMsg,omitempty"`
+	Title        string   `json:"title"`
+	// Adult is set when the site rates the loaded series 18+, so the window masks its title
+	Adult         bool `json:"adult"`
+	ChapterCount  int  `json:"chapterCount"`
+	HasDuplicates bool `json:"hasDuplicates"`
 	// HasGroupDuplicates is set when the list repeats a chapter number in one
 	// language with the groups telling the copies apart (see ChapterDTO.Group)
 	HasGroupDuplicates bool `json:"hasGroupDuplicates"`
@@ -291,6 +298,12 @@ type GroupDTO struct {
 	Run        RunDTO      `json:"run"`
 	Jobs       []JobDTO    `json:"jobs"`
 	Summary    *SummaryDTO `json:"summary"`
+	// Restored is set on a group of the last session, read back from
+	// history.txt: Resume loads its series with its to-do chapters selected
+	Restored bool   `json:"restored"`
+	URL      string `json:"url"`
+	// Adult is set when the site rates the series 18+
+	Adult bool `json:"adult"`
 }
 
 // RunDTO describes the run of a group
@@ -392,6 +405,7 @@ func (a *App) State() State {
 		Loading:            c.Loading(),
 		Loaded:             c.Loaded(),
 		Title:              c.Title(),
+		Adult:              c.Adult(),
 		ChapterCount:       len(c.Chapters()),
 		HasDuplicates:      c.HasDuplicates(),
 		HasGroupDuplicates: c.HasGroupDuplicates(),
@@ -765,6 +779,48 @@ func startFileManager(dir string) error {
 	return nil
 }
 
+// HistoryDTO is one series of the history pop-up. When is Unix
+// milliseconds, 0 when unknown; Done and Todo count its chapters.
+type HistoryDTO struct {
+	Title string `json:"title"`
+	URL   string `json:"url"`
+	// Site is the site's home page, "" when the URL has none
+	Site  string `json:"site"`
+	Adult bool   `json:"adult"`
+	When  int64  `json:"when"`
+	Done  int    `json:"done"`
+	Todo  int    `json:"todo"`
+}
+
+// History returns the series of history.txt, newest first
+func (a *App) History() []HistoryDTO {
+	out := []HistoryDTO{}
+	for _, e := range a.ctrl.History() {
+		d := HistoryDTO{Title: e.Title, URL: e.URL, Site: historySite(e.URL), Adult: e.Adult, Todo: e.Todo()}
+		d.Done = len(e.Chapters) - d.Todo
+		if !e.When.IsZero() {
+			d.When = e.When.UnixMilli()
+		}
+		out = append(out, d)
+	}
+	return out
+}
+
+// ClearHistory empties history.txt
+func (a *App) ClearHistory() {
+	a.ctrl.ClearHistory()
+}
+
+// Resume loads the series of restored group id with its to-do chapters
+// selected, ready for Download; it downloads nothing
+func (a *App) Resume(id int) error {
+	url, load, err := a.ctrl.Resume(id)
+	if err != nil || !load {
+		return err
+	}
+	return a.Load(url)
+}
+
 // Start downloads the selected chapters in the background, as a new group
 // beside any running. Refusals (nothing selected, invalid options, a series
 // loading) are returned here.
@@ -905,6 +961,9 @@ func groupDTO(g GroupState) GroupDTO {
 		Run:        runDTO(g.Run),
 		Jobs:       []JobDTO{},
 		Summary:    summaryDTO(g.Summary),
+		Restored:   g.Restored,
+		URL:        g.URL,
+		Adult:      g.Adult,
 	}
 	for _, j := range g.Jobs {
 		out.Jobs = append(out.Jobs, JobDTO{
@@ -972,6 +1031,8 @@ func jobStateName(s JobState) string {
 		return "skipped"
 	case JobFetching:
 		return "fetching"
+	case JobTodo:
+		return "todo"
 	}
 
 	return ""

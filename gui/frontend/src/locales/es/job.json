@@ -5,7 +5,8 @@
     "archiving": "empaquetando",
     "done": "completado",
     "failed": "fallido: {{reason}}",
-    "skipped": "omitido: {{reason}}"
+    "skipped": "omitido: {{reason}}",
+    "todo": "pendiente: {{reason}}"
   },
   "short": {
     "fetching": "Obteniendo páginas…",
@@ -14,7 +15,8 @@
     "downloading": "Descargando",
     "done": "Guardado",
     "failed": "Fallido",
-    "skipped": "Omitido"
+    "skipped": "Omitido",
+    "todo": "Pendiente"
   },
   "title": {
     "bundle": "Paquete: capítulos {{range}}",
@@ -39,6 +41,7 @@
     "locked": "capítulo bloqueado",
     "emptyVolume": "no se pudo descargar ninguno de sus capítulos",
     "exists": "{{name}} ya existe",
-    "noPages": "no se ha encontrado ninguna página"
+    "noPages": "no se ha encontrado ninguna página",
+    "todo": "aún no descargado"
   }
 }

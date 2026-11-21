@@ -9,7 +9,7 @@ import { sameScanlator, typedValue, filterControl, filtersIdentified, filterOpti
 import { say } from './i18n';
 import { useI18n } from './i18n/react';
 import { shortcutLabel, isMac } from './settingsShortcut';
-import { AlertIcon, GearIcon, LinkIcon, RefreshIcon, Spinner } from './icons';
+import { AlertIcon, GearIcon, HistoryIcon, LinkIcon, RefreshIcon, Spinner } from './icons';
 import { Mascot, useExpression, Wordmark } from './Mascot';
 import type { FilterChoice, Options, State } from './types';
 
@@ -36,6 +36,9 @@ interface Props {
   /** Opens the settings dialog from the gear button */
   onOpenSettings: () => void;
   settingsOpen: boolean;
+  /** Opens the history pop-up of past series */
+  onOpenHistory?: () => void;
+  historyOpen?: boolean;
   /** The gear button, so the dialog can hand focus back to it when it closes */
   settingsRef?: Ref<HTMLButtonElement>;
   /** The simple view: the logo over the URL box and the settings button, no filters */
@@ -54,6 +57,8 @@ export function SourceBar({
   optionError,
   onOpenSettings,
   settingsOpen,
+  onOpenHistory,
+  historyOpen = false,
   settingsRef,
   simple = false,
 }: Props) {
@@ -209,6 +214,19 @@ export function SourceBar({
             )}
           </button>
         </form>
+        {onOpenHistory && (
+          <button
+            type="button"
+            className="btn ghost icon-only history-btn"
+            aria-label={t('history.open')}
+            title={t('history.open')}
+            aria-haspopup="dialog"
+            aria-expanded={historyOpen}
+            onClick={onOpenHistory}
+          >
+            <HistoryIcon />
+          </button>
+        )}
         <button
           ref={settingsRef}
           type="button"

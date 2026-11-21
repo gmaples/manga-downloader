@@ -22,8 +22,16 @@ export function Clear() {
   return window['go']['main']['App']['Clear']();
 }
 
+export function ClearHistory() {
+  return window['go']['main']['App']['ClearHistory']();
+}
+
 export function DismissBrowserAlert() {
   return window['go']['main']['App']['DismissBrowserAlert']();
+}
+
+export function History() {
+  return window['go']['main']['App']['History']();
 }
 
 export function Load(arg1) {
@@ -40,6 +48,10 @@ export function OpenFolder(arg1) {
 
 export function Options() {
   return window['go']['main']['App']['Options']();
+}
+
+export function Resume(arg1) {
+  return window['go']['main']['App']['Resume'](arg1);
 }
 
 export function SelectRange(arg1) {

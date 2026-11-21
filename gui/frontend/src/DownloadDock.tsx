@@ -7,6 +7,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { T as Translator } from './i18n';
 import { T, useI18n } from './i18n/react';
 import { DownloadIcon, Spinner, XIcon } from './icons';
+import { useMask } from './Masked';
 import { downloadBlocker, downloadLabel, overallProgress, runningProgress } from './run';
 import type { Chapter, Options, PackAs, SiteBar, State } from './types';
 
@@ -46,8 +47,9 @@ export function DownloadDock({ state, error, chapters, selected, onStart, onCanc
 
   const blocker = downloadBlocker(state, t);
   const o = state.options;
+  const mask = useMask(state.title, state.adult);
   // the series folder when that option is on, so the folder shown is the one written to
-  const dir = state.destination || o.outputDir;
+  const dir = mask(state.destination || o.outputDir);
   return (
     <div className={`dock${state.running ? ' running' : ''}`}>
       {state.running && <Running state={state} focused={focused} onCancel={onCancel} />}

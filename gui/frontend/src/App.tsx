@@ -21,6 +21,7 @@ import { LogDrawer, StatusBar } from './LogPanel';
 import { createOptionsWriter } from './optionsWriter';
 import { OptionsPanel } from './OptionsPanel';
 import { CHAPTERS_MIN, forwardWheel, LOG_MIN, LOG_ROOM, SIDE_MIN, Splitter } from './panes';
+import { HistoryDialog } from './HistoryDialog';
 import { SettingsDialog } from './SettingsDialog';
 import { SourceBar } from './SourceBar';
 import { isMac, shouldToggleSettings } from './settingsShortcut';
@@ -43,6 +44,7 @@ export function App({ api, initial }: { api: Api; initial?: State }) {
   const [actionError, setActionError] = useState('');
   const [optionError, setOptionError] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const gear = useRef<HTMLButtonElement>(null);
   const wasSettingsOpen = useRef(false);
   // null until the first State, which picks the view the window opens on
@@ -234,6 +236,8 @@ export function App({ api, initial }: { api: Api; initial?: State }) {
         optionError={optionError}
         onOpenSettings={() => setSettingsOpen(true)}
         settingsOpen={settingsOpen}
+        onOpenHistory={() => setHistoryOpen(true)}
+        historyOpen={historyOpen}
         settingsRef={gear}
         simple={view === 'simple'}
       />
@@ -324,6 +328,10 @@ export function App({ api, initial }: { api: Api; initial?: State }) {
                 onCancelGroup={(id) => {
                   api.cancelGroup(id).catch((e) => setActionError(errorMessage(e, t)));
                 }}
+                onResume={(id) => {
+                  setActionError('');
+                  api.resume(id).catch((e) => setActionError(errorMessage(e, t)));
+                }}
               />
             </div>
 
@@ -356,6 +364,14 @@ export function App({ api, initial }: { api: Api; initial?: State }) {
           }}
           onOpenURL={(url) => api.openURL(url)}
           onError={setOptionError}
+        />
+      )}
+      {historyOpen && (
+        <HistoryDialog
+          load={() => api.history()}
+          onClear={() => api.clearHistory()}
+          onClose={() => setHistoryOpen(false)}
+          onOpenURL={(url) => api.openURL(url)}
         />
       )}
       {logOpen && (

@@ -37,5 +37,6 @@
   "errorDownload": "error en descarregar {{label}}: {{reason}}",
   "packFailed": "{{label}}: error en empaquetar: {{reason}}",
   "errorPacking": "error en empaquetar {{label}}: {{reason}}",
-  "saved": "desat {{name}}"
+  "saved": "desat {{name}}",
+  "historyFailed": "no s'ha pogut desar l'historial: {{reason}}"
 }

@@ -41,6 +41,7 @@ function render(state: Partial<State>, pref: LangPref = '') {
         state: state as State,
         onOpenFolder: () => undefined,
         onCancelGroup: () => undefined,
+        onResume: () => undefined,
       }),
     ),
   );
@@ -51,7 +52,19 @@ const run = { chapters: 1, bundle: false, volumes: false, rows: 1 };
 /** A group of One Piece, running unless it has a summary */
 function group(g: Partial<Group>, id = 1): Group {
   const summary = g.summary ?? null;
-  return { id, title: 'One Piece', running: summary === null, cancelling: false, run, jobs: [], summary, ...g };
+  return {
+    id,
+    title: 'One Piece',
+    running: summary === null,
+    cancelling: false,
+    run,
+    jobs: [],
+    summary,
+    restored: false,
+    url: 'https://example.com/manga/one-piece',
+    adult: false,
+    ...g,
+  };
 }
 
 /** The state of a window with the one group g */

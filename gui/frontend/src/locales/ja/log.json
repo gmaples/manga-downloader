@@ -37,5 +37,6 @@
   "errorDownload": "{{label}}のダウンロードエラー: {{reason}}",
   "packFailed": "{{label}}: 書き出し: {{reason}}",
   "errorPacking": "{{label}}の書き出しエラー: {{reason}}",
-  "saved": "{{name}}を保存しました"
+  "saved": "{{name}}を保存しました",
+  "historyFailed": "履歴を保存できませんでした: {{reason}}"
 }
