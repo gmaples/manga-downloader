@@ -75,6 +75,10 @@ What this fork adds:
   download from that site pauses (15s, then 1.5 times longer each time, up to
   5m), only the failed request is made again, and the site's gap grows and is
   saved.
+- **Learned download speed**: each site learns how many pages to download at
+  once from how fast it answers, cuts back at once on 429s, timeouts and
+  overload errors, and saves what it learned in `site-parallel.txt` next to
+  `site-rate-limits.txt` (`mangadex.org: 8`), so the next run starts there.
 - **Download groups** in the desktop app: while downloads run, you can load
   another series and start it at once. Each group has its own Cancel and
   summary, keeps the options it started with, and groups from the same site

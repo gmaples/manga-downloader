@@ -17,6 +17,30 @@ as they are.
 What the fork changes, and why, is described in the README's
 "About this fork" section. Android details are in [docs/android.md](docs/android.md).
 
+## v25.2.0-series-folders.20 (2026-11-21)
+
+Commit `8d294e6`, on top of build 19. Each site learns how many pages to
+download at once from how fast it answers.
+
+- **Learned level**: a site seen for the first time starts at 4 pages at once
+  and doubles while each doubling is at least 25% faster, then settles at the
+  fastest level. Every few windows it tries one more and keeps it when that's
+  at least 5% faster. Speed is bytes per second, measured only while pages
+  are queued.
+- **Trouble cuts it**: a 429, a 502/503/504, a Cloudflare 520-524, a timeout or
+  a dropped connection halves the level at once, holds off any rise for 30s,
+  and keeps the site below the level that had trouble for the rest of the
+  run. `site-rate-limits.txt` and the 429 pause still apply on top.
+- **Carried over**: `site-parallel.txt`, next to `site-rate-limits.txt`, holds
+  one `site: number` line per site, written when downloads end and right after
+  a cut. The next run starts there. Edit a number to set a site's start.
+- **Shared**: groups of one site running at once share one level.
+- **Shown**: each site's bar in the app says how many run at once (*8
+  parallel*); the CLI prints a line when a site settles or is cut back.
+- Verified by tests only, including a mocked slow site (settles at the 8 it
+  can serve) and a mocked site that answers 429 past 6 at once (3 429s in
+  1,000 pages, ends at 6). Not yet run against a live site.
+
 ## v25.2.0-series-folders.19 (2026-11-21)
 
 Commit `5ef0851`, on top of build 18. The Windows desktop app remembers its
