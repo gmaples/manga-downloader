@@ -249,3 +249,16 @@ func TestGenericReportsWhatItTried(t *testing.T) {
 		}
 	}
 }
+
+// A link text that only names the chapter's number is no title
+func TestGenericChapterLinksTitles(t *testing.T) {
+	html := `<body><a href="/s/x/1">Розділ 1</a><a href="/s/x/2">Chapter 2 - The Fight</a><a href="/s/x/3">3</a></body>`
+	links := genericChapterLinks(mustDoc(t, html), "https://site.example/s/x")
+	var got []string
+	for _, l := range links {
+		got = append(got, l.Title)
+	}
+	if strings.Join(got, "|") != "|Chapter 2 - The Fight|" {
+		t.Errorf("titles %q", got)
+	}
+}

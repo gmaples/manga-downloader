@@ -421,6 +421,11 @@ func genericChapterLinks(doc *goquery.Document, pageURL string) []genericLink {
 			continue
 		}
 		title := c.text
+		// a text that's only the number ("Chapter 12", "12") is no title:
+		// the label says it already
+		if !genericLetterRe.MatchString(genericLinkNumberRe.ReplaceAllString(title, "")) {
+			title = ""
+		}
 		if r := []rune(title); len(r) > 120 {
 			title = string(r[:120])
 		}
@@ -431,6 +436,9 @@ func genericChapterLinks(doc *goquery.Document, pageURL string) []genericLink {
 	}
 	return links
 }
+
+// genericLetterRe is a letter, in any script
+var genericLetterRe = regexp.MustCompile(`\pL`)
 
 // genericImageRe is an image URL written out in a page's scripts, escaped
 // slashes included
