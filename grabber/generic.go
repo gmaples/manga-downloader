@@ -422,6 +422,9 @@ var genericDigitsRe = regexp.MustCompile(`\d+(?:\.\d+)?`)
 // genericChapterWordRe is a URL that names a chapter or a reader
 var genericChapterWordRe = regexp.MustCompile(`(?i)chapter|chap|/ch[-_/.\d]|/c\d|glava|capitulo|cap[-_]|episode|/ep[-_\d]|/read|reader|viewer|/vol|/v\d|/tom`)
 
+// genericIDRe is an id in a URL: a UUID, or a long run of hex digits
+var genericIDRe = regexp.MustCompile(`(?i)[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|\b[0-9a-f]{16,}\b`)
+
 // genericLinkNumberRe is a chapter number written in a link's text
 var genericLinkNumberRe = regexp.MustCompile(`(?i)(?:chapter|chap\.?|ch\.?|глава|гл\.?|розділ|capítulo|capitulo|cap\.?|chapitre|episode|ep\.?|第|#)\s*(\d+(?:[.,]\d+)?)`)
 
@@ -464,9 +467,10 @@ func genericChapterLinks(doc *goquery.Document, pageURL string) []genericLink {
 		if strings.TrimSuffix(u.Path, "/") == seriesPath && u.RawQuery == base.RawQuery {
 			return
 		}
-		shape := genericDigitsRe.ReplaceAllString(key, "#")
-		if shape == key {
-			return // no number: not a chapter
+		// ids ("97628fda-5c9a-…", a 24-digit hex) are one token, not numbers
+		shape := genericDigitsRe.ReplaceAllString(genericIDRe.ReplaceAllString(key, "{id}"), "#")
+		if !strings.ContainsAny(shape, "#{") {
+			return // no number and no id: not a chapter
 		}
 		underSeries := seriesPath != "" && strings.HasPrefix(u.Path, seriesPath+"/")
 		if !underSeries && !genericChapterWordRe.MatchString(u.Path) && !genericLinkNumberRe.MatchString(a.Text()) {
@@ -502,7 +506,7 @@ func genericChapterLinks(doc *goquery.Document, pageURL string) []genericLink {
 	// the number is the last one that differs between the links
 	numbers := make([][]string, len(list))
 	for i, c := range list {
-		numbers[i] = genericDigitsRe.FindAllString(c.url.Path+"?"+c.url.RawQuery, -1)
+		numbers[i] = genericDigitsRe.FindAllString(genericIDRe.ReplaceAllString(c.url.Path+"?"+c.url.RawQuery, "{id}"), -1)
 	}
 	at := -1
 	for j := range numbers[0] {
@@ -513,16 +517,14 @@ func genericChapterLinks(doc *goquery.Document, pageURL string) []genericLink {
 			}
 		}
 	}
-	if at < 0 {
-		return nil
-	}
+	// at < 0: the URLs differ only by ids, so only the link texts number them
 
 	links := make([]genericLink, 0, len(list))
 	for i, c := range list {
 		numText := ""
 		if m := genericLinkNumberRe.FindStringSubmatch(c.text); m != nil {
 			numText = strings.ReplaceAll(m[1], ",", ".")
-		} else if at < len(numbers[i]) {
+		} else if at >= 0 && at < len(numbers[i]) {
 			numText = numbers[i][at]
 		}
 		num, err := strconv.ParseFloat(numText, 64)

@@ -341,3 +341,16 @@ func TestGenericChapterLinksByLinkText(t *testing.T) {
 		t.Errorf("links %+v", links)
 	}
 }
+
+// Chapter URLs told apart only by ids (honey-manga's /read/{uuid}/{uuid})
+// are one list, numbered by their link texts
+func TestGenericChapterLinksByID(t *testing.T) {
+	html := `<body>
+		<a href="/read/97628fda-5c9a-48a1-a926-98096a4eebac/00427aa7-c581-4f5e-9ff6-97144c505ae3"><span>Том 1 - Розділ 2</span></a>
+		<a href="/read/e37467c7-0c11-4c7a-92f1-238ab8e69a41/00427aa7-c581-4f5e-9ff6-97144c505ae3"><span>Том 1 - Розділ 1</span></a>
+	</body>`
+	links := genericChapterLinks(mustDoc(t, html), "https://site.example/book/00427aa7-c581-4f5e-9ff6-97144c505ae3")
+	if len(links) != 2 || links[0].Number != 2 || links[1].Number != 1 {
+		t.Errorf("links %+v", links)
+	}
+}

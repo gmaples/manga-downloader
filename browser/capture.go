@@ -32,6 +32,19 @@ const (
 	captureMaxSteps = 60
 )
 
+// captureInnerScrollJS scrolls every element that scrolls on its own by
+// one of its heights, so a reader drawn in an inner pane mounts its pages too
+const captureInnerScrollJS = `(function(){
+	var els = document.querySelectorAll("body *");
+	for (var i = 0; i < els.length; i++) {
+		var el = els[i];
+		if (el.scrollHeight > el.clientHeight + 50 && /auto|scroll/.test(getComputedStyle(el).overflowY)) {
+			el.scrollTop += el.clientHeight;
+		}
+	}
+	return true;
+})()`
+
 // captureLoadWait is how long Capture lets a page's scripts run after it
 // loaded, before scrolling. A var so tests can shrink it.
 var captureLoadWait = 2 * time.Second
@@ -135,6 +148,10 @@ func capture(ctx context.Context, h hooks, pageURL, prepare string) (Snapshot, e
 					}
 				} else {
 					atBottom = 0
+				}
+				// readers that scroll an inner element instead of the page
+				if _, err := chromedp.Evaluate[bool](captureInnerScrollJS)(ctx, t); err != nil {
+					return err
 				}
 				if _, err := chromedp.Sleep(400*time.Millisecond)(ctx, t); err != nil {
 					return err
