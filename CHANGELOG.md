@@ -17,6 +17,23 @@ as they are.
 What the fork changes, and why, is described in the README's
 "About this fork" section. Android details are in [docs/android.md](docs/android.md).
 
+## v25.2.0-series-folders.25 (2026-11-21)
+
+Commits `33cf3a6` and `445c4a6`, on top of build 24.
+
+- **Chapter links told apart only by ids** (`/read/{uuid}/{uuid}`, as on
+  honey-manga.com.ua) now form a list, numbered by their link text
+  ("Том 1 - Розділ 2").
+- **Readers drawn in an inner pane** are scrolled too, so their pages load.
+- **Chapter titles stop at a date or time**, so "27 груд 2023 р., 22:46|211"
+  or "2025-03-02" no longer end up in file names.
+- Live on a Windows PC with the command line (a test build of `33cf3a6`):
+  **senkuro.com** chapter 1 again 58 real JPEGs. **honey-manga.com.ua**: the
+  generic reader found both chapters and every page address, in a headless
+  browser, but the site's own image server (hmvolumestorage.b-cdn.net)
+  resolves to 127.0.0.1 in public DNS, so no page could be fetched. That's
+  the site, not the reader. The date fix was checked by tests only.
+
 ## v25.2.0-series-folders.24 (2026-11-21)
 
 Commit `7f49ed1`, on top of build 23. The generic reader learns two common
