@@ -196,6 +196,7 @@ func (g *Grabber) IdentifySite() (Site, []error) {
 		NewMangitto(g),
 		NewZinmanga(g),
 		NewMangalib(g),
+		NewRemanga(g),
 		NewMangadenizi(g),
 		NewRoliascan(g),
 		NewSacachispa(g),
