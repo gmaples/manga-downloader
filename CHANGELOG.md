@@ -17,6 +17,27 @@ as they are.
 What the fork changes, and why, is described in the README's
 "About this fork" section. Android details are in [docs/android.md](docs/android.md).
 
+## v25.2.0-series-folders.14 (2026-11-20)
+
+Commits `b3f6a2a` and `aeb8f7c`. Desktop app changes, on Windows. (Build 13
+was a test build of `b3f6a2a` alone; it was never released.)
+
+- **One browser window per series**: on a site that needs a browser
+  (joilmang.com, Cloudflare-gated sites), the window opened to load a series
+  now stays open for its download, instead of closing and a second one
+  opening. It closes when the download ends, on Clear, or when another
+  series is loaded. A second download of the same loaded series still opens
+  a window of its own.
+- **Guess language** no longer trusts the language filter on a site that has
+  no language choice: joilmang ignores it, yet the saved `en` named the
+  folder `Мир Лидейл [en]`. It now also tags from the language the site's
+  page declares (`<html lang="ru">`) when the title is written in that
+  language's script, and from Russian letters (Ы Э Ъ); Ы and Э are
+  Belarusian too and Ъ Bulgarian.
+- Tested on a Windows PC with build 13 (the window change): World of Leadale
+  on joilmang loaded and downloaded all 52 chapters with one Chrome window
+  for the load and the download, as far as the process log reached.
+
 ## v25.2.0-series-folders.12 (2026-11-17)
 
 Commit `a73f88b`. Adds joilmang.com, on the Windows desktop app and command line.
