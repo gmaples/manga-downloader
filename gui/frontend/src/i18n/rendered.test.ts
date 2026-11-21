@@ -148,6 +148,7 @@ function components({ state, chapters, selected, log }: Snapshot): Screen[] {
         onSetAll: later,
         onRange: () => Promise.resolve(0),
         onVolumes: later,
+        onDownloadMissing: later,
         onReload: noop,
         onError: noop,
       }),
@@ -160,7 +161,7 @@ function components({ state, chapters, selected, log }: Snapshot): Screen[] {
     {
       file: 'ActivityPanel.tsx',
       name: 'ActivityPanel',
-      element: createElement(ActivityPanel, { state, onOpenFolder: noop, onCancelGroup: noop, onResume: noop }),
+      element: createElement(ActivityPanel, { state, onOpenFolder: noop, onCancelGroup: noop, onResume: noop, onRestart: noop }),
     },
     {
       file: 'DownloadDock.tsx',

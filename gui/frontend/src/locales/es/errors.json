@@ -24,5 +24,7 @@
   "loadTitle": "No se pudo obtener el título de la serie: {{reason}}",
   "loadChapters": "No se pudo obtener la lista de capítulos: {{reason}}",
   "noChapterDownloaded": "no se pudo descargar ningún capítulo",
-  "noSuchGroup": "esa descarga ya no está en la lista"
+  "noSuchGroup": "esa descarga ya no está en la lista",
+  "nothingToRestart": "no queda nada por reiniciar en esa descarga",
+  "nothingMissing": "todos los capítulos de esta serie están guardados o en camino"
 }

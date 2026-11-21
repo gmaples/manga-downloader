@@ -68,6 +68,13 @@ export interface Api {
   clearHistory(): Promise<void>;
   /** Loads the series of restored group id with its chapters to do selected; downloads nothing */
   resume(id: number): Promise<void>;
+  /**
+   * Downloads again the unfinished chapters of group id: the row's with its key, all with '';
+   * a group of another series loads it first, then starts
+   */
+  restart(id: number, key: string): Promise<void>;
+  /** Selects and downloads every chapter of the loaded series not saved yet, failed and cancelled included */
+  downloadMissing(): Promise<void>;
 
   // Pushes. Each returns a function that stops the callback.
   onState(cb: (s: State) => void): Unsubscribe;
@@ -146,6 +153,8 @@ export function createWailsApi(): Api {
     history: () => app.History(),
     clearHistory: () => app.ClearHistory(),
     resume: (id) => app.Resume(id),
+    restart: (id, key) => app.Restart(id, key),
+    downloadMissing: () => app.DownloadMissing(),
 
     onState: (cb) => state.subscribe(cb),
     onChapters: (cb) => chapters.subscribe(cb),

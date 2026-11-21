@@ -120,3 +120,46 @@ func TestMarkFailedBeatsDone(t *testing.T) {
 		t.Errorf("mark = %q, want failed", got)
 	}
 }
+
+// Download missing takes every chapter not saved: the failed one and the one
+// never picked, and then nothing is left; the selection is kept when refused
+func TestDownloadMissing(t *testing.T) {
+	list := chapters(4, 2)
+	list[1].fail = map[int]bool{1: true}
+	c, _, _ := newTestController(t, false, nil, list...)
+	if err := c.Load(testURL); err != nil {
+		t.Fatal(err)
+	}
+	for _, i := range []int{0, 1, 2} {
+		if err := c.SetSelected(i, true); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := c.Start(); err != nil {
+		t.Fatal(err)
+	}
+	waitFinished(t, c)
+	wantMarks(t, c, "done", "failed", "done", "")
+
+	if err := c.DownloadMissing(); err != nil {
+		t.Fatal(err)
+	}
+	if got := c.SelectedIndices(); !slices.Equal(got, []int{1, 3}) {
+		t.Errorf("selection = %v, want the failed chapter and the one never picked", got)
+	}
+	waitIdle(t, c)
+	wantMarks(t, c, "done", "failed", "done", "done")
+
+	list[1].fail = nil
+	if err := c.DownloadMissing(); err != nil {
+		t.Fatal(err)
+	}
+	waitIdle(t, c)
+	wantMarks(t, c, "done", "done", "done", "done")
+	if err := c.DownloadMissing(); err == nil {
+		t.Error("DownloadMissing with nothing missing was not refused")
+	}
+	if got := c.SelectedIndices(); !slices.Equal(got, []int{1}) {
+		t.Errorf("selection = %v, want the last download's kept after the refusal", got)
+	}
+}

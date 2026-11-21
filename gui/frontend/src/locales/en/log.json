@@ -38,5 +38,6 @@
   "packFailed": "{{label}}: packing: {{reason}}",
   "errorPacking": "error packing {{label}}: {{reason}}",
   "saved": "saved {{name}}",
-  "historyFailed": "could not save the history: {{reason}}"
+  "historyFailed": "could not save the history: {{reason}}",
+  "restartFailed": "could not restart the chapters: {{reason}}"
 }

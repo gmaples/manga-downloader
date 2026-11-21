@@ -91,6 +91,12 @@ type Job struct {
 	StatusMsg *Message
 	// Volume is set on the row of a volume
 	Volume bool
+	// Key is the row's chapter, by chapKey of its listing entry, or
+	// "todo:" and its label on a restored row; "" for a volume or bundle
+	Key string
+	// Restart is set on a row whose chapter can be downloaded again (see
+	// Controller.Restart): one that failed, or a restored one to do
+	Restart bool
 }
 
 // setTitle, setStatus and setReason set a row's text the GUI wrote, with its message
@@ -288,6 +294,12 @@ type Controller struct {
 	// of a restored group by label (see Resume)
 	resumeURL  string
 	resumeTodo map[string]bool
+	// resumeKeys are chapters by chapKey that Restart readied with
+	// resumeURL, and resumeStart has the load that selects them start them
+	// too (startPending, until FinishLoad starts it); see Restart
+	resumeKeys   map[string]bool
+	resumeStart  bool
+	startPending bool
 	// adult is set when the site rates the loaded series 18+, and
 	// adultTitles holds the titles of the adult series seen this session,
 	// which the log masks (see maskLineLocked)
@@ -492,6 +504,9 @@ type GroupState struct {
 	Restored bool
 	URL      string
 	Adult    bool
+	// Unfinished counts the chapters Restart would download again for the
+	// whole group (see Controller.Restart)
+	Unfinished int
 }
 
 // NewController returns a controller that works on its own copy of settings
@@ -762,11 +777,20 @@ func (c *Controller) FinishLoad(url string) error {
 		c.loadRelease = release
 		kept = true
 	}
+	start := c.startPending && err == nil
+	c.startPending = false
+	if err != nil && c.resumeURL == url {
+		// a restart whose series didn't load is dropped, not kept for a later load
+		c.resumeStart, c.resumeKeys = false, nil
+	}
 	c.mu.Unlock()
 	if prev != nil {
 		prev()
 	}
 	c.emit()
+	if start {
+		c.startRestart()
+	}
 	return err
 }
 
@@ -1637,6 +1661,7 @@ func (c *Controller) Groups() []GroupState {
 	out := make([]GroupState, len(c.groups))
 	for i, g := range c.groups {
 		out[i] = g.state()
+		c.restartInfoLocked(g, &out[i])
 	}
 	return out
 }
@@ -2207,7 +2232,7 @@ func (e events) Fetching(listed grabber.Filterable) {
 	g.started[chapKey(listed)] = true
 	// a bundle or a volume has its own row
 	if g.bundle == nil && g.listedVol[listed] == nil {
-		j := &Job{Title: grabber.ChapterLabel(listed), Tags: g.releaseTags(listed), Number: listed.GetNumber(), State: JobFetching}
+		j := &Job{Title: grabber.ChapterLabel(listed), Tags: g.releaseTags(listed), Number: listed.GetNumber(), State: JobFetching, Key: chapKey(listed)}
 		j.setStatus(msg("job.status.fetching", nil))
 		g.jobs = append(g.jobs, j)
 		g.fetching[listed] = j
@@ -2244,7 +2269,7 @@ func (g *group) endRow(ch *grabber.Chapter, state JobState, reason Message) {
 		j.clearStatus()
 		return
 	}
-	j := &Job{Title: grabber.ChapterLabel(ch), Tags: g.releaseTags(ch), Number: ch.GetNumber(), State: state}
+	j := &Job{Title: grabber.ChapterLabel(ch), Tags: g.releaseTags(ch), Number: ch.GetNumber(), State: state, Key: g.keyOf(ch)}
 	j.setReason(reason)
 	g.jobs = append(g.jobs, j)
 }
@@ -2261,7 +2286,7 @@ func (e events) FetchFailed(listed grabber.Filterable, err error) {
 		j.clearStatus()
 		delete(g.fetching, listed)
 	} else if g.bundle == nil && g.listedVol[listed] == nil {
-		j := &Job{Title: grabber.ChapterLabel(listed), Tags: g.releaseTags(listed), Number: listed.GetNumber(), State: JobFailed}
+		j := &Job{Title: grabber.ChapterLabel(listed), Tags: g.releaseTags(listed), Number: listed.GetNumber(), State: JobFailed, Key: chapKey(listed)}
 		j.setReasonErr(err)
 		g.jobs = append(g.jobs, j)
 	}
@@ -2361,7 +2386,7 @@ func (e events) Started(ch *grabber.Chapter) {
 		j.clearStatus()
 	} else {
 		// the CLI's bar: each page's download and archive steps
-		j := &Job{Title: grabber.ChapterLabel(ch), Tags: g.releaseTags(ch), Number: ch.GetNumber(), Total: ch.PagesCount * (core.DownloadWeight + core.ArchiveWeight), State: JobDownloading}
+		j := &Job{Title: grabber.ChapterLabel(ch), Tags: g.releaseTags(ch), Number: ch.GetNumber(), Total: ch.PagesCount * (core.DownloadWeight + core.ArchiveWeight), State: JobDownloading, Key: g.keyOf(ch)}
 		g.jobs = append(g.jobs, j)
 		g.byChap[ch] = j
 	}

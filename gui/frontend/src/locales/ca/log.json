@@ -38,5 +38,6 @@
   "packFailed": "{{label}}: error en empaquetar: {{reason}}",
   "errorPacking": "error en empaquetar {{label}}: {{reason}}",
   "saved": "desat {{name}}",
-  "historyFailed": "no s'ha pogut desar l'historial: {{reason}}"
+  "historyFailed": "no s'ha pogut desar l'historial: {{reason}}",
+  "restartFailed": "no s'han pogut reiniciar els capítols: {{reason}}"
 }

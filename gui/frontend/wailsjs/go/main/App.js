@@ -30,6 +30,10 @@ export function DismissBrowserAlert() {
   return window['go']['main']['App']['DismissBrowserAlert']();
 }
 
+export function DownloadMissing() {
+  return window['go']['main']['App']['DownloadMissing']();
+}
+
 export function History() {
   return window['go']['main']['App']['History']();
 }
@@ -52,6 +56,10 @@ export function OpenFolder(arg1) {
 
 export function Options() {
   return window['go']['main']['App']['Options']();
+}
+
+export function Restart(arg1, arg2) {
+  return window['go']['main']['App']['Restart'](arg1, arg2);
 }
 
 export function Resume(arg1) {

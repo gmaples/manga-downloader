@@ -31,8 +31,14 @@ button, *Load* and *Settings*. (To open on the full window instead, turn off
    looks for) or it was saved this session, a spinner while it downloads, a
    grey dot while it waits its turn, and an amber mark when it failed (!) or a
    cancel left it unsaved (a circled dash). No mark means no file and no
-   download. *Pick N unfinished* then selects just the failed and cancelled
-   chapters, ready for Download.
+   download. Once anything of the series was saved or tried, **Download N
+   missing** above the list downloads every chapter that isn't saved yet,
+   the failed and cancelled ones included, in one click (chapters already on
+   their way are left to their download). In the Activity tab, each download's
+   header has **Restart N unfinished** for its failed, cancelled and to-do
+   chapters, and a failed or to-do row has a restart button of its own; a
+   download of another series loads that series first. A restart downloads
+   the whole chapter again.
 3. **Choose a language and a scanlation group** when the site offers them. The
    selectors tell you when a series has none, and picking one reloads the
    chapter list. Sites that support it also offer *All*.

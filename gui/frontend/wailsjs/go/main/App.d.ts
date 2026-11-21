@@ -16,6 +16,8 @@ export function ClearHistory():Promise<void>;
 
 export function DismissBrowserAlert():Promise<void>;
 
+export function DownloadMissing():Promise<void>;
+
 export function History():Promise<Array<main.HistoryDTO>>;
 
 export function Load(arg1:string):Promise<void>;
@@ -27,6 +29,8 @@ export function Marks():Promise<Array<string>>;
 export function OpenFolder(arg1:number):Promise<void>;
 
 export function Options():Promise<main.OptionsDTO>;
+
+export function Restart(arg1:number,arg2:string):Promise<void>;
 
 export function Resume(arg1:number):Promise<void>;
 

@@ -20,5 +20,9 @@
   "cancelGroup": "Cancel·la {{title}}",
   "restored": "De l'última sessió",
   "resume": "Carrega per continuar",
-  "resumeLabel": "Carrega la sèrie amb els capítols pendents seleccionats"
+  "resumeLabel": "Carrega la sèrie amb els capítols pendents seleccionats",
+  "restartAll_one": "Reinicia {{count}} sense acabar",
+  "restartAll_other": "Reinicia {{count}} sense acabar",
+  "restartAllLabel": "Torna a descarregar els capítols d'aquesta descàrrega que han fallat, s'han cancel·lat o encara estan pendents",
+  "restartRow": "Torna a descarregar {{title}}"
 }

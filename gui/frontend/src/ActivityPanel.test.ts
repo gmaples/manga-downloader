@@ -42,6 +42,7 @@ function render(state: Partial<State>, pref: LangPref = '') {
         onOpenFolder: () => undefined,
         onCancelGroup: () => undefined,
         onResume: () => undefined,
+        onRestart: () => undefined,
       }),
     ),
   );
@@ -187,5 +188,39 @@ describe('ActivityPanel', () => {
     const html = render(one({ jobs: [job] }));
     expect(html).toContain('class="activity"');
     expect(html).toContain('class="jobs" role="list">');
+  });
+});
+
+describe('ActivityPanel restarts', () => {
+  const job = (title: string, state: Job['state'], extra: Partial<Job> = {}): Job => ({
+    title,
+    tags: '',
+    number: 1,
+    total: 10,
+    done: state === 'done' ? 10 : 0,
+    state,
+    reason: '',
+    status: '',
+    volume: false,
+    ...extra,
+  });
+
+  it('offers the group\'s unfinished chapters and a restartable row\'s own', () => {
+    const html = render(
+      one({
+        summary,
+        unfinished: 2,
+        jobs: [job('Romance Dawn', 'failed', { key: 'k1', restart: true }), job('Two Years Later', 'done')],
+      }),
+    );
+    expect(html).toContain('Restart 2 unfinished');
+    expect(html).toContain('aria-label="Download Romance Dawn again"');
+    expect(html.match(/job-restart/g)?.length).toBe(1);
+  });
+
+  it('offers nothing when nothing is unfinished', () => {
+    const html = render(one({ summary, unfinished: 0, jobs: [job('Two Years Later', 'done')] }));
+    expect(html).not.toContain('unfinished');
+    expect(html).not.toContain('job-restart');
   });
 });

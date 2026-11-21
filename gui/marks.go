@@ -104,3 +104,41 @@ func (c *Controller) diskMarksLocked() []bool {
 
 	return disk
 }
+
+// DownloadMissing downloads every chapter of the loaded series that isn't
+// saved: no file in the folder and no download (no mark), or failed or
+// cancelled. Queued and downloading chapters are left to their download,
+// and locked ones can't be picked. The selection becomes those chapters,
+// and they start as Download would start them, so a running download of
+// the series takes them in its queue.
+func (c *Controller) DownloadMissing() error {
+	marks := c.ChapterMarks()
+	c.mu.Lock()
+	if c.loading {
+		c.mu.Unlock()
+		return errBusy
+	}
+	if c.series == nil || len(marks) != len(c.series.Chapters) {
+		c.mu.Unlock()
+		return uiErr("errors.loadFirst", nil, nil)
+	}
+	var missing []int
+	for i, m := range marks {
+		if (m == MarkNone || m == MarkFailed || m == MarkCancelled) && c.selectable(i) {
+			missing = append(missing, i)
+		}
+	}
+	if len(missing) == 0 {
+		// the selection stays as it was
+		c.mu.Unlock()
+		return uiErr("errors.nothingMissing", nil, nil)
+	}
+	clear(c.selected)
+	for _, i := range missing {
+		c.selected[i] = true
+	}
+	c.selGen++
+	c.mu.Unlock()
+	c.emit()
+	return c.Start()
+}

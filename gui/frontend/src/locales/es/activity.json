@@ -20,5 +20,9 @@
   "cancelGroup": "Cancelar {{title}}",
   "restored": "De la última sesión",
   "resume": "Cargar para continuar",
-  "resumeLabel": "Cargar la serie con sus capítulos pendientes seleccionados"
+  "resumeLabel": "Cargar la serie con sus capítulos pendientes seleccionados",
+  "restartAll_one": "Reiniciar {{count}} sin terminar",
+  "restartAll_other": "Reiniciar {{count}} sin terminar",
+  "restartAllLabel": "Descarga de nuevo los capítulos de esta descarga que fallaron, se cancelaron o siguen pendientes",
+  "restartRow": "Descargar {{title}} de nuevo"
 }

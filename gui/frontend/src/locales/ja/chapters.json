@@ -49,9 +49,9 @@
     "failed": "失敗：選択すると再ダウンロードできます",
     "cancelled": "保存前にキャンセル：選択すると再ダウンロードできます"
   },
-  "pickUnfinished_one": "未完了の{{count}}話を選択",
-  "pickUnfinished_other": "未完了の{{count}}話を選択",
-  "pickUnfinishedHint": "失敗またはキャンセルされた話だけを選択し、再ダウンロードできるようにします",
+  "downloadMissing_one": "未取得の{{count}}話をダウンロード",
+  "downloadMissing_other": "未取得の{{count}}話をダウンロード",
+  "downloadMissingHint": "この作品でまだフォルダーにない話を、失敗・キャンセルしたものも含めてすべてダウンロードします。保存済みの話とダウンロード中の話はそのままです。",
   "duplicates": {
     "language": "同じ番号の話が言語ごとに並んでいます。言語のタグで区別できます。",
     "group": "同じ番号の話が翻訳グループごとに並んでいます。グループのタグで区別できます。"

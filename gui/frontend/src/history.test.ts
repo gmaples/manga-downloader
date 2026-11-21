@@ -56,6 +56,7 @@ describe('adult titles', () => {
         onOpenFolder: () => undefined,
         onCancelGroup: () => undefined,
         onResume: () => undefined,
+        onRestart: () => undefined,
       }),
     );
     expect(html).toContain('[Adult Title]');
@@ -89,6 +90,7 @@ describe('the last session', () => {
           onOpenFolder: () => undefined,
           onCancelGroup: () => undefined,
           onResume: () => undefined,
+          onRestart: () => undefined,
         }),
       );
       expect(html).toContain('From last session');
