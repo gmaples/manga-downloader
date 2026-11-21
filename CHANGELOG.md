@@ -1,9 +1,11 @@
 # Changelog
 
 This fork's builds, newest first. Each version is a git tag on the commit the
-build was made from. Builds are numbered `v25.2.0-series-folders.N`: the
-upstream base (v25.2.0), this fork's name, and the build number. In Windows,
-an exe's Properties > Details show the same version as `25.2.0.N`; on Android
+build was made from. Builds are numbered `vX.Y.Z-series-folders.N`: the
+upstream release merged in (v25.2.0 up to build 27, v25.3.0 from build 28),
+this fork's name, and the build number, which keeps counting across upstream
+releases. In Windows, an exe's Properties > Details show the same version as
+`X.Y.Z.N`; on Android
 the build number is the app's version code. Add an entry here with each
 new build.
 
@@ -17,10 +19,11 @@ as they are.
 What the fork changes, and why, is described in the README's
 "About this fork" section. Android details are in [docs/android.md](docs/android.md).
 
-## v25.2.0-series-folders.28 (2026-11-21)
+## v25.3.0-series-folders.28 (2026-11-21)
 
-Commit `d2e3aaf`. Upstream's latest master (`b7c87ef`, six commits since
-v25.2.0) merged into the fork, with every fork feature kept.
+Commit `5f403ec`. Upstream's v25.3.0 (`b7c87ef`, six commits since v25.2.0)
+merged into the fork, with every fork feature kept. The version now starts
+with 25.3.0, so the update check no longer offers 25.3.0 as newer.
 
 - **From upstream**: chikari.moe, manhuaplus.top and manhuaplus.org; the
   grabbers repaired after upstream's 2026-11-16 smoke run; chapter volumes
