@@ -178,4 +178,8 @@ func TestZenkoAgeCheckRefusesAbove(t *testing.T) {
 	if title, err := z.FetchTitle(); err != nil || title != "Доджінші" {
 		t.Errorf("FetchTitle() with the check at 18 = %q, %v", title, err)
 	}
+	var rated AgeRated = z
+	if rated.AgeLimit() != 18 {
+		t.Errorf("AgeLimit() = %d, want 18", rated.AgeLimit())
+	}
 }

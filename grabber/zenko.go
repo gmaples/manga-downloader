@@ -32,7 +32,13 @@ const zenkoSeparator = "@#%&;№%#&**#!@"
 // Zenko is a grabber for zenko.online
 type Zenko struct {
 	*Grabber
-	title string
+	title    string
+	ageLimit int
+}
+
+// AgeLimit is the title's age rating (0, 16 or 18), once FetchTitle read it
+func (z *Zenko) AgeLimit() int {
+	return z.ageLimit
 }
 
 func NewZenko(g *Grabber) *Zenko {
@@ -92,6 +98,7 @@ func (z *Zenko) FetchTitle() (string, error) {
 	if err = json.Unmarshal([]byte(body), &feed); err != nil {
 		return "", err
 	}
+	z.ageLimit = feed.AgeLimit
 	// the site's own age gate is on its pages only: the api serves every
 	// title, so the user's age check is applied here
 	if err = z.Settings.AgeAllows(feed.AgeLimit); err != nil {

@@ -10,6 +10,12 @@ const (
 	AgeAdult = 18
 )
 
+// AgeRated is a site that knows its title's age rating: the minimum age, 0
+// when the site gives none or the title hasn't been fetched yet
+type AgeRated interface {
+	AgeLimit() int
+}
+
 // NormalizeAge returns age when it's one the check offers, AgeAdult otherwise
 // (a settings file from before the check existed, or a hand edit)
 func NormalizeAge(age int) int {
