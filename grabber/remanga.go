@@ -175,6 +175,8 @@ func (r *Remanga) FetchChapters() (chapters Filterables, errs []error) {
 					Volume:   c.Tome,
 					ID:       strconv.Itoa(c.ID),
 					Locked:   c.IsPaid && !c.IsBought,
+					// most chapters have no name: "Chapter 12" then
+					Label: Label{Style: LabelNumbered, Number: c.Chapter},
 				}}
 				publishers := c.Publishers
 				if len(publishers) == 0 {
@@ -228,6 +230,7 @@ func (r *Remanga) FetchChapter(f Filterable) (*Chapter, error) {
 		Volume:     rchap.Volume,
 		Language:   "ru",
 		ID:         rchap.ID,
+		Label:      rchap.Label,
 		PagesCount: int64(len(pages)),
 	}
 	chapter.SetGroups(rchap.GetGroups()...)

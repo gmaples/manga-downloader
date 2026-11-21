@@ -128,6 +128,9 @@ func TestRemangaSeries(t *testing.T) {
 			t.Errorf("chapter %d = (%q, %v, vol %d, locked %v), want %+v", i, c.ID, c.Number, c.Volume, c.Locked, w)
 		}
 		// a chapter listing no publisher takes its branch's
+		if wantLabel := []string{"Chapter 206.5", "Paid", "Start"}[i]; ChapterLabel(c) != wantLabel {
+			t.Errorf("chapter %d label %q, want %q", i, ChapterLabel(c), wantLabel)
+		}
 		if c.Group != "Newlate.WTF" || c.Language != "ru" {
 			t.Errorf("chapter %d group %q, language %q", i, c.Group, c.Language)
 		}
@@ -139,6 +142,9 @@ func TestRemangaSeries(t *testing.T) {
 	}
 	if chapter.ID != "320521" || chapter.Title != "Start" || chapter.Group != "Newlate.WTF" || chapter.PagesCount != 3 {
 		t.Errorf("FetchChapter() = ID %q, Title %q, Group %q, %d pages", chapter.ID, chapter.Title, chapter.Group, chapter.PagesCount)
+	}
+	if ChapterLabel(chapter) != "Start" || ChapterLabel(chapters[0]) != "Chapter 206.5" {
+		t.Errorf("fetched label %q", ChapterLabel(chapter))
 	}
 	wantPages := []string{"a", "b", "c"}
 	for i, p := range chapter.Pages {
