@@ -428,6 +428,7 @@ grabber: \
 	grabber/readhunters \
 	grabber/readkagura \
 	grabber/readspyxfamilymanga \
+	grabber/remanga \
 	grabber/resetscans \
 	grabber/rimacomiplus \
 	grabber/roliascan \
@@ -587,6 +588,8 @@ grabber/mangaball:
 	go run . https://mangaball.com/title-detail/baki-gaiden-shin-chiharu-6a5ffe5d90273b5b995225d2/ 1
 grabber/mangalib:
 	go run . https://mangalib.me/ru/manga/206--one-piece 1188
+grabber/remanga:
+	go run . https://remanga.org/manga/murim-login_ 1
 grabber/mangadenizi:
 	go run . https://www.mangadenizi.net/manga/one-piece 1188
 
