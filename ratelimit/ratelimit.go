@@ -82,6 +82,10 @@ type Book struct {
 	// info reports a 429 and what it changed
 	info func(format string, a ...any)
 
+	// paceWarn reports a shared pace file that can't be saved once, not at
+	// every request
+	paceWarn sync.Once
+
 	mu    sync.Mutex
 	gaps  map[string]time.Duration
 	pars  map[string]int
@@ -434,9 +438,12 @@ func (s *Site) paced(ctx context.Context) (uint64, error) {
 		if listed && s.next.After(slot) {
 			slot = s.next
 		}
+		var gap time.Duration
 		if listed {
-			s.next = slot.Add(s.gap)
+			gap = s.gap
+			s.next = slot.Add(gap)
 		}
+		until := s.until
 		gen, changed := s.gen, s.changed
 		s.mu.Unlock()
 
@@ -447,6 +454,28 @@ func (s *Site) paced(ctx context.Context) (uint64, error) {
 		case lowered > 0:
 			s.book.info("%s: no 429 for %s, now one request every %s (saved in %s)", s.key, Format(CalmFor), Format(lowered), FileName)
 			s.book.save(s.key, lowered)
+		}
+		if cleared || lowered > 0 {
+			s.book.sharedChange(s.key, lowered, time.Time{})
+		}
+
+		// the other copies of the program running at once may have sent a
+		// request later than this one would go, or be pausing after a 429
+		shared, g, pause := s.book.sharedSlot(s.key, slot, gap, until)
+		s.mu.Lock()
+		if shared.After(slot) {
+			if n := shared.Add(g); n.After(s.next) {
+				s.next = n
+			}
+		}
+		// another copy's 429 restarts this copy's calm too, so it doesn't
+		// lower the time that copy just raised
+		if pause.After(s.calm) {
+			s.calm = pause
+		}
+		s.mu.Unlock()
+		if shared.After(slot) {
+			slot = shared
 		}
 
 		if d := time.Until(slot); d > 0 {
@@ -475,6 +504,11 @@ func (s *Site) calmDownLocked(now time.Time) (lowered time.Duration, cleared boo
 		return 0, false
 	}
 	if !s.listed || s.gap <= 0 || now.Sub(s.calm) < CalmFor {
+		return 0, false
+	}
+	// another copy's 429 since then restarts the calm (see sharedSlot)
+	if pause := s.book.sharedPause(s.key); pause.After(s.calm) {
+		s.calm = pause
 		return 0, false
 	}
 	s.calm = now
@@ -520,6 +554,9 @@ func (s *Site) Hit(gen uint64, retryAfter time.Duration) (giveUp bool) {
 	s.until = now.Add(cool)
 	s.next = s.until
 	gap := s.gap
+	// the other copies are told before this copy's waiters wake, or a waiter
+	// could read the shared pace from before the 429
+	s.book.sharedChange(s.key, gap, s.until)
 	close(s.changed)
 	s.changed = make(chan struct{})
 	s.mu.Unlock()
