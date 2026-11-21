@@ -17,6 +17,21 @@ as they are.
 What the fork changes, and why, is described in the README's
 "About this fork" section. Android details are in [docs/android.md](docs/android.md).
 
+## v25.2.0-series-folders.28 (2026-11-21)
+
+Commit `d2e3aaf`. Upstream's latest master (`b7c87ef`, six commits since
+v25.2.0) merged into the fork, with every fork feature kept.
+
+- **From upstream**: chikari.moe, manhuaplus.top and manhuaplus.org; the
+  grabbers repaired after upstream's 2026-11-16 smoke run; chapter volumes
+  read from more sites for *Volumes* auto; a *Clear* button in the log; the
+  output folder is created when it's missing (the command line too), and a
+  folder that can't be made fails the run before anything is downloaded.
+- **Merge notes**: upstream's output-folder failure is reported per download
+  group, like the fork's other run failures. The log drawer keeps its resize
+  edge and gains *Clear*. Core now makes the series folder too, so a fork
+  test that expected it not to was changed to expect the chapter saved.
+
 ## v25.2.0-series-folders.27 (2026-11-21)
 
 Commit `e51cd22`. Fewer browser windows, in the desktop app and command line.
