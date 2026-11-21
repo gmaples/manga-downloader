@@ -207,9 +207,11 @@ func TestGenericLoadsPlainSite(t *testing.T) {
 // A JavaScript app's empty page is rendered; the rendered chapter list loads
 func TestGenericLoadsRenderedSite(t *testing.T) {
 	srv := genericSite(t, map[string]string{"/t/7": `<html><body><div id="app"></div></body></html>`})
-	defer func(old bool, cap func(string) (browser.Snapshot, error)) { genericBrowser, genericCapture = old, cap }(genericBrowser, genericCapture)
+	defer func(old bool, cap func(string, string) (browser.Snapshot, error)) {
+		genericBrowser, genericCapture = old, cap
+	}(genericBrowser, genericCapture)
 	genericBrowser = true
-	genericCapture = func(string) (browser.Snapshot, error) {
+	genericCapture = func(string, string) (browser.Snapshot, error) {
 		return browser.Snapshot{Status: 200, HTML: `<html><body><h1>Seven</h1>
 			<a href="/t/7/101">Розділ 1</a><a href="/t/7/102">Розділ 2</a><a href="/t/7/103">Розділ 3</a></body></html>`}, nil
 	}
@@ -228,9 +230,11 @@ func TestGenericLoadsRenderedSite(t *testing.T) {
 // When nothing works, IdentifySite says what the generic reader tried
 func TestGenericReportsWhatItTried(t *testing.T) {
 	srv := genericSite(t, map[string]string{"/t/7": `<html><body><div id="app"></div></body></html>`})
-	defer func(old bool, cap func(string) (browser.Snapshot, error)) { genericBrowser, genericCapture = old, cap }(genericBrowser, genericCapture)
+	defer func(old bool, cap func(string, string) (browser.Snapshot, error)) {
+		genericBrowser, genericCapture = old, cap
+	}(genericBrowser, genericCapture)
 	genericBrowser = true
-	genericCapture = func(string) (browser.Snapshot, error) {
+	genericCapture = func(string, string) (browser.Snapshot, error) {
 		return browser.Snapshot{Status: 200, HTML: `<html><body><main>Confirm your age or sign in</main></body></html>`}, nil
 	}
 	g := &Grabber{URL: srv.URL + "/t/7", Settings: &Settings{}}
@@ -260,5 +264,80 @@ func TestGenericChapterLinksTitles(t *testing.T) {
 	}
 	if strings.Join(got, "|") != "|Chapter 2 - The Fight|" {
 		t.Errorf("titles %q", got)
+	}
+}
+
+// A series page that links to its chapter list on a page of its own
+// (senkuro's /manga/{slug}/chapters) is followed there
+func TestGenericFollowsChaptersPage(t *testing.T) {
+	srv := genericSite(t, map[string]string{
+		"/manga/abc": `<html><body><h1>Abc</h1><a href="/manga/abc/chapters">Главы 2</a></body></html>`,
+		"/manga/abc/chapters": `<html><body><a href="/manga/abc/chapters/111">Глава 1</a>
+			<a href="/manga/abc/chapters/112">Глава 2</a></body></html>`,
+	})
+	g := &Grabber{URL: srv.URL + "/manga/abc", Settings: &Settings{}}
+	site, errs := g.IdentifySite()
+	gs, ok := site.(*Generic)
+	if !ok {
+		t.Fatalf("got %T, errs %v", site, errs)
+	}
+	chapters, _ := gs.FetchChapters()
+	if len(chapters) != 2 || chapters[1].GetNumber() != 2 {
+		t.Errorf("chapters %+v", chapters)
+	}
+	if title, _ := gs.FetchTitle(); title != "Abc" {
+		t.Errorf("title %q", title)
+	}
+}
+
+// The hidden browser gets the script that opens a chapters tab
+func TestGenericRendersWithTheTabScript(t *testing.T) {
+	srv := genericSite(t, map[string]string{"/book/x": `<html><body><div id="app"></div></body></html>`})
+	defer func(old bool, cap func(string, string) (browser.Snapshot, error)) {
+		genericBrowser, genericCapture = old, cap
+	}(genericBrowser, genericCapture)
+	genericBrowser = true
+	var prepared string
+	genericCapture = func(_, prepare string) (browser.Snapshot, error) {
+		prepared = prepare
+		return browser.Snapshot{Status: 200, HTML: `<html><body><h1>X</h1>
+			<a href="/read/x/1">Розділ 1</a><a href="/read/x/2">Розділ 2</a></body></html>`}, nil
+	}
+	g := &Grabber{URL: srv.URL + "/book/x", Settings: &Settings{}}
+	if site, errs := g.IdentifySite(); site == nil {
+		t.Fatalf("no site, errs %v", errs)
+	}
+	if prepared != genericRevealJS {
+		t.Errorf("the capture ran %q", prepared)
+	}
+}
+
+// A chapter list's name, with a count, opens it; a single chapter's doesn't
+func TestGenericListWord(t *testing.T) {
+	for text, want := range map[string]bool{
+		"Розділи": true, "Розділи 10": true, "Chapters (120)": true, "Главы": true, "All chapters": true,
+		"Chapter 1": false, "Глава 12": false, "Read chapters of this series and more": false,
+	} {
+		if got := genericListWordRe.MatchString(text); got != want {
+			t.Errorf("%q: got %v, want %v", text, got, want)
+		}
+	}
+}
+
+// Page URLs inside a script's JSON string, escaped (senkuro's window.__SENKURO__)
+func TestGenericPageImagesFromEscapedJSON(t *testing.T) {
+	html := `<html><body><img src="data:image/svg+xml;base64,AA"><script>window.__S__=JSON.parse("{\"image\":{\"original\":{\"url\":\"https://cdn.example/manga-chapters/1/2/a_1.jpeg\"}}},{\"image\":{\"original\":{\"url\":\"https://cdn.example/manga-chapters/1/2/b_2.jpeg\"}}}")</script></body></html>`
+	got := genericPageImages(mustDoc(t, html), html, "https://site.example/manga/x/chapters/1/pages/1", nil)
+	want := "https://cdn.example/manga-chapters/1/2/a_1.jpeg https://cdn.example/manga-chapters/1/2/b_2.jpeg"
+	if strings.Join(got, " ") != want {
+		t.Errorf("got %v", got)
+	}
+}
+
+// A link outside the series path counts when its text names a chapter
+func TestGenericChapterLinksByLinkText(t *testing.T) {
+	html := `<body><a href="/r/9/101">Розділ 1</a><a href="/r/9/102">Розділ 2</a><a href="/u/1">x</a><a href="/u/2">y</a></body>`
+	if links := genericChapterLinks(mustDoc(t, html), "https://site.example/book/abc"); len(links) != 2 || links[1].Number != 2 {
+		t.Errorf("links %+v", links)
 	}
 }

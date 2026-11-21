@@ -41,25 +41,29 @@ var captureLoadWait = 2 * time.Second
 // bottom (at most captureMaxSteps steps) so lazy lists and images mount, and
 // returns the HTML along with the JSON the page fetched meanwhile.
 //
+// prepare, if set, is JS run once the page's scripts had their time and
+// before the scroll, e.g. to click a tab that reveals a list. When it returns
+// true the page gets captureLoadWait again to fetch and draw what it revealed.
+//
 // It never opens a window by itself: a headless browser is used unless the
 // user asked for a visible one, and a page behind a challenge isn't retried
 // in a window, as GetHTML would. Callers check NeedsVisible first for the
 // hosts known to refuse a headless browser.
-func Capture(pageURL string, timeout time.Duration) (Snapshot, error) {
+func Capture(pageURL, prepare string, timeout time.Duration) (Snapshot, error) {
 	abort := lock()
 	defer mu.Unlock()
 
 	var snap Snapshot
 	err := runPage(abort, pageURL, timeout, false, func(ctx context.Context, h hooks) error {
 		var err error
-		snap, err = capture(ctx, h, pageURL)
+		snap, err = capture(ctx, h, pageURL, prepare)
 		return err
 	})
 	return snap, err
 }
 
 // capture is one Capture attempt in the shared browser's tab
-func capture(ctx context.Context, h hooks, pageURL string) (Snapshot, error) {
+func capture(ctx context.Context, h hooks, pageURL, prepare string) (Snapshot, error) {
 	type entry struct {
 		id  network.RequestID
 		url string
@@ -100,6 +104,18 @@ func capture(ctx context.Context, h hooks, pageURL string) (Snapshot, error) {
 	snap := Snapshot{}
 	err := chromedp.Do(ctx,
 		chromedp.Sleep(captureLoadWait),
+		chromedp.Func(func(ctx context.Context, t *chromedp.Target) error {
+			if prepare == "" {
+				return nil
+			}
+			acted, err := chromedp.Evaluate[bool](prepare)(ctx, t)
+			if err != nil || !acted {
+				// a page the script can't act on is read as it is
+				return nil
+			}
+			_, err = chromedp.Sleep(captureLoadWait)(ctx, t)
+			return err
+		}),
 		chromedp.Func(func(ctx context.Context, t *chromedp.Target) error {
 			js := scrollStepJS(Scroll{})
 			atBottom := 0

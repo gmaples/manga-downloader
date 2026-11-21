@@ -63,10 +63,11 @@ type genericLink struct {
 // headless browser; off in the tests, which can't start one
 var genericBrowser = true
 
-// genericCapture renders a page for the generic reader. A var so tests can
-// stand in for the browser.
-var genericCapture = func(pageURL string) (browser.Snapshot, error) {
-	return browser.Capture(pageURL, 45*time.Second)
+// genericCapture renders a page for the generic reader, running prepare
+// (see browser.Capture) before it's read. A var so tests can stand in for the
+// browser.
+var genericCapture = func(pageURL, prepare string) (browser.Snapshot, error) {
+	return browser.Capture(pageURL, prepare, 45*time.Second)
 }
 
 // genericMinChapters and genericMinPages are the fewest links and images that
@@ -77,8 +78,37 @@ const (
 	genericMinPages    = 2
 )
 
+// genericListWordRe is the name of a chapter list, as a tab, a button or a
+// link to its own page says it, a count after it allowed ("Розділи 10")
+var genericListWordRe = regexp.MustCompile(`(?i)^\s*(?:all\s+)?(?:chapters|chapter\s+list|episodes|главы|глави|список\s+глав|оглавление|розділи|список\s+розділів|capítulos|capitulos|chapitres|bölümler|rozdziały)\s*[(\[]?\s*\d*\s*[)\]]?\s*$`)
+
+// genericListPathRe is the last segment of a chapter list's own page
+var genericListPathRe = regexp.MustCompile(`(?i)^(?:chapters?|chapter-list|chapterlist|episodes|glavy|rozdily|capitulos|chapitres)$`)
+
+// genericRevealJS clicks the tab or button that shows a series' chapters
+// (the smallest element whose own text names the list, see
+// genericListWordRe), for pages that draw the list only once it's opened.
+// It returns whether it clicked.
+var genericRevealJS = `(function(){
+	var re = new RegExp(` + strconv.Quote(genericListWordRe.String()[4:]) + `, "i");
+	var els = document.querySelectorAll("button, a, [role=tab], li, span, div, label, h2, h3");
+	var best = null;
+	for (var i = 0; i < els.length; i++) {
+		var el = els[i];
+		if (el.closest("header, nav, footer")) continue;
+		var text = (el.textContent || "").trim();
+		if (text.length > 40 || !re.test(text)) continue;
+		if (!best || best.contains(el)) best = el;
+	}
+	if (!best) return false;
+	best.scrollIntoView({block: "center"});
+	best.click();
+	return true;
+})()`
+
 // Test reads the page, plain and then rendered, and returns true when it
-// finds a chapter list. It never fails: what it found goes into the report.
+// finds a chapter list. A list on its own page ("/chapters"), or behind a
+// tab, is followed. It never fails: what it found goes into the report.
 func (g *Generic) Test() (bool, error) {
 	u, err := url.Parse(g.URL)
 	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
@@ -87,6 +117,7 @@ func (g *Generic) Test() (bool, error) {
 
 	body, err := g.identifyPage(g.URL)
 	plainReached := false
+	listPage := ""
 	if err != nil {
 		g.note("the plain-page reader couldn't read the page: %s", genericFetchError(err))
 		// a server answered, unless the page isn't there: a JavaScript app
@@ -99,13 +130,22 @@ func (g *Generic) Test() (bool, error) {
 		if perr == nil {
 			if kind := genericBlock(doc); kind != "" {
 				g.note("the plain-page reader got %s instead of the page", kind)
-			} else if links := genericChapterLinks(doc, g.URL); len(links) >= genericMinChapters {
-				g.doc, g.chapters = doc, links
-				g.announce("the plain page")
+			} else if g.doc = doc; g.take(doc, "the plain page") {
 				return true, nil
 			} else {
 				g.note("the plain-page reader found no chapter list in the page")
+				listPage = genericListPage(doc, g.URL)
 			}
+		}
+	}
+	if listPage != "" {
+		if lbody, lerr := g.identifyPage(listPage); lerr != nil {
+			g.note("the plain-page reader couldn't read the chapters page %s: %s", listPage, genericFetchError(lerr))
+		} else if ldoc, perr := goquery.NewDocumentFromReader(strings.NewReader(lbody)); perr == nil {
+			if g.take(ldoc, "the plain chapters page") {
+				return true, nil
+			}
+			g.note("the plain-page reader found no chapter list in the chapters page %s", listPage)
 		}
 	}
 
@@ -120,32 +160,99 @@ func (g *Generic) Test() (bool, error) {
 		return false, nil
 	}
 
-	snap, err := genericCapture(g.URL)
+	doc, ok := g.render(g.URL)
+	if ok || doc == nil {
+		return ok, nil
+	}
+	if next := genericListPage(doc, g.URL); next != "" && next != listPage {
+		_, ok = g.render(next)
+	}
+	return ok, nil
+}
+
+// render reads pageURL in the hidden browser, opening its chapter list's tab
+// if it has one, and takes the chapters it finds. It returns the rendered
+// page when it was read, nil when the browser failed or was turned away.
+func (g *Generic) render(pageURL string) (*goquery.Document, bool) {
+	snap, err := genericCapture(pageURL, genericRevealJS)
 	if err != nil {
-		g.note("the hidden-browser reader couldn't render the page: %s", err)
-		return false, nil
+		g.note("the hidden-browser reader couldn't render %s: %s", pageURL, err)
+		return nil, false
 	}
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(snap.HTML))
 	if err != nil {
-		g.note("the hidden-browser reader couldn't parse the page: %s", err)
-		return false, nil
+		g.note("the hidden-browser reader couldn't parse %s: %s", pageURL, err)
+		return nil, false
 	}
 	if kind := genericBlock(doc); kind != "" {
-		g.note("the hidden-browser reader got %s (HTTP %d) instead of the page", kind, snap.Status)
-		return false, nil
+		g.note("the hidden-browser reader got %s (HTTP %d) instead of %s", kind, snap.Status, pageURL)
+		return nil, false
 	}
 	if snap.Status >= 400 {
-		g.note("the hidden-browser reader got HTTP %d: %s", snap.Status, genericPageText(doc))
-		return false, nil
+		g.note("the hidden-browser reader got HTTP %d for %s: %s", snap.Status, pageURL, genericPageText(doc))
+		return nil, false
+	}
+	if g.doc == nil || genericTitle(g.doc) == "" {
+		g.doc = doc
+	}
+	if g.take(doc, "a hidden browser") {
+		return doc, true
 	}
 	links := genericChapterLinks(doc, g.URL)
+	g.note("the hidden-browser reader found %d chapter link(s) in the rendered page %s: %s", len(links), pageURL, genericPageText(doc))
+	return doc, false
+}
+
+// take keeps doc's chapter list when it has one, read against the series URL
+func (g *Generic) take(doc *goquery.Document, how string) bool {
+	links := genericChapterLinks(doc, g.URL)
 	if len(links) < genericMinChapters {
-		g.note("the hidden-browser reader found %d chapter link(s) in the rendered page: %s", len(links), genericPageText(doc))
-		return false, nil
+		return false
 	}
-	g.doc, g.chapters = doc, links
-	g.announce("a hidden browser")
-	return true, nil
+	// the series page names the series best: a list on its own page or tab
+	// is read for its links only
+	if g.doc == nil || genericTitle(g.doc) == "" {
+		g.doc = doc
+	}
+	g.chapters = links
+	g.announce(how)
+	return true
+}
+
+// genericListPage returns the address of the series' chapter list when the
+// page links to it on its own page (".../chapters", or a link named
+// "Chapters"), "" when it doesn't
+func genericListPage(doc *goquery.Document, pageURL string) string {
+	base, err := url.Parse(pageURL)
+	if err != nil {
+		return ""
+	}
+	host := normalHost(base.Host)
+	seriesPath := strings.TrimSuffix(base.Path, "/")
+	found := ""
+	doc.Find("a[href]").EachWithBreak(func(_ int, a *goquery.Selection) bool {
+		if a.Closest(genericSkip).Length() > 0 {
+			return true
+		}
+		ref, err := url.Parse(strings.TrimSpace(a.AttrOr("href", "")))
+		if err != nil {
+			return true
+		}
+		u := base.ResolveReference(ref)
+		u.Fragment = ""
+		if normalHost(u.Host) != host || strings.TrimSuffix(u.Path, "/") == seriesPath {
+			return true
+		}
+		path := strings.TrimSuffix(u.Path, "/")
+		last := path[strings.LastIndex(path, "/")+1:]
+		underSeries := seriesPath != "" && strings.HasPrefix(path, seriesPath+"/")
+		if (underSeries && genericListPathRe.MatchString(last)) || genericListWordRe.MatchString(a.Text()) {
+			found = u.String()
+			return false
+		}
+		return true
+	})
+	return found
 }
 
 // note adds a line to the report of what was tried
@@ -215,7 +322,7 @@ func (g *Generic) FetchChapter(f Filterable) (*Chapter, error) {
 		}
 	}
 	if len(pages) < genericMinPages && genericBrowser && !browser.NeedsVisible(gc.URL) {
-		snap, cerr := genericCapture(gc.URL)
+		snap, cerr := genericCapture(gc.URL, "")
 		if cerr != nil {
 			return nil, fmt.Errorf("the generic reader couldn't render %s: %w", gc.URL, cerr)
 		}
@@ -292,6 +399,8 @@ func genericPageText(doc *goquery.Document) string {
 	if main.Length() == 0 {
 		main = doc.Find("body").First()
 	}
+	main = main.Clone()
+	main.Find("script, style, noscript, template").Remove()
 	text := strings.Join(strings.Fields(main.Text()), " ")
 	if text == "" {
 		return "the page is empty"
@@ -360,7 +469,7 @@ func genericChapterLinks(doc *goquery.Document, pageURL string) []genericLink {
 			return // no number: not a chapter
 		}
 		underSeries := seriesPath != "" && strings.HasPrefix(u.Path, seriesPath+"/")
-		if !underSeries && !genericChapterWordRe.MatchString(u.Path) {
+		if !underSeries && !genericChapterWordRe.MatchString(u.Path) && !genericLinkNumberRe.MatchString(a.Text()) {
 			return
 		}
 		if !seen[key] {
@@ -497,8 +606,10 @@ func genericPageImages(doc *goquery.Document, html, pageURL string, jsons []brow
 			add(strings.Fields(v + " ")[0])
 		}
 	})
-	for _, m := range genericImageRe.FindAllString(html, -1) {
-		add(strings.ReplaceAll(m, `\/`, "/"))
+	// scripts write URLs inside JSON strings, escaped: \/, \u002F, \"
+	unescaped := strings.NewReplacer(`\u002F`, "/", `\u002f`, "/", `\/`, "/", `\"`, `"`).Replace(html)
+	for _, m := range genericImageRe.FindAllString(unescaped, -1) {
+		add(m)
 	}
 
 	// The JSON's image paths. A relative one is joined to the base of the
