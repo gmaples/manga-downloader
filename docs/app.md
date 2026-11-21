@@ -195,6 +195,11 @@ so Download carries on with it; nothing downloads by itself. *Load to resume*
 does the same for another series. Clear (the × in the URL box) takes them off
 the tab, and the next launch won't show them.
 
+The same list drops down from the URL box: click the arrow at its right end,
+or press ↓ in the box. Typing then narrows it by title or address, ↑ and ↓
+move through it, Enter (or a click) puts that series in the box and loads it,
+and Esc closes it. A new link can still be typed or pasted as before.
+
 The clock icon beside the gear opens the list of past series. A series opens
 its page in your browser, and its site the site's home page. Clear there
 empties the list.
@@ -202,6 +207,12 @@ empties the list.
 A title the site rates 18+ (zenko.online gives a rating) shows as
 *[Adult Title]* until you click it, which shows it until the app closes. The
 log always writes *[Adult Title]* for it, in file and folder names too.
+
+## Sites without built-in support
+
+A site none of the built-in handlers knows is read by the generic reader. It looks for the series' chapter list in the page's links (the largest set of links that differ only in a number, under the series' address or with a word like "chapter" or "read" in them) and for a chapter's pages in its images (the largest set served from one folder). When the plain page has no chapter list, as on sites built as JavaScript apps, it renders the page in a hidden browser, scrolls it, and reads that, along with the data the page fetched. It never opens a browser window by itself.
+
+The chapter numbers and pages it finds are guesses, and a warning says so: check the first chapter before downloading a whole series. When it finds nothing, the error lists what it tried and what it saw, for example a bot check, an age confirmation, or a page that says the site isn't available in your country.
 
 ## Rate limits
 

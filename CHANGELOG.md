@@ -17,6 +17,37 @@ as they are.
 What the fork changes, and why, is described in the README's
 "About this fork" section. Android details are in [docs/android.md](docs/android.md).
 
+## v25.2.0-series-folders.26 (2026-11-21)
+
+Commit `0dff8c8`, on top of builds 24 (download missing, restart) and 25
+(the generic reader), merged together.
+
+- **History in the URL box**: the arrow at the box's right end, or ↓ in the
+  box, drops down the past series (the clock button's list). Typing narrows
+  it by title or address, ↑/↓ move, Enter or a click puts the series in the
+  box and loads it, Esc closes it. Adult titles stay *[Adult Title]* with
+  their address shown; Clear is at the bottom. Typing or pasting a new link
+  works as before.
+- Tested by `make test`, `make test/demo`, `make test/gui` and in the browser
+  mock; not yet run as the Windows app.
+
+## v25.2.0-series-folders.25 (2026-11-21)
+
+Commits `33cf3a6` and `445c4a6`, on top of build 24.
+
+- **Chapter links told apart only by ids** (`/read/{uuid}/{uuid}`, as on
+  honey-manga.com.ua) now form a list, numbered by their link text
+  ("Том 1 - Розділ 2").
+- **Readers drawn in an inner pane** are scrolled too, so their pages load.
+- **Chapter titles stop at a date or time**, so "27 груд 2023 р., 22:46|211"
+  or "2025-03-02" no longer end up in file names.
+- Live on a Windows PC with the command line (a test build of `33cf3a6`):
+  **senkuro.com** chapter 1 again 58 real JPEGs. **honey-manga.com.ua**: the
+  generic reader found both chapters and every page address, in a headless
+  browser, but the site's own image server (hmvolumestorage.b-cdn.net)
+  resolves to 127.0.0.1 in public DNS, so no page could be fetched. That's
+  the site, not the reader. The date fix was checked by tests only.
+
 ## v25.2.0-series-folders.24 (2026-11-21)
 
 Commit `90a8cf0`, on top of build 22 (build 23 is a separate branch). One click downloads
@@ -37,6 +68,51 @@ whatever of a series is missing, and the Activity tab can restart chapters.
   and its old failed row and failure are dropped from the summary.
 - A restart downloads the whole chapter again: nothing of a failed try is
   kept.
+
+## v25.2.0-series-folders.24 (2026-11-21)
+
+Commit `7f49ed1`, on top of build 23. The generic reader learns two common
+layouts that build 23 missed on its first live run.
+
+- **A chapter list on its own page**: a series page that links to its list
+  (".../chapters", or a tab named Chapters, Главы, Розділи, Capítulos...)
+  is followed there.
+- **A chapter list behind a tab**: in the hidden browser, a tab or button
+  named like that is clicked before the page is read.
+- **Page addresses inside a script's data** are found even when written
+  escaped (`https:\u002F\u002F...`).
+- Live on a Windows PC with the command line: **senkuro.com** (no built-in
+  support) chapter 1 downloaded through the generic reader, 58 real JPEG
+  pages, the same 58 the site's page lists; the hidden browser ran headless,
+  no window. **honey-manga.com.ua** still fails: its chapter rows are buttons,
+  not links. mangabuff.ru (geoblocked on that connection) and desu.me (no
+  DNS there) couldn't be tried.
+
+## v25.2.0-series-folders.23 (2026-11-21)
+
+Commits `6696128` and `5cf65fd`, on top of build 22. A site with no built-in
+support is tried anyway, by a generic reader, instead of stopping at "site not
+recognised".
+
+- **Plain page first**: the chapter list is guessed from the page's links (the
+  largest set that differ only in a number, under the series' address or with
+  a word like "chapter" or "read" in them), and a chapter's pages from its
+  images (the largest set from one folder, including image addresses written
+  in the page's scripts).
+- **Then a hidden browser**, when the plain page has no chapter list (sites
+  built as JavaScript apps): it renders and scrolls the page, and also reads
+  the data the page fetched, so a reader that draws only the pages in view
+  still gives all of them. It never opens a browser window by itself, and a
+  site known to need a window is skipped.
+- **A warning** says the chapter numbers and pages are guesses.
+- **When nothing works**, the error says what was tried and what the page
+  showed: a bot check, an age confirmation, a "not available in your
+  country" page, or just no chapter links. The app shows it as the load
+  error; the command line lists it under "Site not recognised".
+- Tested by `make test`, `make test/demo`, `make test/gui`, and with the
+  command line against a small JavaScript test site in the build workspace
+  (2 chapters, 4 pages each, only 2 drawn: both CBZs got all 4 pages). Not
+  yet run against real unknown sites or as the Windows app.
 
 ## v25.2.0-series-folders.22 (2026-11-21)
 

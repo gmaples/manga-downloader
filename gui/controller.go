@@ -927,10 +927,18 @@ func (c *Controller) listingFor(url string, s *grabber.Settings, reuse grabber.S
 	} else {
 		var siteErrs []error
 		site, siteErrs = c.identify(url, s)
+		// what was tried on an unknown site is the load's error, not a check
+		var unknown *grabber.NotRecognisedError
 		for _, err := range siteErrs {
+			if errors.As(err, &unknown) {
+				continue
+			}
 			c.addMsg(LogWarn, msg("log.siteCheck", map[string]any{"reason": err.Error()}))
 		}
 		if site == nil {
+			if unknown != nil {
+				return nil, nil, uiErr("errors.siteUnknownTried", map[string]any{"reason": unknown.Detail()}, nil)
+			}
 			return nil, nil, uiErr("errors.siteUnknown", nil, nil)
 		}
 	}

@@ -237,6 +237,8 @@ export function App({ api, initial }: { api: Api; initial?: State }) {
         onOpenSettings={() => setSettingsOpen(true)}
         settingsOpen={settingsOpen}
         onOpenHistory={() => setHistoryOpen(true)}
+        loadHistory={() => api.history()}
+        onClearHistory={() => api.clearHistory()}
         historyOpen={historyOpen}
         settingsRef={gear}
         simple={view === 'simple'}
