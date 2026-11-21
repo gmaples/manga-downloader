@@ -42,6 +42,10 @@ export function Log() {
   return window['go']['main']['App']['Log']();
 }
 
+export function Marks() {
+  return window['go']['main']['App']['Marks']();
+}
+
 export function OpenFolder(arg1) {
   return window['go']['main']['App']['OpenFolder'](arg1);
 }

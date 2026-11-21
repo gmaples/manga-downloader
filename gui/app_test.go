@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -673,5 +674,38 @@ func TestSetSelectedManyThroughTheApp(t *testing.T) {
 	}
 	if err := a.SetSelectedMany([]int{7}, true); err == nil {
 		t.Error("App accepted an index out of range")
+	}
+}
+
+func TestMarksArePushedOnlyWhenTheyChange(t *testing.T) {
+	a, sink := loadedApp(t, 2)
+	if got := a.Marks(); len(got) != 2 || got[0] != "" {
+		t.Fatalf("Marks = %q, want two unmarked chapters", got)
+	}
+	a.launch()
+	defer a.shutdown(context.Background())
+
+	a.ctrl.SetAll(true)
+	if err := a.ctrl.Start(); err != nil {
+		t.Fatal(err)
+	}
+	waitUntil(t, "a marks push with both done", func() bool {
+		m := sink.named("marks")
+		return len(m) > 0 && slices.Equal(m[len(m)-1].([]string), []string{"done", "done"})
+	})
+	pushes := len(sink.named("marks"))
+
+	statesBefore := len(sink.named("state"))
+	a.notify()
+	waitUntil(t, "a state push", func() bool { return len(sink.named("state")) > statesBefore })
+	if got := len(sink.named("marks")); got != pushes {
+		t.Errorf("marks pushed %d more times for no change", got-pushes)
+	}
+}
+
+func TestMarksAreEmptyNotNull(t *testing.T) {
+	a, _, _ := newTestApp(t, 1)
+	if got := a.Marks(); got == nil {
+		t.Error("Marks returned nil, which the frontend reads as no array")
 	}
 }

@@ -291,6 +291,14 @@ export interface Chapter {
   unnumbered?: boolean;
 }
 
+/**
+ * What became of a chapter of the list, shown beside its checkbox: '' is no
+ * file in the folder and no download; done is saved this session or already
+ * in the folder; downloading has begun and queued waits in a running
+ * download; failed and cancelled were left unsaved by a download
+ */
+export type ChapterMark = '' | 'done' | 'downloading' | 'queued' | 'failed' | 'cancelled';
+
 export interface LogLine {
   level: LogLevel;
   /** The English text: what copying the log gives, and what shows when the window can't translate msg */

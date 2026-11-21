@@ -26,6 +26,13 @@ button, *Load* and *Settings*. (To open on the full window instead, turn off
    Enter (or the + in the box), Shift+click to select a span, or use *All* and
    *None*. The arrow keys and Space work too. Locked chapters (paid or members-only) show
    a lock and can't be selected.
+   A mark beside each checkbox says what became of the chapter: a green tick
+   when its file is already in the folder (the name *Skip existing files*
+   looks for) or it was saved this session, a spinner while it downloads, a
+   grey dot while it waits its turn, and an amber mark when it failed (!) or a
+   cancel left it unsaved (a circled dash). No mark means no file and no
+   download. *Pick N unfinished* then selects just the failed and cancelled
+   chapters, ready for Download.
 3. **Choose a language and a scanlation group** when the site offers them. The
    selectors tell you when a series has none, and picking one reloads the
    chapter list. Sites that support it also offer *All*.

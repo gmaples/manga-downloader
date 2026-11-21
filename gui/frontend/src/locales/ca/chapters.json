@@ -42,6 +42,16 @@
     "partialHint": "Només les parts seleccionades van al seu fitxer"
   },
   "locked": "Bloquejat, així que no es pot seleccionar",
+  "mark": {
+    "done": "Descarregat: el seu fitxer és a la carpeta",
+    "downloading": "Descarregant",
+    "queued": "Esperant per descarregar",
+    "failed": "Ha fallat: selecciona'l per descarregar-lo de nou",
+    "cancelled": "Cancel·lat abans de desar-se: selecciona'l per descarregar-lo de nou"
+  },
+  "pickUnfinished_one": "Tria {{count}} sense acabar",
+  "pickUnfinished_other": "Tria {{count}} sense acabar",
+  "pickUnfinishedHint": "Selecciona només els capítols que han fallat o s'han cancel·lat, a punt per descarregar de nou",
   "duplicates": {
     "language": "Alguns números apareixen una vegada per idioma; l'etiqueta d'idioma els distingeix.",
     "group": "Alguns números apareixen una vegada per grup; l'etiqueta de grup els distingeix."

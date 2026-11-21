@@ -760,7 +760,7 @@ code,
   left: 0;
   right: 0;
   display: grid;
-  grid-template-columns: 16px 40px minmax(0, 1fr) auto;
+  grid-template-columns: 16px 14px 40px minmax(0, 1fr) auto;
   align-items: center;
   gap: 10px;
   padding: 0 16px 0 14px;
@@ -922,6 +922,8 @@ code,
 }
 
 .row.group-row {
+  /* its chevron takes the place of a chapter's mark and number */
+  grid-template-columns: 16px 64px minmax(0, 1fr) auto;
   background: var(--surface-2);
   font-weight: 600;
 }
@@ -989,8 +991,40 @@ code,
 /* a part sits under its chapter's header: its box under the chevron, its
    label under the header's title */
 .row.part-row {
-  grid-template-columns: 16px minmax(0, 1fr) auto;
-  padding-left: 64px;
+  grid-template-columns: 16px 14px minmax(0, 1fr) auto;
+  padding-left: 88px;
+}
+
+/* a chapter's mark, beside its checkbox: what became of it. Failed and
+   cancelled share the warning colour, with their own glyphs. */
+.mark {
+  display: grid;
+  place-items: center;
+  width: 14px;
+  height: 14px;
+  color: var(--text-3);
+}
+
+.mark-done {
+  color: var(--success);
+}
+
+.mark-downloading {
+  color: var(--accent);
+}
+
+.mark-queued::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--border-strong);
+}
+
+.mark-failed,
+.mark-cancelled,
+.btn.unfinished {
+  color: var(--warning);
 }
 
 .field-stack {

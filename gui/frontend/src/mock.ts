@@ -56,6 +56,7 @@ import type { Api, Unsubscribe } from './api';
 import { createT, LANGS, resolveLanguage, type Lang, type LangPref, type Vars } from './i18n';
 import type {
   Chapter,
+  ChapterMark,
   FilterChoice,
   HistoryItem,
   Job,
@@ -540,6 +541,7 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
   const stateBus = new Bus<State>();
   const chaptersBus = new Bus<Chapter[]>();
   const selectionBus = new Bus<number[]>();
+  const marksBus = new Bus<ChapterMark[]>();
   const logBus = new Bus<LogLine[]>();
 
   const selectionOf = () => [...selected].sort((a, b) => a - b);
@@ -716,7 +718,46 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
       ...(prefs.logHeight ? { logHeight: prefs.logHeight } : {}),
     },
   });
-  const push = () => stateBus.emit(snapshot());
+  // each chapter's mark, as the backend's ChapterMarks: the newest group of
+  // the series that took it says, by its row, or, without one, by whether
+  // it's still waiting (a volume's or a bundle's chapter has no row of its own)
+  const marksOf = (): ChapterMark[] => {
+    if (!loaded) {
+      return [];
+    }
+    return chapters.map((c, i) => {
+      for (let k = runs.length - 1; k >= 0; k--) {
+        const g = runs[k];
+        if (g.restored || g.url !== url || !g.keys.has(i)) {
+          continue;
+        }
+        // a bundle's one row stands for all its chapters
+        const job = g.runBundle
+          ? g.jobs[g.jobs.length - 1]
+          : g.jobs.find((j) => !j.volume && j.number === c.number && j.title === labelOf(c));
+        if (job !== undefined) {
+          switch (job.state) {
+            case 'done':
+            case 'skipped':
+              return 'done';
+            case 'failed':
+              return 'failed';
+            default:
+              return g.running ? 'downloading' : g.cancelling ? 'cancelled' : 'failed';
+          }
+        }
+        if (g.pending.includes(c)) {
+          return g.running ? 'queued' : g.cancelling ? 'cancelled' : 'failed';
+        }
+        return g.running ? 'downloading' : 'done';
+      }
+      return '';
+    });
+  };
+  const push = () => {
+    stateBus.emit(snapshot());
+    marksBus.emit(marksOf());
+  };
   const copySummary = (s: Summary | null): Summary | null => (s ? { ...s, failures: [...s.failures] } : null);
   // the outcome of the group that ended last, as the backend's LastSummary
   const lastSummary = (): Summary | null =>
@@ -1338,6 +1379,9 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
     async selection() {
       return selectionOf();
     },
+    async marks() {
+      return marksOf();
+    },
     async log() {
       return log.slice();
     },
@@ -1595,6 +1639,7 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
     onState: (cb) => stateBus.subscribe(cb),
     onChapters: (cb) => chaptersBus.subscribe(cb),
     onSelection: (cb) => selectionBus.subscribe(cb),
+    onMarks: (cb) => marksBus.subscribe(cb),
     onLog: (cb) => logBus.subscribe(cb),
   };
 

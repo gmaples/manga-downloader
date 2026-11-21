@@ -5,7 +5,7 @@
 import * as app from '../wailsjs/go/main/App';
 import { BrowserOpenURL, ClipboardGetText, EventsOn } from '../wailsjs/runtime/runtime';
 import type { LangPref } from './i18n';
-import type { Chapter, HistoryItem, LogLine, Options, State } from './types';
+import type { Chapter, ChapterMark, HistoryItem, LogLine, Options, State } from './types';
 
 export type Unsubscribe = () => void;
 
@@ -14,6 +14,8 @@ export interface Api {
   state(): Promise<State>;
   chapters(): Promise<Chapter[]>;
   selection(): Promise<number[]>;
+  /** The mark of each chapter of the list, by index; empty when nothing is loaded */
+  marks(): Promise<ChapterMark[]>;
   log(): Promise<LogLine[]>;
 
   // Actions. A rejected promise carries the reason as a string (or Error).
@@ -71,6 +73,7 @@ export interface Api {
   onState(cb: (s: State) => void): Unsubscribe;
   onChapters(cb: (c: Chapter[]) => void): Unsubscribe;
   onSelection(cb: (indices: number[]) => void): Unsubscribe;
+  onMarks(cb: (marks: ChapterMark[]) => void): Unsubscribe;
   onLog(cb: (lines: LogLine[]) => void): Unsubscribe;
 }
 
@@ -102,6 +105,7 @@ export function createWailsApi(): Api {
   const state = fanOut<State>('state');
   const chapters = fanOut<Chapter[]>('chapters');
   const selection = fanOut<number[]>('selection');
+  const marks = fanOut<ChapterMark[]>('marks');
   const log = fanOut<LogLine[]>('log');
 
   return {
@@ -110,6 +114,7 @@ export function createWailsApi(): Api {
     state: () => app.State() as unknown as Promise<State>,
     chapters: () => app.Chapters() as unknown as Promise<Chapter[]>,
     selection: () => app.Selection(),
+    marks: () => app.Marks() as Promise<ChapterMark[]>,
     log: () => app.Log() as unknown as Promise<LogLine[]>,
 
     load: (url) => app.Load(url),
@@ -145,6 +150,7 @@ export function createWailsApi(): Api {
     onState: (cb) => state.subscribe(cb),
     onChapters: (cb) => chapters.subscribe(cb),
     onSelection: (cb) => selection.subscribe(cb),
+    onMarks: (cb) => marks.subscribe(cb),
     onLog: (cb) => log.subscribe(cb),
   };
 }

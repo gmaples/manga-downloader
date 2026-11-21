@@ -293,6 +293,10 @@ type Controller struct {
 	// which the log masks (see maskLineLocked)
 	adult       bool
 	adultTitles map[string]bool
+	// onDisk is which chapters of the loaded list have their file in the
+	// folder, and onDiskKey what it was worked out for (see diskMarksLocked)
+	onDisk    []bool
+	onDiskKey string
 }
 
 // group is one press of Download: its chapters' rows, its cancel and its
@@ -363,6 +367,11 @@ type group struct {
 	chapters grabber.Filterables
 	done     map[string]bool
 	listedOf map[*grabber.Chapter]grabber.Filterable
+	// started and failed are the chapters of the run, by chapKey, that
+	// began (their page list was asked for) and that failed, for the marks
+	// of the chapter list (see ChapterMarks)
+	started map[string]bool
+	failed  map[string]bool
 }
 
 // flight is the progress of one chapter of a group from its fetch to its end,
@@ -408,6 +417,8 @@ func newGroup() *group {
 		flightOf:  map[grabber.Filterable]*flight{},
 		done:      map[string]bool{},
 		listedOf:  map[*grabber.Chapter]grabber.Filterable{},
+		started:   map[string]bool{},
+		failed:    map[string]bool{},
 	}
 }
 
@@ -2193,6 +2204,7 @@ func (e events) Fetching(listed grabber.Filterable) {
 	c.mu.Lock()
 	c.flightSeq++
 	g.flightOf[listed] = &flight{seq: c.flightSeq, title: grabber.ChapterLabel(listed), tags: g.releaseTags(listed)}
+	g.started[chapKey(listed)] = true
 	// a bundle or a volume has its own row
 	if g.bundle == nil && g.listedVol[listed] == nil {
 		j := &Job{Title: grabber.ChapterLabel(listed), Tags: g.releaseTags(listed), Number: listed.GetNumber(), State: JobFetching}
@@ -2241,6 +2253,7 @@ func (e events) FetchFailed(listed grabber.Filterable, err error) {
 	c, g := e.c, e.g
 	c.mu.Lock()
 	delete(g.flightOf, listed)
+	g.failed[chapKey(listed)] = true
 	g.stats.failures = append(g.stats.failures, newFailure(g.releaseLabel(listed), err))
 	if j := g.fetching[listed]; j != nil {
 		j.State = JobFailed
@@ -2309,6 +2322,7 @@ func (e events) FilenameFailed(ch *grabber.Chapter, err error) {
 	c, g := e.c, e.g
 	c.mu.Lock()
 	delete(g.flights, ch)
+	g.failed[g.keyOf(ch)] = true
 	reason := msg("job.reason.filename", map[string]any{"reason": err.Error()})
 	g.stats.failures = append(g.stats.failures, windowFailure(g.releaseLabel(ch), reason))
 	if g.bundle == nil {
@@ -2322,6 +2336,7 @@ func (e events) FilenameFailed(ch *grabber.Chapter, err error) {
 func (e events) Started(ch *grabber.Chapter) {
 	c, g := e.c, e.g
 	c.mu.Lock()
+	g.started[g.keyOf(ch)] = true
 	f := g.flights[ch]
 	if f == nil {
 		c.flightSeq++
@@ -2375,6 +2390,7 @@ func (e events) DownloadFailed(ch *grabber.Chapter, err error) {
 	c, g := e.c, e.g
 	c.mu.Lock()
 	g.failedC[ch] = true
+	g.failed[g.keyOf(ch)] = true
 	delete(g.flights, ch)
 	g.stats.failures = append(g.stats.failures, newFailure(g.releaseLabel(ch), err))
 	// a volume goes on with its other chapters
@@ -2413,6 +2429,7 @@ func (e events) Packed(ch *grabber.Chapter, name string, err error) {
 	j := g.byChap[ch]
 	if err != nil {
 		reason := msg("job.reason.packing", map[string]any{"reason": err.Error()})
+		g.failed[g.keyOf(ch)] = true
 		g.stats.failures = append(g.stats.failures, windowFailure(g.releaseLabel(ch), reason))
 		if j != nil {
 			j.State = JobFailed

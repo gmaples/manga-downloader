@@ -37,7 +37,7 @@ const FLIP_MODES: Record<string, FlipMode> = { mascot: 'scale', wordmark: 'scale
 
 export function App({ api, initial }: { api: Api; initial?: State }) {
   const { t } = useI18n();
-  const { state, chapters, selected, log, failure } = useWindow(api, initial);
+  const { state, chapters, selected, marks, log, failure } = useWindow(api, initial);
   const [tab, setTab] = useState<Tab>('options');
   const [logOpen, setLogOpen] = useState(false);
   const [loadRefusal, setLoadRefusal] = useState('');
@@ -252,6 +252,7 @@ export function App({ api, initial }: { api: Api; initial?: State }) {
             state={state}
             chapters={chapters}
             selected={selected}
+            marks={marks}
             disabled={busy}
             onToggle={(index, on) => api.setSelected(index, on)}
             onToggleMany={(indices, on) => api.setSelectedMany(indices, on)}
