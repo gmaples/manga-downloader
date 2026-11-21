@@ -279,6 +279,7 @@ func (c *Controller) maskLineLocked(line LogLine) LogLine {
 func (c *Controller) SetHistory(path string, entries []HistoryEntry) {
 	c.mu.Lock()
 	c.history = entries
+	c.histBase = copyHistory(entries)
 	c.historyPath = path
 	c.restoreLocked()
 	c.mu.Unlock()
@@ -422,25 +423,31 @@ func (c *Controller) kickHistory() {
 	}
 }
 
-// saveHistoryNow writes the history to history.txt. Saves run one at a time,
-// each with the history as it is when it starts, so the last one wins.
+// saveHistoryNow writes the history to history.txt, merged with what the
+// file has now, which another copy of the app may have written (see
+// mergeHistory); the merged history becomes this copy's too. Saves run one at
+// a time.
 func (c *Controller) saveHistoryNow() {
 	c.histSave.Lock()
 	defer c.histSave.Unlock()
 	c.mu.Lock()
 	path := c.historyPath
-	entries := make([]HistoryEntry, len(c.history))
-	for i, e := range c.history {
-		e.Chapters = append([]HistoryChapter(nil), e.Chapters...)
-		entries[i] = e
-	}
 	c.mu.Unlock()
 	if path == "" {
 		return
 	}
+	disk := loadHistory(path)
+	c.mu.Lock()
+	c.history = mergeHistory(c.histBase, c.history, disk)
+	entries := copyHistory(c.history)
+	c.mu.Unlock()
 	if err := saveHistory(path, entries); err != nil {
 		c.addMsg(LogWarn, msg("log.historyFailed", map[string]any{"reason": err.Error()}))
+		return
 	}
+	c.mu.Lock()
+	c.histBase = entries
+	c.mu.Unlock()
 }
 
 // History returns a copy of the history, newest first

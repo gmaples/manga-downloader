@@ -294,6 +294,10 @@ type Controller struct {
 	// it's saved, "" for nowhere (see history.go)
 	history     []HistoryEntry
 	historyPath string
+	// histBase is the history as history.txt had it at the load or the
+	// last save, which a save tells this copy's changes from by (see
+	// mergeHistory)
+	histBase []HistoryEntry
 	// histSave serialises the saves of history; histKick asks the saver
 	// goroutine for one, nil when there's no saver
 	histSave sync.Mutex

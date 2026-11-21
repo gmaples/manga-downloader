@@ -210,7 +210,7 @@ window.
 The app keeps `history.txt` next to `gui.json`: the last 100 series you loaded
 or downloaded, newest first, written as it runs. It's plain text, one
 `key: value` line each (`title`, `url`, `adult`, `when`, `open`, then a `done`
-or `todo` line per chapter), so it can be read or edited with the app closed.
+or `todo` line per chapter), so it can be read or edited with the app closed. Two copies of the app open at once share it: each save first reads the file and keeps the series the other copy wrote, writing over only the series this copy changed since it last saved.
 
 When the app starts, the Activity tab shows again the series that were in it
 when it closed, under *From last session*: the chapters saved and the ones
