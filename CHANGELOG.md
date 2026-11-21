@@ -17,6 +17,26 @@ as they are.
 What the fork changes, and why, is described in the README's
 "About this fork" section. Android details are in [docs/android.md](docs/android.md).
 
+## v25.2.0-series-folders.15 (2026-11-20)
+
+Commits `0722a60` and `845b1b8`. Adds remanga.org, on the Windows desktop app
+and command line.
+
+- **remanga.org** (ReManga, Russian): series links and reader links both work,
+  for example `https://remanga.org/manga/murim-login_/320521?page=1` (the
+  number is a chapter id; the whole series loads). Title, chapters and pages
+  come from the site's own open API (`api.remanga.org/api/v2`), so no browser
+  opens. Every translation branch is listed, with its group as the release's
+  group. Chapters the site marks paid are left out; a price alone isn't paid,
+  since it stays on early-access chapters that are free now.
+- Untitled chapters are named "Chapter N", so files read
+  `Логин Мурим 1 - Chapter 1 [Newlate.WTF].cbz`.
+- Recent chapters are WebP; add `webp` to Convert images if a reader needs JPEG.
+- Tested on a Windows PC with a test build of `0722a60`'s grabber: chapter 1
+  of Логин Мурим (146 pages, all JPEG) and chapters 250-251 (53 and 57 pages,
+  WebP), no browser opened. The "Chapter N" naming is covered by tests, not
+  yet by a run on the PC.
+
 ## v25.2.0-series-folders.14 (2026-11-20)
 
 Commits `b3f6a2a` and `aeb8f7c`. Desktop app changes, on Windows. (Build 13
