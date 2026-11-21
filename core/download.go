@@ -690,6 +690,9 @@ func (s *Series) fetchChapter(ctx context.Context, lim downloader.Limiter, chap 
 			}
 		}
 		chapter, err := s.Site.FetchChapter(chap)
+		if lim != nil {
+			lim.Done(-1, downloader.Trouble(err))
+		}
 		var se *http.StatusError
 		if lim != nil && errors.As(err, &se) && se.Code == 429 && !lim.Hit(gen, se.RetryAfter) {
 			continue

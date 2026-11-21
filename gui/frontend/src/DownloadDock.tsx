@@ -172,7 +172,10 @@ function useNow(on: boolean): number {
   return now;
 }
 
-/** A bar for each site downloading: the chapter it's on, or its pause after a 429 */
+/**
+ * A bar for each site downloading: the chapter it's on and how many of its
+ * downloads run at once, or its pause after a 429
+ */
 function SiteBars({ sites }: { sites: SiteBar[] }) {
   const { t } = useI18n();
   const now = useNow(sites.some((s) => s.until > 0));
@@ -202,7 +205,15 @@ function SiteBars({ sites }: { sites: SiteBar[] }) {
                   </span>
                 )}
               </span>
-              <span className="site-status">{status}</span>
+              <span className="site-status">
+                {status}
+                {!waiting && s.parallel > 0 && (
+                  <span className="site-parallel" title={t('download.site.parallelHint')}>
+                    {' · '}
+                    {t('download.site.parallel', { count: s.parallel })}
+                  </span>
+                )}
+              </span>
             </div>
             <div
               className="bar"

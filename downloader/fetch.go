@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	stdhttp "net/http"
 	"sort"
 	"strconv"
@@ -41,11 +42,44 @@ type ProgressCallback func(page, progress int, err error)
 // (ratelimit.Site). Wait blocks until a request may go out and returns its
 // generation; Hit records a 429 to a request of that generation and reports
 // whether to give up. Listed reports whether it has a pace of its own, which
-// replaces the site's PagePacer.
+// replaces the site's PagePacer. Done ends a request Wait let out, with the
+// bytes it downloaded (negative for a request that isn't a page) and whether
+// it failed with Trouble, which is how the site's level of requests under way
+// at once is learned.
 type Limiter interface {
 	Wait(ctx context.Context) (uint64, error)
 	Hit(gen uint64, retryAfter time.Duration) (giveUp bool)
 	Listed() bool
+	Done(bytes int64, trouble bool)
+}
+
+// Trouble reports whether err says the site is overloaded rather than that
+// the request was wrong: a 429, a 502, 503 or 504, a Cloudflare 520-524, a
+// timeout or a connection cut short. A 404 or a 500 isn't.
+func Trouble(err error) bool {
+	if err == nil {
+		return false
+	}
+	var se *http.StatusError
+	if errors.As(err, &se) {
+		switch c := se.Code; {
+		case c == stdhttp.StatusTooManyRequests, c == stdhttp.StatusBadGateway, c == stdhttp.StatusServiceUnavailable, c == stdhttp.StatusGatewayTimeout:
+			return true
+		case c >= 520 && c <= 524:
+			return true
+		}
+		return false
+	}
+	var ne net.Error
+	if errors.As(err, &ne) && ne.Timeout() {
+		return true
+	}
+	// a reset reads as a failed read on every system (ECONNRESET, WSAECONNRESET)
+	var oe *net.OpError
+	if errors.As(err, &oe) && oe.Op == "read" {
+		return true
+	}
+	return errors.Is(err, io.ErrUnexpectedEOF)
 }
 
 // FetchChapter downloads all the pages of a chapter. Cancelling ctx cuts
@@ -159,6 +193,9 @@ func fetchFile(ctx context.Context, params http.RequestParams, page uint, retrie
 		}
 		var data []byte
 		data, err = fetchFileOnce(params)
+		if lim != nil {
+			lim.Done(int64(len(data)), Trouble(err))
+		}
 		if err == nil {
 			err = checkPage(data)
 		}

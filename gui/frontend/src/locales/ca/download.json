@@ -50,6 +50,8 @@
     "label": "Progrés de {{site}}",
     "waiting": "Esperant {{seconds}} s: massa peticions",
     "next": "Començant el capítol següent",
-    "fetching": "Obtenint la llista de pàgines"
+    "fetching": "Obtenint la llista de pàgines",
+    "parallel": "{{count}} en paral·lel",
+    "parallelHint": "Descàrregues alhora per a aquest lloc, apreses de la rapidesa amb què respon"
   }
 }

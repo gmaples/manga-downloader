@@ -620,7 +620,7 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
     for (const g of runs.filter((r) => r.running)) {
       const site = hostOf(g.url);
       if (!bars.has(site)) {
-        bars.set(site, { site, title: '', tags: '', done: 0, total: 0, until: 0 });
+        bars.set(site, { site, title: '', tags: '', done: 0, total: 0, until: 0, parallel: 8 });
       }
       const bar = bars.get(site)!;
       if (bar.title !== '') {
