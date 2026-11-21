@@ -17,6 +17,25 @@ as they are.
 What the fork changes, and why, is described in the README's
 "About this fork" section. Android details are in [docs/android.md](docs/android.md).
 
+## v25.2.0-series-folders.18 (2026-11-20)
+
+Commits `4a90f43` and `2e50e27`, on top of build 17. Adds an age check, on the
+Windows desktop app and command line.
+
+- **Age check**: Options > Save has *Age check* and *I am over* 16 or 18
+  (saved in `gui.json` as `ageCheck` and `age`); the command line has
+  `--age 16|18`. Off, the default, every title loads as before. On, a title
+  the site rates above that age is refused before anything is downloaded,
+  with a message saying why.
+- zenko.online is the first site checked: its API gives each title an age
+  rating (`ageLimit`). Its own age gate is only on the website, so without
+  the check its 18+ titles download like any other.
+- Tested on a Windows PC with this build's command line, title 2779 (rated
+  18): refused with `--age 16` (exit 1, no file), downloaded with `--age 18`
+  and with no `--age` (7 JPEG pages). Title 1225 (rated 16) downloaded with
+  `--age 16`; `--age 17` is refused as invalid. The desktop app's switch is
+  covered by tests, not yet by a run on the PC.
+
 ## v25.2.0-series-folders.17 (2026-11-21)
 
 Commit `b534d91`. Resizable panes and mouse-wheel scrolling everywhere, in the
