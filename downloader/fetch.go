@@ -10,6 +10,7 @@ import (
 	"io"
 	"net"
 	stdhttp "net/http"
+	"net/url"
 	"sort"
 	"strconv"
 	"strings"
@@ -18,6 +19,7 @@ import (
 
 	"github.com/elboletaire/manga-downloader/grabber"
 	"github.com/elboletaire/manga-downloader/http"
+	"github.com/elboletaire/manga-downloader/notice"
 )
 
 // retryDelay is the base delay between retry attempts (multiplied by the
@@ -82,6 +84,40 @@ func Trouble(err error) bool {
 	return errors.Is(err, io.ErrUnexpectedEOF)
 }
 
+// Mirrorer is a Limiter that also knows other servers for a page's host
+// (ratelimit.Site, from site-mirrors.txt)
+type Mirrorer interface {
+	Mirrors(host string) []string
+}
+
+// mirrorURLs returns rawURL on each other host lim names for its host, in
+// order, nil when lim names none
+func mirrorURLs(lim Limiter, rawURL string) []string {
+	m, ok := lim.(Mirrorer)
+	if !ok {
+		return nil
+	}
+	u, err := url.Parse(rawURL)
+	if err != nil || u.Host == "" {
+		return nil
+	}
+	var out []string
+	for _, h := range m.Mirrors(u.Host) {
+		v := *u
+		v.Host = h
+		out = append(out, v.String())
+	}
+	return out
+}
+
+// hostOf is rawURL's host, rawURL itself when it has none
+func hostOf(rawURL string) string {
+	if u, err := url.Parse(rawURL); err == nil && u.Host != "" {
+		return u.Host
+	}
+	return rawURL
+}
+
 // FetchChapter downloads all the pages of a chapter. Cancelling ctx cuts
 // short the waits between retries; requests already under way still finish.
 func FetchChapter(ctx context.Context, site grabber.Site, chapter *grabber.Chapter, onprogress ProgressCallback) ([]*File, error) {
@@ -120,12 +156,25 @@ func FetchChapterLimited(ctx context.Context, site grabber.Site, chapter *grabbe
 			if page.NoReferer {
 				referer = ""
 			}
-			file, err := fetchFile(ctx, http.RequestParams{
+			params := http.RequestParams{
 				URL:     page.URL,
 				Referer: referer,
 				Headers: page.Headers,
 				Accept:  http.ImageAccept,
-			}, uint(page.Number), site.GetRetries(), page.Transform, pace, page.RetryFlaky, lim)
+			}
+			file, err := fetchFile(ctx, params, uint(page.Number), site.GetRetries(), page.Transform, pace, page.RetryFlaky, lim)
+			if err != nil && ctx.Err() == nil {
+				// the other servers site-mirrors.txt names for the page's host
+				for _, u := range mirrorURLs(lim, page.URL) {
+					params.URL = u
+					f, merr := fetchFile(ctx, params, uint(page.Number), site.GetRetries(), page.Transform, pace, page.RetryFlaky, lim)
+					if merr == nil {
+						notice.Info("page %d: %s failed (%s), got it from %s", page.Number, hostOf(page.URL), err, hostOf(u))
+						file, err = f, nil
+						break
+					}
+				}
+			}
 
 			if err != nil {
 				select {

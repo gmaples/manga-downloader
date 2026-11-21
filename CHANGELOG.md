@@ -19,6 +19,17 @@ as they are.
 What the fork changes, and why, is described in the README's
 "About this fork" section. Android details are in [docs/android.md](docs/android.md).
 
+## v25.3.0-series-folders.31 (2026-11-21)
+
+Includes build 29. A page that fails on one server can be fetched from
+others named in `site-mirrors.txt`, a new plain-text file next to
+`site-rate-limits.txt`: one `host: other host, other host` line per server,
+tried in order with the same path once the page's retries are used up.
+Nothing is built in and the file is only read. App and command line alike.
+Made for mangalib, whose main image server answers 400 for some old pages
+(Gintama vol. 17 ch. 141-144) that its second server has. Build 30 is the
+number another change was given.
+
 ## v25.3.0-series-folders.29 (2026-11-21)
 
 A small **VPN?** tag in the desktop app next to a site that might need a VPN:
