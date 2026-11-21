@@ -15,6 +15,7 @@
   "updateInstaller": "no se pudo iniciar el instalador: {{reason}}",
   "notReady": "la ventana todavía no está lista",
   "siteUnknown": "sitio no reconocido",
+  "siteUnknownTried": "sitio no reconocido: {{reason}}",
   "chapterMissing": "el capítulo {{index}} no está en la lista",
   "partsVolumes": "\"parts\" no es un valor de Volúmenes: elige Unidos en Empaquetar como",
   "loadFirst": "carga primero una serie",

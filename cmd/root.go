@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"regexp"
+	"slices"
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
@@ -310,6 +311,9 @@ func exitSettingError(err error) {
 func openSeries(url string) *core.Series {
 	releaseLd := browser.Hold()
 	s, errs := core.Identify(url, &settings)
+	// what was tried on an unknown site is the answer, not one of the errors
+	var unknown *grabber.NotRecognisedError
+	errs = slices.DeleteFunc(errs, func(err error) bool { return errors.As(err, &unknown) })
 	if len(errs) > 0 {
 		red("Errors testing site (a site may be down):")
 		for _, err := range errs {
@@ -319,6 +323,12 @@ func openSeries(url string) *core.Series {
 	if s == nil {
 		releaseLd()
 		yellow("Site not recognised")
+		if unknown != nil {
+			yellow("%s has no built-in support (%d site handlers declined it). The generic reader tried:", unknown.Host, unknown.Handlers)
+			for _, line := range unknown.Tried {
+				yellow("  - %s", line)
+			}
+		}
 		exit(1)
 	}
 

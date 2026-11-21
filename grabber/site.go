@@ -297,12 +297,26 @@ func (g *Grabber) IdentifySite() (Site, []error) {
 		}
 	}
 
+	// Nothing knows the site: the generic reader guesses from the page alone.
+	// It never fails, and the errors of the grabbers that declined are noise
+	// when it matches.
+	generic := NewGeneric(g)
+	if ok, _ := generic.Test(); ok {
+		return generic, nil
+	}
+
 	// the markup testers share PlainHTML's cached fetch error, so each message once
 	for _, err := range markupErrs {
 		if !slices.ContainsFunc(errs, func(e error) bool { return e.Error() == err.Error() }) {
 			errs = append(errs, err)
 		}
 	}
+	// last, so the reasons above stay first: what was tried, for the user
+	errs = append(errs, &NotRecognisedError{
+		Host:     hostOf(g.URL),
+		Handlers: len(sites) + 2,
+		Tried:    generic.Report(),
+	})
 	return nil, errs
 }
 

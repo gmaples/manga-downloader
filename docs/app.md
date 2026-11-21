@@ -203,6 +203,12 @@ A title the site rates 18+ (zenko.online gives a rating) shows as
 *[Adult Title]* until you click it, which shows it until the app closes. The
 log always writes *[Adult Title]* for it, in file and folder names too.
 
+## Sites without built-in support
+
+A site none of the built-in handlers knows is read by the generic reader. It looks for the series' chapter list in the page's links (the largest set of links that differ only in a number, under the series' address or with a word like "chapter" or "read" in them) and for a chapter's pages in its images (the largest set served from one folder). When the plain page has no chapter list, as on sites built as JavaScript apps, it renders the page in a hidden browser, scrolls it, and reads that, along with the data the page fetched. It never opens a browser window by itself.
+
+The chapter numbers and pages it finds are guesses, and a warning says so: check the first chapter before downloading a whole series. When it finds nothing, the error lists what it tried and what it saw, for example a bot check, an age confirmation, or a page that says the site isn't available in your country.
+
 ## Rate limits
 
 When a site answers 429 Too Many Requests, the downloader slows down for that site and remembers it. It writes a line such as `mangalib.org: 1s` to `site-rate-limits.txt` in the download root (the folder picked under Save, not a series folder inside it). Every later request to that site, in this run and the next ones, waits at least that long after the previous one.

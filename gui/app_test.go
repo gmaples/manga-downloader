@@ -140,6 +140,23 @@ func TestLoadErrorReachesTheState(t *testing.T) {
 	}
 }
 
+// what the generic reader tried on an unknown site is the load's error, not
+// a warning in the activity
+func TestLoadErrorSaysWhatWasTried(t *testing.T) {
+	a, _, _ := newTestApp(t, 1)
+	a.ctrl.identify = func(string, *grabber.Settings) (grabber.Site, []error) {
+		return nil, []error{&grabber.NotRecognisedError{Host: "example.com", Handlers: 3, Tried: []string{"the plain-page reader found no chapter list in the page"}}}
+	}
+	if err := a.Load("https://example.com/unknown"); err != nil {
+		t.Fatal(err)
+	}
+	waitUntil(t, "the load", func() bool { return !a.State().Loading })
+	want := "site not recognised: example.com has no built-in support (3 site handlers declined it); the plain-page reader found no chapter list in the page"
+	if got := a.State().LoadError; got != want {
+		t.Errorf("LoadError = %q, want %q", got, want)
+	}
+}
+
 func TestLoadMessageNamesTheFailingStep(t *testing.T) {
 	cases := []struct {
 		err  error

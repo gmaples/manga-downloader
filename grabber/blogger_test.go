@@ -4,6 +4,7 @@ package grabber
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -655,8 +656,10 @@ func TestBloggerReportsFetchError(t *testing.T) {
 	if n := hits.count(path); n != 1 {
 		t.Errorf("GET %s made %d requests, want 1", path, n)
 	}
-	if len(errs) != 1 {
-		t.Fatalf("IdentifySite() errs = %v, want exactly one", errs)
+	// the fetch error once, then what the generic reader tried
+	var nr *NotRecognisedError
+	if len(errs) != 2 || !errors.As(errs[1], &nr) {
+		t.Fatalf("IdentifySite() errs = %v, want the fetch error and a NotRecognisedError", errs)
 	}
 	if !strings.Contains(errs[0].Error(), "429") {
 		t.Errorf("IdentifySite() error = %v, want the 429", errs[0])
