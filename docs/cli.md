@@ -309,7 +309,7 @@ The chapter numbers and pages it finds are guesses, and a warning says so: check
 
 When a site answers 429 Too Many Requests, the downloader slows down for that site and remembers it. It writes a line such as `mangalib.org: 1s` to `site-rate-limits.txt` in the download root (`--output-dir`). Every later request to that site, in this run and the next ones, waits at least that long after the previous one.
 
-After a 429, every download from that site pauses: 15s after the first one, then 1.5 times longer after each further one, up to 5m. Only the pages that got the 429 are fetched again, so the chapter's file is still complete. A site's time also grows 1.5 times on each 429, up to 5m. A page that still gets a 429 after the 5m pause fails, and so does its chapter.
+After a 429, every download from that site pauses: 15s after the first one, then 1.5 times longer after each further one, up to 5m. Only the pages that got the 429 are fetched again, so the chapter's file is still complete. A site's time also grows 1.5 times on each 429, up to 5m. A page that still gets a 429 after the 5m pause fails, and so does its chapter. The time comes back down as well: after 5m of downloads from the site with no 429, it's divided by 1.5 and saved, again after each further 5m, and once it would drop below 1s the site's line is taken out of the file. A time you wrote by hand comes down the same way.
 
 The file is plain text and can be edited: one `site: time` line per site, with times such as `500ms`, `15s` or `1m30s`, and `#` for comments. A site's line replaces any pacing built into the downloader for it. Because the file sits next to your series, it travels with the folder or card to another device.
 
