@@ -90,6 +90,8 @@ type Book struct {
 	gaps  map[string]time.Duration
 	pars  map[string]int
 	sites map[string]*Site
+	// mirrors are the other hosts of site-mirrors.txt, by host (see Mirrors)
+	mirrors map[string][]string
 }
 
 // Open reads the file in dir. A missing file is an empty book, which is only
@@ -101,8 +103,9 @@ func Open(dir string, warn, info func(format string, a ...any)) *Book {
 	if info == nil {
 		info = func(string, ...any) {}
 	}
-	b := &Book{path: filepath.Join(dir, FileName), warn: warn, info: info, gaps: map[string]time.Duration{}, pars: map[string]int{}, sites: map[string]*Site{}}
+	b := &Book{path: filepath.Join(dir, FileName), warn: warn, info: info, gaps: map[string]time.Duration{}, pars: map[string]int{}, sites: map[string]*Site{}, mirrors: map[string][]string{}}
 	b.readParallel()
+	b.readMirrors()
 	data, err := os.ReadFile(b.path)
 	if err != nil {
 		if !os.IsNotExist(err) {

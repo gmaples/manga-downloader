@@ -325,6 +325,16 @@ When a site struggles (a 429, a 502, 503 or 504, a Cloudflare 520-524, a timeout
 
 The level is shared by every download from the site that runs at once, and it's saved in `site-parallel.txt`, next to `site-rate-limits.txt`, as one `site: number` line per site (for example `mangadex.org: 8`). It's written when the downloads end and right after a cut, and only for a site whose level moved. The next run starts from it. The file is plain text: change a number to make that site start there, or remove its line to have it learned again.
 
+### Other servers for a page (`site-mirrors.txt`)
+
+Some sites serve their pages from more than one server, and a page can be missing from one of them (mangalib's main image server answers 400 for some old pages that its second server has). `site-mirrors.txt`, next to `site-rate-limits.txt`, names the servers to try when a page fails, one line per server:
+
+```
+img2.imglib.info: img3.cdnlibs.org, img3.cdnrulib.link
+```
+
+A page whose address is on the host before the colon, and that still fails after its retries, is fetched from each host after it in turn, with the same path, until one works. Nothing is built in: a host the file doesn't list has no fallback, and the downloader never writes the file. Lines starting with `#` are comments. A page got from another server is noted in the log.
+
 ## Environment variables
 
 | Variable                           | Description                                                   |

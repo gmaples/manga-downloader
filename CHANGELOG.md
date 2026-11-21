@@ -19,6 +19,16 @@ as they are.
 What the fork changes, and why, is described in the README's
 "About this fork" section. Android details are in [docs/android.md](docs/android.md).
 
+## v25.3.0-series-folders.31 (2026-11-21)
+
+Includes builds 29 and 30 (merged in). A page that fails on one server can be fetched from
+others named in `site-mirrors.txt`, a new plain-text file next to
+`site-rate-limits.txt`: one `host: other host, other host` line per server,
+tried in order with the same path once the page's retries are used up.
+Nothing is built in and the file is only read. App and command line alike.
+Made for mangalib, whose main image server answers 400 for some old pages
+(Gintama vol. 17 ch. 141-144) that its second server has.
+
 ## v25.3.0-series-folders.30 (2026-11-21)
 
 Commit `3753bd8`, with build 29 (`54d9b02`) merged in. Two fixes for slow
