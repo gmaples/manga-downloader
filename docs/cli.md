@@ -21,6 +21,13 @@ Arguments aren't positional, so `manga-downloader 1-50 [url]` works too.
 Chapters the site marks as locked (coins, early access or members-only) are
 skipped, with a line saying which.
 
+The exit code is 0 when everything asked for was saved (or skipped because
+its file already exists, with `--skip-existing`), and 1 when anything
+failed: a chapter that couldn't be fetched, named, downloaded or packed, a
+volume or bundle that couldn't be packed, or an error before the download.
+A bundle is still written without the chapters that failed, and the run
+still exits 1. Ctrl+C ends it with 130.
+
 Without a range, the question looks like this:
 
 <picture>

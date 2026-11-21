@@ -173,7 +173,7 @@ func Run(cmd *cobra.Command, args []string) {
 		// Non-terminal output defaults to 80-column-equivalent logging.
 		releaseDl := browser.Hold()
 		defer releaseDl()
-		ev := plainEvents{showLang: showLanguage, showGroup: showGroup}
+		ev := &failCounter{Events: plainEvents{showLang: showLanguage, showGroup: showGroup}}
 		bundleFile, err := series.Download(context.Background(), chapters, skipPages, settings.Range, ev)
 		// raised before anything was fetched, so it's reported before the run's own exit
 		var serr *core.SettingError
@@ -181,7 +181,7 @@ func Run(cmd *cobra.Command, args []string) {
 			exitSettingError(err)
 		}
 		if !settings.Bundle {
-			exit(0)
+			exit(ev.code())
 		}
 		if errors.Is(err, core.ErrExists) {
 			yellow("- skipping the bundle: %s already exists", bundleFile)
@@ -192,7 +192,8 @@ func Run(cmd *cobra.Command, args []string) {
 			exit(1)
 		}
 		fmt.Printf("- %s %s\n", color.GreenString("saved file"), color.HiBlackString(bundleFile))
-		return
+		// a bundle is packed without the chapters that failed
+		exit(ev.code())
 	}
 
 	// TTY mode: Bubble Tea interactive progress bars.
@@ -204,12 +205,13 @@ func Run(cmd *cobra.Command, args []string) {
 	// evDone is closed when prog.Run() returns so that bubbleEvents methods
 	// that call prog.Println can fall back to stderr instead of deadlocking.
 	evDone := make(chan struct{})
-	ev := &bubbleEvents{prog: prog, done: evDone, showLang: showLanguage, showGroup: showGroup}
+	bubbles := &bubbleEvents{prog: prog, done: evDone, showLang: showLanguage, showGroup: showGroup}
+	ev := &failCounter{Events: bubbles}
 
 	// Override the notice and attention handlers with TUI-aware versions that
 	// route through prog.Send (safe after quit) instead of printing directly.
-	notice.SetHandler(teaNoticeHandler(ev))
-	browser.SetAttentionHandler(teaAttentionHandler(ev))
+	notice.SetHandler(teaNoticeHandler(bubbles))
+	browser.SetAttentionHandler(teaAttentionHandler(bubbles))
 
 	type downloadResult struct {
 		file string
@@ -263,7 +265,7 @@ func Run(cmd *cobra.Command, args []string) {
 	}
 
 	if !settings.Bundle {
-		exit(0)
+		exit(ev.code())
 	}
 
 	// the bundle's row already says skipped or done, like the chapters'
@@ -278,6 +280,8 @@ func Run(cmd *cobra.Command, args []string) {
 		// unless the bars never showed: then say it like the non-TTY path
 		fmt.Printf("- %s %s\n", color.GreenString("saved file"), color.HiBlackString(res.file))
 	}
+	// a bundle is packed without the chapters that failed
+	exit(ev.code())
 }
 
 // exitSettingError prints a setting that failed validation in the words each

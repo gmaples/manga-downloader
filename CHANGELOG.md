@@ -19,6 +19,14 @@ as they are.
 What the fork changes, and why, is described in the README's
 "About this fork" section. Android details are in [docs/android.md](docs/android.md).
 
+## v25.3.0-series-folders.33 (2026-11-21)
+
+Master after PRs #13, #14 and #15 (builds 29 to 31), plus correct exit codes
+on the command line: it exits 1 when any chapter, volume or bundle failed
+(fetch, file name, download or packing), not 0 as before; 0 only when
+everything was saved or already existed. A bundle written without its failed
+chapters exits 1 too. Ctrl+C still exits 130. Build 32 (PR #16) is not in it.
+
 ## v25.3.0-series-folders.31 (2026-11-21)
 
 Includes builds 29 and 30 (merged in). A page that fails on one server can be fetched from
