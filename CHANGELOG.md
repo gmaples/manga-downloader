@@ -17,6 +17,27 @@ as they are.
 What the fork changes, and why, is described in the README's
 "About this fork" section. Android details are in [docs/android.md](docs/android.md).
 
+## v25.2.0-series-folders.27 (2026-11-21)
+
+Commit `e51cd22`. Fewer browser windows, in the desktop app and command line.
+
+- **joilmang.com** loads in a hidden browser, with no window. A headless
+  browser now passes its Vercel check by itself.
+- **Hidden windows**: a site that needs a window opens it off the screen. It
+  comes on screen, with the alert, only when the page hasn't loaded after 10
+  seconds (a check waiting for you). A window you asked for (*Show the
+  browser window*, `--browser-visible`) shows as before.
+- **Saved browser profile**: the browser keeps its profile between runs, in
+  the cache folder under `manga-downloader/browser`, so a check passed once
+  is skipped until it expires (joilmang: about an hour). Up to 4 programs
+  running at once each get their own.
+- The Chrome flag `--disable-blink-features=AutomationControlled` stays:
+  without it joilmang failed its check in every test.
+- Tested on a Windows PC with a test build of the same changes: joilmang
+  chapter 1 (16 JPEG pages) passed headless with an empty profile, in an
+  off-screen window, and, with a kept profile, three later headless runs over
+  20 minutes skipped the check. Build 27 itself has not been run there yet.
+
 ## v25.2.0-series-folders.26 (2026-11-21)
 
 Commit `0dff8c8`, on top of builds 24 (download missing, restart) and 25
