@@ -6,5 +6,10 @@
   "all": "Todos",
   "none": "Ninguno",
   "adultTitle": "[Título para adultos]",
-  "adultReveal": "Título para adultos: haz clic para mostrarlo"
+  "adultReveal": "Título para adultos: haz clic para mostrarlo",
+  "vpn": {
+    "badge": "¿VPN?",
+    "region": "Puede que este sitio necesite una VPN: respondió que no está disponible en tu país o región.",
+    "dns": "Puede que este sitio necesite una VPN: su dirección no se resolvió, o se resolvió a una dirección bloqueada, que es una de las formas en que las redes bloquean sitios."
+  }
 }

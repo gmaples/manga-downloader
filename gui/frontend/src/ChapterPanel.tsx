@@ -14,6 +14,7 @@ import { extendsSpan, moveActive, pickable, spanIndices } from './listKeys';
 import { hostOf } from './run';
 import type { Chapter, ChapterMark, State } from './types';
 import { useVirtualList } from './virtual';
+import { VpnHint } from './VpnHint';
 import {
   chapterSpan,
   groupChapters,
@@ -118,7 +119,11 @@ function FailedState({ state, onRetry }: { state: State; onRetry: () => void }) 
       <p className="error-text" role="alert">
         {say(t, state.loadErrorMsg, state.loadError)}
       </p>
-      {host !== '' && <p className="muted mono small">{state.url}</p>}
+      {host !== '' && (
+        <p className="muted mono small">
+          {state.url} <VpnHint reason={state.vpn} />
+        </p>
+      )}
       <p className="muted">
         <T k="chapters.failed.hint" />
       </p>
@@ -374,6 +379,7 @@ function ChapterList({
             {host !== '' && (
               <>
                 <span className="host">{host}</span>
+                <VpnHint reason={state.vpn} />
                 <span className="dot" aria-hidden="true">
                   ·
                 </span>
