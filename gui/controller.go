@@ -294,6 +294,10 @@ type Controller struct {
 	// it's saved, "" for nowhere (see history.go)
 	history     []HistoryEntry
 	historyPath string
+	// histBase is the history as history.txt had it at the load or the
+	// last save, which a save tells this copy's changes from by (see
+	// mergeHistory)
+	histBase []HistoryEntry
 	// histSave serialises the saves of history; histKick asks the saver
 	// goroutine for one, nil when there's no saver
 	histSave sync.Mutex
@@ -2378,6 +2382,16 @@ func (e events) Skipped(ch *grabber.Chapter) {
 		g.endRow(ch, JobSkipped, msg("job.reason.skipped", nil))
 	}
 	c.appendMsgLocked(LogWarn, msg("log.skipping", map[string]any{"label": g.releaseLabel(ch)}))
+	c.mu.Unlock()
+	c.emit()
+}
+
+// Waiting is a chapter waiting for another copy of the program, which is
+// downloading the same file: only the log says so, the row stays as it is
+func (e events) Waiting(ch *grabber.Chapter, name string) {
+	c, g := e.c, e.g
+	c.mu.Lock()
+	c.appendMsgLocked(LogInfo, msg("log.waiting", map[string]any{"label": g.releaseLabel(ch), "name": name}))
 	c.mu.Unlock()
 	c.emit()
 }

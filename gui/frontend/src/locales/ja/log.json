@@ -34,6 +34,7 @@
   "cancelling": "キャンセル中: ダウンロード中の話は完了させ、新しい話は開始しません",
   "errorFetching": "{{label}}の取得エラー: {{reason}}",
   "exists": "{{name}}をスキップ: フォルダーにすでにあります",
+  "waiting": "{{label}}を待機中: アプリの別のコピーが{{name}}をダウンロードしています",
   "skipping": "{{label}}をスキップ: --skip-pagesですべてのページが除外されています",
   "errorFilename": "{{label}}のファイル名エラー: {{reason}}",
   "errorPage": "{{label}}のページ{{page}}のダウンロードエラー: {{reason}}",
