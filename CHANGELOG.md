@@ -19,6 +19,21 @@ as they are.
 What the fork changes, and why, is described in the README's
 "About this fork" section. Android details are in [docs/android.md](docs/android.md).
 
+## v25.3.0-series-folders.30 (2026-11-21)
+
+Commit `3753bd8`, with build 29 (`54d9b02`) merged in. Two fixes for slow
+downloads that were measured on Greg's PC.
+
+- **A site's saved time comes back down.** `site-rate-limits.txt` held
+  `mangalib.org: 2.25s` from a few 429s a week earlier, so every MangaLib
+  page waited 2.25s whatever the learned level (about 1,600 pages an hour,
+  where single page loads took about 1s). Now, after 5m of downloads from a
+  site with no 429, its time is divided by 1.5 and saved, again after each
+  further 5m, and once it would drop below 1s the line is taken out.
+- **The app's log is saved.** Every log line also goes to `log.txt` next to
+  `gui.json`, with its date and time; past 5 MB at a start it becomes
+  `log-old.txt`. The command line already prints its log to the terminal.
+
 ## v25.3.0-series-folders.29 (2026-11-21)
 
 A small **VPN?** tag in the desktop app next to a site that might need a VPN:
