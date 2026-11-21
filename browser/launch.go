@@ -36,8 +36,6 @@ func launchChrome(abort context.Context, headed bool) (*instance, error) {
 		// (and possibly solved) by the user
 		opts = append(opts, chromedp.Flag("headless", false))
 	}
-	// reduce automation fingerprint: this flag adds navigator.webdriver etc.
-	opts = append(opts, chromedp.Flag("disable-blink-features", "AutomationControlled"))
 	// chromedp's defaults pass --enable-automation (another loud automation
 	// signal, plus the "Chrome is being controlled" infobar); strict cloudflare
 	// configs (e.g. sakuramangas) loop the challenge forever when they see it
