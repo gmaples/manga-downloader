@@ -975,7 +975,7 @@ environment variables.
 | [yurimoonsub.blogspot.com](https://yurimoonsub.blogspot.com) | Arabic, mostly NSFW | 2026-11-02 |
 | [yurionair.top](https://yurionair.top) | Yuri Verso, Portuguese, yuri, some NSFW | 2026-10-29 |
 | [zenithscans.com](https://zenithscans.com) | Turkish | 2026-11-09 |
-| [zenko.online](https://zenko.online) | Zenko, Ukrainian | — |
+| [zenko.online](https://zenko.online) | Zenko, Ukrainian | 2026-11-20 |
 | [zinmanga.net](https://www.zinmanga.net) | ZinManga, English | 2026-10-29 |
 | [zonatmo.org](https://zonatmo.org) | TuMangaOnline, former zonatmo.com | 2026-10-29 |
 

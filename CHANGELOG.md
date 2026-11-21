@@ -17,6 +17,22 @@ as they are.
 What the fork changes, and why, is described in the README's
 "About this fork" section. Android details are in [docs/android.md](docs/android.md).
 
+## v25.2.0-series-folders.16 (2026-11-20)
+
+Commit `8a64451`. Adds zenko.online, on the Windows desktop app and command
+line.
+
+- **zenko.online** (Zenko, Ukrainian): series links and reader links both
+  work, for example `https://zenko.online/titles/1225/20377` (the second
+  number is a chapter id; the whole series loads). Title, chapters and pages
+  come from the site's own open API (`api.zenko.online`), with images from
+  `storage.zenko.online`, so no browser opens. The release's group is the
+  site's publisher. Untitled chapters are named "Chapter N".
+- Tested on a Windows PC with this build's command line: chapter 1 of
+  Доктор Стоун from the reader link (45 pages) and chapters 2-3 from the
+  series link (24 and 21 pages), all JPEG, no browser opened. Not yet
+  checked: the desktop app on zenko, paid or unpublished chapters.
+
 ## v25.2.0-series-folders.15 (2026-11-20)
 
 Commits `0722a60` and `845b1b8`. Adds remanga.org, on the Windows desktop app
