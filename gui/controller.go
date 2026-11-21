@@ -2382,6 +2382,16 @@ func (e events) Skipped(ch *grabber.Chapter) {
 	c.emit()
 }
 
+// Waiting is a chapter waiting for another copy of the program, which is
+// downloading the same file: only the log says so, the row stays as it is
+func (e events) Waiting(ch *grabber.Chapter, name string) {
+	c, g := e.c, e.g
+	c.mu.Lock()
+	c.appendMsgLocked(LogInfo, msg("log.waiting", map[string]any{"label": g.releaseLabel(ch), "name": name}))
+	c.mu.Unlock()
+	c.emit()
+}
+
 // Exists is a chapter left out because its file is already in the output folder.
 // Its row is the one Fetching made, or the fetched chapter's (after the
 // re-check), or a new one when the check ran before any fetch.
