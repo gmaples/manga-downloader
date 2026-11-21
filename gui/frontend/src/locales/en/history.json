@@ -3,9 +3,11 @@
   "title": "Past series",
   "close": "Close history",
   "empty": "No series yet. The series you load show up here.",
-  "hint": "Click a series to open its page in your browser, or its site to open the site. The last 100 are kept.",
+  "hint": "Click a series to open its page in your browser, or its site to open the site. Load puts it in the URL box and loads its chapters. The last 100 are kept.",
   "clear": "Clear",
   "counts": "{{done}} saved, {{todo}} to do",
   "dropdown": "Past series",
-  "noMatch": "No past series match."
+  "noMatch": "No past series match.",
+  "load": "Load",
+  "loadLabel": "Put this series in the URL box and load its chapters"
 }

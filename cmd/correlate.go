@@ -14,22 +14,45 @@ type line struct {
 	warn bool
 }
 
-// correlationLines are what the command prints about the output folder's
-// duplicates (see core.Correlation): a line per file moved to the trash,
-// one per file that couldn't be, and a total
+// compareEvery is how many files read between two "compared" lines
+const compareEvery = 50
+
+// progressLines are what the command prints as the output folder's
+// correlation goes (see core.CorrelateProgress): the files it looks at, the
+// files read now and then, and each file moved to the trash (or not) as its
+// batch is done
+func progressLines(p core.CorrelateProgress) []line {
+	switch p.Step {
+	case core.CorrelateListed:
+		if p.Total == 0 {
+			return nil
+		}
+		return []line{{text: fmt.Sprintf("- looking for duplicates among %d %s", p.Total, plural(p.Total, "file", "files"))}}
+	case core.CorrelateComparing:
+		if p.Done%compareEvery != 0 && p.Done != p.Total {
+			return nil
+		}
+		return []line{{text: fmt.Sprintf("- compared %d of %d files that share a size", p.Done, p.Total)}}
+	}
+	var out []line
+	for _, d := range p.Moved {
+		if d.Err != nil {
+			out = append(out, line{text: fmt.Sprintf("- couldn't remove duplicate %s (%s): %s", d.Name, why(d), d.Err), warn: true})
+		} else {
+			out = append(out, line{text: "- removed duplicate " + d.Name + ": " + why(d)})
+		}
+	}
+	out = append(out, line{text: fmt.Sprintf("- moved %d of %d duplicates to the trash", p.Done, p.Total)})
+	return out
+}
+
+// correlationLines are the total the command prints once the output folder's
+// correlation is done (see core.Correlation), none when it moved nothing
 func correlationLines(r *core.Correlation) []line {
 	if r == nil || len(r.Removed)+len(r.Failed) == 0 {
 		return nil
 	}
-	var out []line
-	for _, d := range r.Removed {
-		out = append(out, line{text: "- removed duplicate " + d.Name + ": " + why(d)})
-	}
-	for _, d := range r.Failed {
-		out = append(out, line{text: fmt.Sprintf("- couldn't remove duplicate %s (%s): %s", d.Name, why(d), d.Err), warn: true})
-	}
-	out = append(out, line{text: fmt.Sprintf("- moved %d duplicate %s (%s) to the trash", len(r.Removed), plural(len(r.Removed), "file", "files"), Bytes(r.RemovedBytes))})
-	return out
+	return []line{{text: fmt.Sprintf("- moved %d duplicate %s (%s) to the trash", len(r.Removed), plural(len(r.Removed), "file", "files"), Bytes(r.RemovedBytes))}}
 }
 
 // why says what a duplicate was matched to

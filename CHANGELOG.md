@@ -19,6 +19,26 @@ as they are.
 What the fork changes, and why, is described in the README's
 "About this fork" section. Android details are in [docs/android.md](docs/android.md).
 
+## v25.3.0-series-folders.35 (2026-11-21)
+
+Build 34 with live updates on everything a download does. In build 34 the
+first app run on the Gintama folder spent 3 minutes 7 seconds moving 433
+duplicates to the Recycle Bin, one call per file, and showed nothing until it
+was done, so it looked as if nothing was downloading.
+
+- **Duplicates go to the Recycle Bin in batches of 100**, one Windows call per
+  batch instead of one per file.
+- **The folder tidy-up shows as it goes**: the Activity header says which step
+  it's on (looking at N files, comparing X of Y, moving X of Y to the Recycle
+  Bin), and the log names each file moved as its batch is done. The command
+  line prints the same.
+- **More of the download in the log**: each chapter as it starts downloading
+  (with its page count), each page that needed another server, and each page
+  retried, with the wait and the try number. The command line's plain output
+  prints each file saved.
+- **History**: each series in the past-series list has a *Load* button that
+  puts it in the URL box and loads it.
+
 ## v25.3.0-series-folders.34 (2026-11-21)
 
 No more downloads of chapters that are already in the folder under another

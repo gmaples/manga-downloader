@@ -60,6 +60,8 @@ func (r *recorder) Exists(l grabber.Filterable, name string) {
 }
 func (r *recorder) Waiting(c *grabber.Chapter, name string) { r.add("waiting %g %s", c.Number, name) }
 
+func (r *recorder) Correlating(CorrelateProgress) {}
+
 // Correlated is recorded only when it removed something, so the runs with
 // nothing to correlate read as before
 func (r *recorder) Correlated(c *Correlation) {

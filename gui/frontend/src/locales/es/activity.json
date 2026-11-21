@@ -42,5 +42,11 @@
   "cleanup_one": "{{count}} archivo duplicado ({{size}}) movido a la papelera de reciclaje",
   "cleanup_other": "{{count}} archivos duplicados ({{size}}) movidos a la papelera de reciclaje",
   "cleanupFailed_one": "{{count}} duplicado no se pudo mover: mira el registro",
-  "cleanupFailed_other": "{{count}} duplicados no se pudieron mover: mira el registro"
+  "cleanupFailed_other": "{{count}} duplicados no se pudieron mover: mira el registro",
+  "status": {
+    "listed_one": "Buscando duplicados entre {{count}} archivo",
+    "listed_other": "Buscando duplicados entre {{count}} archivos",
+    "comparing": "Buscando duplicados: {{done}} de {{total}} archivos comparados",
+    "moving": "Moviendo duplicados a la papelera de reciclaje: {{done}} de {{total}}"
+  }
 }

@@ -169,7 +169,11 @@ button, *Load* and *Settings*. (To open on the full window instead, turn off
    "Skipping existing files" section has the details.
 
    The Activity tab shows only what is happening: a row for each chapter
-   being fetched, downloaded or packed now. Each download's header counts the
+   being fetched, downloaded or packed now. While the folder is tidied, the
+   header says which step it's on (looking at the files, comparing them,
+   moving duplicates to the Recycle Bin, with counts that move), and the log
+   names each file as it goes. The log also says when each chapter starts
+   downloading, and each page that needed another server or another try. Each download's header counts the
    rest (downloading, queued, saved, already in the folder, failed) and how
    many duplicates went to the Recycle Bin when it started; the chapter list's
    marks say what became of each chapter, and failed ones are downloaded again
@@ -241,7 +245,8 @@ move through it, Enter (or a click) puts that series in the box and loads it,
 and Esc closes it. A new link can still be typed or pasted as before.
 
 The clock icon beside the gear opens the list of past series. A series opens
-its page in your browser, and its site the site's home page. Clear there
+its page in your browser, and its site the site's home page; *Load* beside it
+puts the series in the URL box and loads it, as the drop-down does. Clear there
 empties the list.
 
 A title the site rates 18+ (zenko.online gives a rating) shows as

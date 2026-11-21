@@ -128,3 +128,14 @@ describe('the last session', () => {
     expect(await api.history()).toEqual([]);
   });
 });
+
+describe('the history pop-up\'s Load button', () => {
+  it('is offered beside a series when the window can load one, and only then', () => {
+    const item = { title: 'Vinland Saga', url: 'https://example.com/v', site: 'https://example.com/', adult: false, when: 0, done: 1, todo: 0 };
+    const withLoad = render(createElement(HistoryRow, { item, onOpenURL: () => undefined, onLoadURL: () => undefined }));
+    expect(withLoad).toContain('history-load');
+    expect(withLoad).toContain('>Load<');
+    const without = render(createElement(HistoryRow, { item, onOpenURL: () => undefined }));
+    expect(without).not.toContain('history-load');
+  });
+});

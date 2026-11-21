@@ -50,6 +50,9 @@ type Events interface {
 	// followed by Exists when that copy saved it (with SkipExisting), or by
 	// the chapter's download.
 	Waiting(c *grabber.Chapter, name string)
+	// Correlating reports each step of the correlation of the output folder
+	// as it goes (see Series.Correlate), before Correlated
+	Correlating(p CorrelateProgress)
 	// Correlated reports what the correlation of the output folder found and
 	// did, once, before any chapter is fetched: with SkipExisting, when the
 	// chapters are packed one file each (not bundle, not volumes). A chapter
@@ -124,6 +127,7 @@ func (NoEvents) FetchFailed(grabber.Filterable, error)        {}
 func (NoEvents) Skipped(*grabber.Chapter)                     {}
 func (NoEvents) Exists(grabber.Filterable, string)            {}
 func (NoEvents) Waiting(*grabber.Chapter, string)             {}
+func (NoEvents) Correlating(CorrelateProgress)                {}
 func (NoEvents) Correlated(*Correlation)                      {}
 func (NoEvents) FilenameFailed(*grabber.Chapter, error)       {}
 func (NoEvents) Fetching(grabber.Filterable)                  {}
@@ -392,7 +396,7 @@ func (s *Series) Download(ctx context.Context, chapters grabber.Filterables, ski
 		if dir == "" {
 			dir = "."
 		}
-		r, err := s.Correlate(dir)
+		r, err := s.Correlate(dir, ev.Correlating)
 		if err != nil {
 			notice.Warn("looking for duplicates in %s: %s", dir, err)
 		}

@@ -322,6 +322,9 @@ type GroupDTO struct {
 	// Cleanup is what the correlation of the group's folder did when its
 	// download started, nil when it didn't run
 	Cleanup *CleanupDTO `json:"cleanup"`
+	// Status is what the group is doing that no row shows (looking for
+	// duplicates, moving them), nil when nothing
+	Status *Message `json:"status"`
 }
 
 // CleanupDTO is the duplicate files a group's download moved to the Recycle
@@ -1047,6 +1050,7 @@ func groupDTO(g GroupState) GroupDTO {
 		Adult:      g.Adult,
 		Unfinished: g.Unfinished,
 	}
+	out.Status = g.Status
 	if g.Cleanup != nil {
 		out.Cleanup = &CleanupDTO{Removed: g.Cleanup.Removed, Bytes: g.Cleanup.Bytes, Failed: g.Cleanup.Failed}
 	}

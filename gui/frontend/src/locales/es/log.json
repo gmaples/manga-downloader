@@ -48,5 +48,9 @@
   "removedNumber": "{{name}} movido a la papelera de reciclaje: el capítulo {{number}} ya es {{kept}}",
   "removeFailed": "no se pudo mover el duplicado {{name}} a la papelera de reciclaje: {{reason}}",
   "removed_one": "{{count}} archivo duplicado ({{size}}) de {{folder}} movido a la papelera de reciclaje",
-  "removed_other": "{{count}} archivos duplicados ({{size}}) de {{folder}} movidos a la papelera de reciclaje"
+  "removed_other": "{{count}} archivos duplicados ({{size}}) de {{folder}} movidos a la papelera de reciclaje",
+  "started": "descargando {{label}} ({{pages}} páginas)",
+  "correlating_one": "buscando duplicados entre {{count}} archivo de la carpeta",
+  "correlating_other": "buscando duplicados entre {{count}} archivos de la carpeta",
+  "compared": "buscando duplicados: {{done}} de {{total}} archivos del mismo tamaño comparados"
 }

@@ -2,7 +2,8 @@
 // press of Download), in the order they started, under a header with the
 // series, its own Cancel and its counts (downloading, queued, saved, already
 // in the folder, failed, and the duplicates moved to the Recycle Bin when it
-// started). Each has its summary once it ended, then one row per chapter
+// started, and while it runs, what it is doing: looking for duplicates and
+// moving them, with their counts). Each has its summary once it ended, then one row per chapter
 // that is happening now (or the single bundle job): a chapter that ended or
 // waits its turn has no row, and the chapter list's marks say what became of
 // each. Rows are windowed like the chapter
@@ -167,11 +168,17 @@ function GroupCountsLine({ group }: { group: Group }) {
     parts.unshift(group.running ? t('activity.thisRun') : group.restored ? t('activity.restored') : t('activity.lastRun'));
   }
   const cleanup = group.cleanup;
-  if (parts.length === 0 && (cleanup == null || cleanup.removed + cleanup.failed === 0)) {
+  const status = group.status;
+  if (parts.length === 0 && status == null && (cleanup == null || cleanup.removed + cleanup.failed === 0)) {
     return null;
   }
   return (
     <div className="run-group-counts small">
+      {status != null && (
+        <p className="run-group-status" role="status">
+          <Spinner size={12} /> {say(t, status, status.text)}
+        </p>
+      )}
       {parts.length > 0 && <p className="muted">{parts.join(' · ')}</p>}
       {cleanup != null && cleanup.removed > 0 && (
         <p className="muted">{t('activity.cleanup', { count: cleanup.removed, size: sizeText(cleanup.bytes) })}</p>

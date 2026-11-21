@@ -319,6 +319,10 @@ under another name:
   macOS and Linux a file on another drive than the trash stays and is reported.
   A file another copy of the program is writing (with a `.downloading` file
   next to it) is left alone.
+- It prints what it's doing as it goes: how many files it's looking at, how
+  many of the files that share a size it has compared (every 50), each file
+  moved as its batch of 100 reaches the trash, and how many of the total have
+  gone. A Windows batch is one Recycle Bin call.
 - A chapter whose number is in the folder is then not downloaded again, and
   of several releases of one missing number only the first listed is
   downloaded.

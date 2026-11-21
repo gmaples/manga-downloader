@@ -42,5 +42,11 @@
   "cleanup_one": "{{count}} fitxer duplicat ({{size}}) s'ha mogut a la paperera de reciclatge",
   "cleanup_other": "{{count}} fitxers duplicats ({{size}}) s'han mogut a la paperera de reciclatge",
   "cleanupFailed_one": "{{count}} duplicat no s'ha pogut moure: mira el registre",
-  "cleanupFailed_other": "{{count}} duplicats no s'han pogut moure: mira el registre"
+  "cleanupFailed_other": "{{count}} duplicats no s'han pogut moure: mira el registre",
+  "status": {
+    "listed_one": "Es busquen duplicats entre {{count}} fitxer",
+    "listed_other": "Es busquen duplicats entre {{count}} fitxers",
+    "comparing": "Es busquen duplicats: {{done}} de {{total}} fitxers comparats",
+    "moving": "Es mouen duplicats a la paperera de reciclatge: {{done}} de {{total}}"
+  }
 }

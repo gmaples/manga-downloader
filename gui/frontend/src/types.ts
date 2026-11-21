@@ -162,6 +162,8 @@ export interface Group {
   unfinished?: number;
   /** The duplicate files its download moved to the Recycle Bin when it started; null when that didn't run */
   cleanup?: Cleanup | null;
+  /** What it is doing that no row shows (looking for duplicates, moving them); null when nothing */
+  status?: Message | null;
 }
 
 /** What the correlation of a group's folder did when its download started */
