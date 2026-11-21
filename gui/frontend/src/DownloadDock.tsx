@@ -6,6 +6,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { T as Translator } from './i18n';
 import { T, useI18n } from './i18n/react';
+import { VpnHint } from './VpnHint';
 import { DownloadIcon, Spinner, XIcon } from './icons';
 import { useMask } from './Masked';
 import { downloadBlocker, downloadLabel, overallProgress, runningProgress } from './run';
@@ -197,6 +198,7 @@ function SiteBars({ sites }: { sites: SiteBar[] }) {
             <div className="dock-line">
               <span className="site-name" title={s.title === '' ? s.site : `${s.site} · ${s.title}${s.tags}`}>
                 <strong>{s.site}</strong>
+                <VpnHint reason={s.vpn} />
                 {s.title !== '' && (
                   <span className="site-chapter">
                     {' · '}

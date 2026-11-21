@@ -237,6 +237,15 @@ When a site struggles (a 429, a 502, 503 or 504, a Cloudflare 520-524, a timeout
 
 The level is shared by every download from the site that runs at once (several groups of one site share one level), and it's saved in `site-parallel.txt`, next to `site-rate-limits.txt`, as one `site: number` line per site (for example `mangadex.org: 8`). It's written when the downloads end and right after a cut, and only for a site whose level moved. The next run starts from it. The file is plain text: change a number to make that site start there, or remove its line to have it learned again.
 
+### A site that might need a VPN
+
+A small **VPN?** tag appears next to a site's name (on its download bar, by the loaded series, and under a load that failed) when the site answered in a way that suggests it blocks the network you're on. Hover it to see why. It only ever says a VPN *might* help:
+
+- the site answered 451, or a 403 page saying it isn't available in your country or region;
+- the site's address didn't resolve, or resolved to an address such as 127.0.0.1, which is one way networks block sites.
+
+Ordinary failures (a 400, a plain 403, a 404, a 429, a 5xx, a timeout) never show it, since a busy or broken site gives those too. The tag goes away once a chapter of the site downloads or its series loads. The app doesn't connect through a VPN or a proxy itself. This is an app feature; the command line prints the error as before.
+
 ## Settings and the update check
 
 The gear icon (below the URL box on the start screen, in the header of the full

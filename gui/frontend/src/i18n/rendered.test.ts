@@ -18,6 +18,7 @@ import { SettingsDialog } from '../SettingsDialog';
 import { SourceBar } from '../SourceBar';
 import type { Chapter, LogLine, State } from '../types';
 import { UpdateDialog } from '../UpdateDialog';
+import { VpnHint } from '../VpnHint';
 import { CATALOG, createT, LANG_INFO, say, type Catalog } from './index';
 import { I18nProvider } from './react';
 
@@ -117,6 +118,9 @@ interface Screen {
 /** Each component the window renders, with the props App gives it. */
 function components({ state, chapters, selected, log }: Snapshot): Screen[] {
   const list: Screen[] = [
+    // the mock's sites never look blocked, so both reasons are rendered here
+    { file: 'VpnHint.tsx', name: 'VpnHint region', element: createElement(VpnHint, { reason: 'region' }) },
+    { file: 'VpnHint.tsx', name: 'VpnHint dns', element: createElement(VpnHint, { reason: 'dns' }) },
     { file: 'App.tsx', name: 'App', element: createElement(App, { api: {} as Api, initial: state }) },
     {
       file: 'SourceBar.tsx',

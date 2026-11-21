@@ -6,5 +6,10 @@
   "all": "All",
   "none": "None",
   "adultTitle": "[Adult Title]",
-  "adultReveal": "Adult title: click to show it"
+  "adultReveal": "Adult title: click to show it",
+  "vpn": {
+    "badge": "VPN?",
+    "region": "This site might need a VPN: it answered that it isn't available in your country or region.",
+    "dns": "This site might need a VPN: its address didn't resolve, or resolved to a blocked address, which is one way networks block sites."
+  }
 }

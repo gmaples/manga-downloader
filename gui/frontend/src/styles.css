@@ -2925,3 +2925,20 @@ a.version:hover {
   padding: 4px 6px;
   border-top: 1px solid var(--border);
 }
+
+/* ---------- "VPN?" hint by a site's name ---------- */
+
+.vpn-hint {
+  display: inline-block;
+  flex: none;
+  margin-left: 6px;
+  padding: 0 5px;
+  border: 1px solid var(--warning);
+  border-radius: 4px;
+  color: var(--warning);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 15px;
+  vertical-align: 1px;
+  cursor: help;
+}

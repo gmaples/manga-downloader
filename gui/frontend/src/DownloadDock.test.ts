@@ -87,6 +87,7 @@ describe('DownloadDock', () => {
       total: 10,
       until: 0,
       parallel: 8,
+      vpn: '',
       ...over,
     });
     const html = await render('en', {
@@ -117,6 +118,18 @@ describe('DownloadDock', () => {
     );
     expect(await render('ja', { running: true, groups: [one], sites: [site({})] })).toContain('同時8件');
     expect(await render('en', { running: true, groups: [one], sites: [] })).not.toContain('site-bars');
+  });
+
+  it('tags a site that might need a VPN by its name, and no other', async () => {
+    const one = group(1, 4);
+    const bar = (site: string, vpn: string): SiteBar => ({ site, title: '', tags: '', done: 0, total: 0, until: 0, parallel: 4, vpn });
+    const html = await render('en', {
+      running: true,
+      groups: [one],
+      sites: [bar('remanga.org', 'region'), bar('mangalib.org', '')],
+    });
+    expect(html.match(/class="vpn-hint"/g)).toHaveLength(1);
+    expect(html).toMatch(/<strong>remanga\.org<\/strong><span class="vpn-hint"[^>]*title="This site might need a VPN/);
   });
 
   it('keeps Download under the progress while groups run', async () => {

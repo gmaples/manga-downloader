@@ -138,6 +138,8 @@ export interface SiteBar {
   total: number;
   until: number;
   parallel: number;
+  /** Why a VPN might help with the site ("region", "dns"), "" when nothing says so */
+  vpn: string;
 }
 
 export interface Group {
@@ -183,6 +185,8 @@ export interface State {
   loadError: string;
   /** loadError as a message, when the GUI wrote it */
   loadErrorMsg?: Message;
+  /** Why a VPN might help with the site of url ("region", "dns"), "" when nothing says so */
+  vpn: string;
   title: string;
   /** The site rates the loaded series 18+: its title is masked until clicked */
   adult: boolean;
