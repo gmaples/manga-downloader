@@ -20,6 +20,7 @@ import { Mascot } from './Mascot';
 import { LogDrawer, StatusBar } from './LogPanel';
 import { createOptionsWriter } from './optionsWriter';
 import { OptionsPanel } from './OptionsPanel';
+import { CHAPTERS_MIN, forwardWheel, LOG_MIN, LOG_ROOM, SIDE_MIN, Splitter } from './panes';
 import { SettingsDialog } from './SettingsDialog';
 import { SourceBar } from './SourceBar';
 import { isMac, shouldToggleSettings } from './settingsShortcut';
@@ -53,6 +54,11 @@ export function App({ api, initial }: { api: Api; initial?: State }) {
   const [revealing, setRevealing] = useState(false);
   const frame = useRef<HTMLDivElement>(null);
   const flipFrom = useRef<Map<string, Box> | null>(null);
+  // the pane sizes the user dragged this session; until then, the saved ones (prefs)
+  const [sideDrag, setSideDrag] = useState<number>();
+  const [logDrag, setLogDrag] = useState<number>();
+  const workspace = useRef<HTMLElement>(null);
+  const side = useRef<HTMLElement>(null);
   // options are written one at a time, each patch over the last set sent
   const [optionsWriter] = useState(() =>
     createOptionsWriter((options, load) =>
@@ -79,6 +85,12 @@ export function App({ api, initial }: { api: Api; initial?: State }) {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  // the wheel scrolls the pane under the pointer, wherever it is over it (panes.tsx)
+  useEffect(() => {
+    window.addEventListener('wheel', forwardWheel, { passive: false });
+    return () => window.removeEventListener('wheel', forwardWheel);
   }, []);
 
   // the browser alert must not sit under the dialog's top layer, so it closes the dialog
@@ -188,6 +200,20 @@ export function App({ api, initial }: { api: Api; initial?: State }) {
       setOptionError(errorMessage(e, t));
     });
   };
+  const sideWidth = sideDrag ?? state.prefs.sideWidth;
+  const logHeight = logDrag ?? state.prefs.logHeight;
+  const savePanes = (sideWidth: number | undefined, logHeight: number | undefined) => {
+    api.setPaneSizes(sideWidth ?? 0, logHeight ?? 0).catch((e: unknown) => setOptionError(errorMessage(e, t)));
+  };
+  // the side panel keeps SIDE_MIN, and leaves the chapter list CHAPTERS_MIN; the workspace's padding isn't room
+  const sideLimits = (): [number, number] => {
+    const ws = workspace.current;
+    if (ws === null) return [SIDE_MIN, SIDE_MIN];
+    const cs = getComputedStyle(ws);
+    const inner = ws.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    return [SIDE_MIN, inner - CHAPTERS_MIN];
+  };
+
   // the failures of every group: an ended one's summary, else its failed rows so far
   const failed = state.groups.reduce(
     (n, g) => n + (g.summary ? g.summary.failures.length : tally(g.jobs).failed),
@@ -213,7 +239,11 @@ export function App({ api, initial }: { api: Api; initial?: State }) {
       />
 
       {view === 'full' && (
-        <main className="workspace">
+        <main
+          className="workspace"
+          ref={workspace}
+          style={sideWidth ? ({ '--side-width': `${sideWidth}px` } as React.CSSProperties) : undefined}
+        >
           <ChapterPanel
             state={state}
             chapters={chapters}
@@ -228,7 +258,17 @@ export function App({ api, initial }: { api: Api; initial?: State }) {
             onError={setActionError}
           />
 
-          <aside className="side" aria-label={t('app.download')}>
+          <Splitter
+            orientation="vertical"
+            className="splitter"
+            label={t('app.resizeSide')}
+            size={() => side.current?.offsetWidth ?? SIDE_MIN}
+            limits={sideLimits}
+            onResize={setSideDrag}
+            onCommit={(px) => savePanes(px, logHeight)}
+          />
+
+          <aside className="side" ref={side} aria-label={t('app.download')}>
             <div className="tabs" role="tablist" aria-label={t('app.tabs.label')}>
               <TabButton id="options" tab={tab} onSelect={setTab}>
                 <SlidersIcon size={15} /> {t('app.tabs.options')}
@@ -318,7 +358,16 @@ export function App({ api, initial }: { api: Api; initial?: State }) {
           onError={setOptionError}
         />
       )}
-      {logOpen && <LogDrawer log={log} onClose={() => setLogOpen(false)} />}
+      {logOpen && (
+        <LogDrawer
+          log={log}
+          onClose={() => setLogOpen(false)}
+          height={logHeight}
+          limits={() => [LOG_MIN, Math.max(LOG_MIN, window.innerHeight - LOG_ROOM)]}
+          onResize={setLogDrag}
+          onCommit={(px) => savePanes(sideWidth, px)}
+        />
+      )}
       {state.browserAlert !== '' && (
         <BrowserAlert
           message={say(t, state.browserAlertMsg, state.browserAlert)}

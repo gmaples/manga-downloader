@@ -6,6 +6,7 @@
     "options": "オプション",
     "activity": "アクティビティ"
   },
+  "resizeSide": "サイドパネルのサイズを変更",
   "download": "ダウンロード",
   "running": "実行中",
   "finished": "完了"

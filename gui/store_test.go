@@ -72,6 +72,19 @@ func TestLoadPrefsCheckUpdatesDefaultsToTrue(t *testing.T) {
 }
 
 // a gui.json from before the simple view opens on it; an explicit false stays off
+func TestLoadPrefsPaneSizes(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "gui.json")
+	if got := loadPrefs(path); got.SideWidth != 0 || got.LogHeight != 0 {
+		t.Errorf("a first run has pane sizes %d, %d, want the defaults (0)", got.SideWidth, got.LogHeight)
+	}
+	if err := os.WriteFile(path, []byte(`{"sideWidth":420,"logHeight":-3}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if got := loadPrefs(path); got.SideWidth != 420 || got.LogHeight != 0 {
+		t.Errorf("loaded pane sizes %d, %d, want 420, 0", got.SideWidth, got.LogHeight)
+	}
+}
+
 func TestLoadPrefsSimpleStartDefaultsToTrue(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "gui.json")
 	if err := os.WriteFile(path, []byte(`{"format":"cbz","checkUpdates":false}`), 0600); err != nil {

@@ -553,20 +553,64 @@ code,
 
 /* ---------- workspace ---------- */
 
+/* the side panel is as wide as the user dragged it (--side-width, set by App),
+   kept at least 280px and leaving the chapter list 372px with the splitter
+   (CHAPTERS_MIN and SIDE_MIN in panes.tsx) */
 .workspace {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 340px;
-  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) 12px clamp(280px, var(--side-width, 340px), 100% - 372px);
   padding: 12px 16px;
   min-height: 0;
 }
 
 @media (min-width: 1280px) {
   .workspace {
-    grid-template-columns: minmax(0, 1fr) 380px;
-    gap: 16px;
+    grid-template-columns: minmax(0, 1fr) 16px clamp(280px, var(--side-width, 380px), 100% - 372px);
     padding: 16px 20px;
   }
+}
+
+/* the gap between the panes is the splitter: a line shows on hover, focus and drag */
+.splitter {
+  position: relative;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.splitter::after {
+  content: '';
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  left: 50%;
+  width: 2px;
+  margin-left: -1px;
+  border-radius: 1px;
+  background: transparent;
+  transition: background 0.15s var(--ease);
+}
+
+.splitter:hover::after,
+.splitter:focus-visible::after,
+.resizing-x .splitter::after {
+  background: var(--accent);
+}
+
+.splitter:focus-visible {
+  outline: none;
+}
+
+/* while a splitter is dragged, the cursor stays and nothing gets selected */
+.resizing-x,
+.resizing-x * {
+  cursor: col-resize !important;
+  user-select: none;
+}
+
+.resizing-y,
+.resizing-y * {
+  cursor: row-resize !important;
+  user-select: none;
 }
 
 .panel,
@@ -2304,12 +2348,48 @@ a.version:hover {
   z-index: 10;
   display: flex;
   flex-direction: column;
-  height: min(46vh, 380px);
+  /* as tall as the user dragged it (--log-height), leaving room for the source bar (LOG_ROOM in panes.tsx) */
+  height: clamp(120px, var(--log-height, min(46vh, 380px)), 100vh - 160px);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface);
   box-shadow: var(--shadow-lg);
   animation: slide-up 0.22s var(--ease);
+}
+
+/* the drawer's top edge drags its height */
+.log-resize {
+  position: absolute;
+  top: -4px;
+  left: 12px;
+  right: 12px;
+  height: 8px;
+  z-index: 1;
+  cursor: row-resize;
+  touch-action: none;
+}
+
+.log-resize::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 50%;
+  width: 40px;
+  height: 2px;
+  margin-left: -20px;
+  border-radius: 1px;
+  background: transparent;
+  transition: background 0.15s var(--ease);
+}
+
+.log-resize:hover::after,
+.log-resize:focus-visible::after,
+.resizing-y .log-resize::after {
+  background: var(--accent);
+}
+
+.log-resize:focus-visible {
+  outline: none;
 }
 
 .log-head {

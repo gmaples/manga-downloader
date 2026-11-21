@@ -213,6 +213,10 @@ export interface Prefs {
   checkUpdates: boolean;
   /** Open on the simple view (logo and URL box) until a load starts */
   simpleStart: boolean;
+  /** The side panel's width the user dragged it to, in CSS pixels; absent (Go omits 0) keeps the default */
+  sideWidth?: number;
+  /** The log drawer's height the user dragged it to, in CSS pixels; absent keeps the default */
+  logHeight?: number;
 }
 
 /** The Volumes box, used when the options pack as volumes */

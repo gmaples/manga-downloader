@@ -431,6 +431,35 @@ func TestSetSimpleStartIsSavedAndKeepsTheOptions(t *testing.T) {
 	}
 }
 
+func TestSetPaneSizesIsSavedAndKeepsTheOptions(t *testing.T) {
+	a, _, prefs := newTestApp(t, 1)
+	if err := a.ctrl.BeginLoad("https://example.com/manga/test"); err != nil {
+		t.Fatal(err)
+	}
+	o := a.Options()
+	if err := a.SetPaneSizes(420, 300); err != nil {
+		t.Errorf("SetPaneSizes while loading = %v", err)
+	}
+	want := PrefsDTO{CheckUpdates: true, SimpleStart: true, SideWidth: 420, LogHeight: 300}
+	if st := a.State(); st.Prefs != want {
+		t.Errorf("State().Prefs = %+v, want %+v", st.Prefs, want)
+	}
+	if got := loadPrefs(prefs); got != want {
+		t.Errorf("saved prefs %+v, want %+v", got, want)
+	}
+	if got := a.Options(); got != o {
+		t.Errorf("options %+v after SetPaneSizes, want %+v", got, o)
+	}
+
+	// out of range is the default
+	if err := a.SetPaneSizes(-5, maxPaneSize+1); err != nil {
+		t.Fatal(err)
+	}
+	if got := loadPrefs(prefs); got.SideWidth != 0 || got.LogHeight != 0 {
+		t.Errorf("out-of-range sizes saved as %d, %d, want 0, 0", got.SideWidth, got.LogHeight)
+	}
+}
+
 func TestTurningUpdatesOffClearsTheUpdate(t *testing.T) {
 	a, _, _ := newTestApp(t, 1)
 	a.ctrl.update = &Update{Latest: "v9.9.9"}

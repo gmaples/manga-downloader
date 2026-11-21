@@ -668,11 +668,15 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
       options.packAs === 'chapters' || options.packAs === 'parts' ? templateWarning(options.filenameTemplate) : '',
     // the mock has no series folders: the dock falls back to outputDir
     destination: '',
-    // the wire omits uiLanguage when it follows the system, as gui.json does
-    prefs:
-      prefs.uiLanguage === ''
-        ? { checkUpdates: prefs.checkUpdates, simpleStart: prefs.simpleStart }
-        : { ...prefs },
+    // the wire omits uiLanguage when it follows the system, and a pane size
+    // left at its default (0), as gui.json does
+    prefs: {
+      checkUpdates: prefs.checkUpdates,
+      simpleStart: prefs.simpleStart,
+      ...(prefs.uiLanguage !== '' && { uiLanguage: prefs.uiLanguage }),
+      ...(prefs.sideWidth ? { sideWidth: prefs.sideWidth } : {}),
+      ...(prefs.logHeight ? { logHeight: prefs.logHeight } : {}),
+    },
   });
   const push = () => stateBus.emit(snapshot());
   const copySummary = (s: Summary | null): Summary | null => (s ? { ...s, failures: [...s.failures] } : null);
@@ -1487,6 +1491,11 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
     },
     async setSimpleStart(on) {
       prefs.simpleStart = on;
+      push();
+    },
+    async setPaneSizes(side, log) {
+      prefs.sideWidth = side;
+      prefs.logHeight = log;
       push();
     },
     async cancel() {

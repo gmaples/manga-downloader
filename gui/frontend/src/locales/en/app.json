@@ -6,6 +6,7 @@
     "options": "Options",
     "activity": "Activity"
   },
+  "resizeSide": "Resize the side panel",
   "download": "Download",
   "running": "running",
   "finished": "finished"

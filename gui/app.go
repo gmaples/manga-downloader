@@ -634,6 +634,16 @@ func (a *App) SetSimpleStart(on bool) error {
 	return nil
 }
 
+// SetPaneSizes saves the sizes, in CSS pixels, the user dragged the side panel
+// and the log drawer to; 0, or a size out of range, keeps the default. It's
+// never refused while busy.
+func (a *App) SetPaneSizes(sideWidth, logHeight int) error {
+	a.ctrl.SetPrefs(func(p *PrefsDTO) { p.SideWidth, p.LogHeight = paneSize(sideWidth), paneSize(logHeight) })
+	a.save()
+
+	return nil
+}
+
 // SetCheckUpdates turns the update check at startup on or off. Turning it off
 // forgets the update found; turning it on checks now, unless a check is still
 // running. It's never refused while busy.

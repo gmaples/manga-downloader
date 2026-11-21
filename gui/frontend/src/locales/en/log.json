@@ -3,6 +3,7 @@
   "show": "Show the log",
   "hide": "Hide the log",
   "closeLog": "Close the log",
+  "resize": "Resize the log",
   "empty": "Nothing logged yet.",
   "ready": "Ready",
   "updateAvailable": "Update available: {{latest}}",

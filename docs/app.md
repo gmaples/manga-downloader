@@ -154,6 +154,17 @@ Sites whose image servers limit the request rate get lower limits on their own.
 Downloads go through the proxy in `HTTPS_PROXY` or `HTTP_PROXY` when the app is
 started with one set, as on the [command line](cli.md#environment-variables).
 
+## Pane sizes and scrolling
+
+Drag the gap between the chapter list and the side panel to make the side
+panel wider or narrower, and the top edge of the log to make it taller or
+shorter. Each also takes the arrow keys once focused. The app remembers the
+sizes for the next launch (`sideWidth` and `logHeight` in `gui.json`).
+
+The mouse wheel scrolls a pane wherever the pointer is over it: over the
+series' title or the toolbar it scrolls the chapter list, and over a run's
+summary or the Download button it scrolls the Activity tab's chapters.
+
 ## Rate limits
 
 When a site answers 429 Too Many Requests, the downloader slows down for that site and remembers it. It writes a line such as `mangalib.org: 1s` to `site-rate-limits.txt` in the download root (the folder picked under Save, not a series folder inside it). Every later request to that site, in this run and the next ones, waits at least that long after the previous one.

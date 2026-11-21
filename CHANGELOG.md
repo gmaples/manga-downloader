@@ -17,6 +17,25 @@ as they are.
 What the fork changes, and why, is described in the README's
 "About this fork" section. Android details are in [docs/android.md](docs/android.md).
 
+## v25.2.0-series-folders.17 (2026-11-21)
+
+Commit `b534d91`. Resizable panes and mouse-wheel scrolling everywhere, in the
+Windows desktop app. Includes everything in build 16.
+
+- **Drag to resize**: the gap between the chapter list and the side panel
+  makes the side panel wider or narrower, and the log's top edge makes it
+  taller or shorter. Each also takes the arrow keys once focused. The sizes
+  are remembered for the next launch (`sideWidth` and `logHeight` in
+  `gui.json`). The side panel stays at least 280px wide and leaves the
+  chapter list 372px.
+- **The wheel works anywhere in a pane**: over the series' title or the list
+  toolbar it scrolls the chapter list, over a run's summary or the Download
+  button it scrolls the Activity tab's chapters, and a run's list that has
+  reached its end passes the wheel on to the Activity tab instead of
+  stopping it.
+- Tested in the browser mock of the app (Chromium, the engine WebView2 uses)
+  and by unit tests; not yet run as the Windows app.
+
 ## v25.2.0-series-folders.16 (2026-11-20)
 
 Commit `8a64451`. Adds zenko.online, on the Windows desktop app and command
