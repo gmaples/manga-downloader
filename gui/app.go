@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -132,9 +133,10 @@ func (a *App) launch() {
 // pump emits a "state" event after each change, at most once per interval.
 // The selection and the log are only sent when they changed since the last
 // push, because they can be thousands of entries long while the rest of the
-// state is small.
+// state is small; so are the chapter marks, compared by content.
 func (a *App) pump() {
 	var sentSel, sentLog uint64
+	var sentMarks []string
 	for {
 		select {
 		case <-a.dirty:
@@ -152,6 +154,10 @@ func (a *App) pump() {
 		if g := a.ctrl.LogGen(); g != sentLog {
 			sentLog = g
 			a.sink.Emit("log", a.Log())
+		}
+		if m := a.Marks(); !slices.Equal(m, sentMarks) {
+			sentMarks = m
+			a.sink.Emit("marks", m)
 		}
 
 		select {
@@ -503,6 +509,17 @@ func (a *App) Chapters() []ChapterDTO {
 // Selection returns the indices of the selected chapters, in list order
 func (a *App) Selection() []int {
 	return a.ctrl.SelectedIndices()
+}
+
+// Marks returns the mark of each chapter of the list, by index: "" (no file
+// and no download), "done", "downloading", "queued", "failed" or "cancelled"
+// (see Controller.ChapterMarks). It's empty when nothing is loaded.
+func (a *App) Marks() []string {
+	m := a.ctrl.ChapterMarks()
+	if m == nil {
+		return []string{}
+	}
+	return m
 }
 
 // Log returns the most recent log lines

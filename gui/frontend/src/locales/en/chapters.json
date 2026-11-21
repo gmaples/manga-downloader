@@ -42,6 +42,16 @@
     "partialHint": "Only the selected parts go in its file"
   },
   "locked": "Locked, so it cannot be selected",
+  "mark": {
+    "done": "Downloaded: its file is in the folder",
+    "downloading": "Downloading",
+    "queued": "Waiting to download",
+    "failed": "Failed: pick it to download it again",
+    "cancelled": "Cancelled before it was saved: pick it to download it again"
+  },
+  "pickUnfinished_one": "Pick {{count}} unfinished",
+  "pickUnfinished_other": "Pick {{count}} unfinished",
+  "pickUnfinishedHint": "Select only the chapters that failed or were cancelled, ready to download again",
   "duplicates": {
     "language": "Some numbers are listed once per language; the language tag tells them apart.",
     "group": "Some numbers are listed once per group; the group tag tells them apart."

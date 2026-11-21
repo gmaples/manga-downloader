@@ -141,6 +141,7 @@ function components({ state, chapters, selected, log }: Snapshot): Screen[] {
         state,
         chapters,
         selected,
+        marks: chapters.map((_, i) => (i % 2 === 0 ? 'failed' : 'done')),
         disabled: state.loading || state.running,
         onToggle: later,
         onToggleMany: later,

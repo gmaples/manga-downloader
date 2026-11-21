@@ -3,7 +3,16 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { CATALOG, createT } from './i18n';
 import { I18nProvider } from './i18n/react';
-import { ChapterBox, ChapterPanel, ChapterTitle, RangeForm, canApplyRange, partsCount } from './ChapterPanel';
+import {
+  ChapterBox,
+  ChapterMarkIcon,
+  ChapterPanel,
+  ChapterTitle,
+  RangeForm,
+  canApplyRange,
+  partsCount,
+  unfinishedOf,
+} from './ChapterPanel';
 import { createMockApi } from './mock';
 
 const LOCKED_HINT = createT('en')('chapters.locked');
@@ -98,6 +107,7 @@ describe('ChapterPanel of a parts run', () => {
         state,
         chapters,
         selected: [],
+        marks: [],
         disabled: false,
         onToggle: noop,
         onToggleMany: noop,
@@ -118,6 +128,127 @@ describe('ChapterPanel of a parts run', () => {
     expect(markup).toMatch(/>Part 2</);
     // a part row never repeats the chapter's title
     expect(markup).not.toContain(escapeHtml(first?.title ?? ''));
+  });
+});
+
+describe('ChapterMarkIcon', () => {
+  it('shows nothing but its place for a chapter with no file and no download', () => {
+    const html = renderToStaticMarkup(createElement(ChapterMarkIcon, { mark: '' }));
+    expect(html).toBe('<span class="mark" aria-hidden="true"></span>');
+  });
+
+  it('names each mark, so it can be read and hovered', () => {
+    const names = {
+      done: 'Downloaded: its file is in the folder',
+      downloading: 'Downloading',
+      queued: 'Waiting to download',
+      failed: 'Failed: pick it to download it again',
+      cancelled: 'Cancelled before it was saved: pick it to download it again',
+    } as const;
+    for (const [mark, name] of Object.entries(names)) {
+      const html = renderToStaticMarkup(createElement(ChapterMarkIcon, { mark: mark as keyof typeof names }));
+      expect(html).toContain(`class="mark mark-${mark}"`);
+      expect(html).toContain(`title="${name}"`);
+      expect(html).toContain(`aria-label="${name}"`);
+    }
+  });
+
+  it('draws failed and cancelled with different glyphs', () => {
+    const failed = renderToStaticMarkup(createElement(ChapterMarkIcon, { mark: 'failed' }));
+    const cancelled = renderToStaticMarkup(createElement(ChapterMarkIcon, { mark: 'cancelled' }));
+    expect(failed.replace(/^<span[^>]*>/, '')).not.toBe(cancelled.replace(/^<span[^>]*>/, ''));
+  });
+});
+
+describe('unfinishedOf', () => {
+  const ch = (index: number, locked = false) => ({ index, number: index + 1, title: '', language: '', group: '', volume: 0, locked });
+
+  it('picks the failed and cancelled chapters, never a locked one', () => {
+    const chapters = [ch(0), ch(1), ch(2), ch(3, true), ch(4), ch(5)];
+    expect(unfinishedOf(chapters, ['done', 'failed', 'cancelled', 'failed', 'downloading', ''])).toEqual([1, 2]);
+  });
+
+  it('picks nothing before the marks arrive', () => {
+    expect(unfinishedOf([ch(0), ch(1)], [])).toEqual([]);
+  });
+});
+
+describe('ChapterPanel marks', () => {
+  it('shows each row\'s mark beside its box, and offers to pick the unfinished ones', async () => {
+    const api = createMockApi({ scenario: 'loaded' });
+    const state = await api.state();
+    const chapters = await api.chapters();
+    const noop = async () => {};
+    const marks = chapters.map((_, i) => (i === 0 ? 'done' : i === 1 ? 'failed' : i === 2 ? 'cancelled' : '')) as ('' | 'done' | 'failed' | 'cancelled')[];
+    const markup = renderToStaticMarkup(
+      createElement(ChapterPanel, {
+        state,
+        chapters,
+        selected: [],
+        marks,
+        disabled: false,
+        onToggle: noop,
+        onToggleMany: noop,
+        onSetAll: noop,
+        onRange: async () => 0,
+        onVolumes: noop,
+        onReload: () => {},
+        onError: () => {},
+      }),
+    );
+    expect(markup).toMatch(/class="box"[^>]*><\/span><span class="mark mark-done"/);
+    expect(markup).toContain('mark mark-failed');
+    expect(markup).toContain('mark mark-cancelled');
+    expect(markup).toContain('Pick 2 unfinished');
+  });
+
+  it('offers nothing to pick while the series downloads, as its run never takes a chapter twice', async () => {
+    const api = createMockApi({ scenario: 'loaded' });
+    const state = { ...(await api.state()), addTo: 1 };
+    const chapters = await api.chapters();
+    const noop = async () => {};
+    const markup = renderToStaticMarkup(
+      createElement(ChapterPanel, {
+        state,
+        chapters,
+        selected: [],
+        marks: chapters.map(() => 'failed' as const),
+        disabled: false,
+        onToggle: noop,
+        onToggleMany: noop,
+        onSetAll: noop,
+        onRange: async () => 0,
+        onVolumes: noop,
+        onReload: () => {},
+        onError: () => {},
+      }),
+    );
+    expect(markup).toContain('mark mark-failed');
+    expect(markup).not.toContain('unfinished');
+  });
+
+  it('offers nothing to pick while no chapter is unfinished', async () => {
+    const api = createMockApi({ scenario: 'loaded' });
+    const state = await api.state();
+    const chapters = await api.chapters();
+    const noop = async () => {};
+    const markup = renderToStaticMarkup(
+      createElement(ChapterPanel, {
+        state,
+        chapters,
+        selected: [],
+        marks: chapters.map(() => 'done' as const),
+        disabled: false,
+        onToggle: noop,
+        onToggleMany: noop,
+        onSetAll: noop,
+        onRange: async () => 0,
+        onVolumes: noop,
+        onReload: () => {},
+        onError: () => {},
+      }),
+    );
+    expect(markup).not.toContain('unfinished');
   });
 });
 

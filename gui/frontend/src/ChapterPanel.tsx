@@ -7,12 +7,12 @@ import { errorMessage, formatNumber } from './format';
 import { say } from './i18n';
 import type { T as Translator } from './i18n';
 import { T, useI18n } from './i18n/react';
-import { AlertIcon, ChevronIcon, LinkIcon, LockIcon, RefreshIcon } from './icons';
+import { AlertIcon, CheckIcon, ChevronIcon, ErrorIcon, LinkIcon, LockIcon, RefreshIcon, SkipIcon, Spinner } from './icons';
 import { Mascot } from './Mascot';
 import { MaskedTitle, useMask } from './Masked';
 import { extendsSpan, moveActive, pickable, spanIndices } from './listKeys';
 import { hostOf } from './run';
-import type { Chapter, State } from './types';
+import type { Chapter, ChapterMark, State } from './types';
 import { useVirtualList } from './virtual';
 import {
   chapterSpan,
@@ -34,6 +34,8 @@ interface Props {
   state: State;
   chapters: Chapter[];
   selected: number[];
+  /** What became of each chapter, by index, shown beside its checkbox */
+  marks: ChapterMark[];
   /** Locked while a series loads or a download runs */
   disabled: boolean;
   onToggle: (index: number, on: boolean) => Promise<void>;
@@ -129,6 +131,7 @@ function ChapterList({
   state,
   chapters,
   selected,
+  marks,
   disabled,
   onToggle,
   onToggleMany,
@@ -348,6 +351,12 @@ function ChapterList({
 
   // locked chapters can't be picked, so "all" and the count are of the others
   const selectable = useMemo(() => pickable(chapters).length, [chapters]);
+  // the chapters a download left unsaved, which one click picks to try again;
+  // not while the series downloads, as its run never takes a chapter twice
+  const unfinished = useMemo(
+    () => (state.addTo !== 0 ? [] : unfinishedOf(chapters, marks)),
+    [state.addTo, chapters, marks],
+  );
   const all = selectable > 0 && state.selectedCount === selectable;
   const some = state.selectedCount > 0 && !all;
   const { first, last } = list.span;
@@ -418,6 +427,21 @@ function ChapterList({
           >
             {t('common.none')}
           </button>
+          {unfinished.length > 0 && (
+            <button
+              type="button"
+              className="btn ghost small unfinished"
+              disabled={disabled}
+              title={t('chapters.pickUnfinishedHint')}
+              onClick={() =>
+                onSetAll(false)
+                  .then(() => onToggleMany(unfinished, true))
+                  .catch(fail)
+              }
+            >
+              <AlertIcon size={13} /> {t('chapters.pickUnfinished', { count: unfinished.length })}
+            </button>
+          )}
         </div>
         <RangeForm
           text={rangeText}
@@ -554,6 +578,7 @@ function ChapterList({
                 onClick={(e) => toggleRow(pos, e.shiftKey)}
               >
                 <ChapterBox on={on} locked={ch.locked} />
+                <ChapterMarkIcon mark={marks[ch.index] ?? ''} />
                 {!row.part && <span className="num">{formatNumber(ch.number)}</span>}
                 <ChapterTitle title={row.part ? row.part.label : ch.title} locked={ch.locked} />
                 {(ch.language !== '' || ch.group !== '') && (
@@ -590,6 +615,49 @@ function ChapterList({
 /** A chapter's checkbox: greyed out for a locked chapter, which can't be picked */
 export function ChapterBox({ on, locked }: { on: boolean; locked: boolean }) {
   return <span className={`box${on ? ' on' : ''}${locked ? ' disabled' : ''}`} aria-hidden="true" />;
+}
+
+/** A chapter's mark, beside its checkbox: what became of it (see ChapterMark) */
+export function ChapterMarkIcon({ mark }: { mark: ChapterMark }) {
+  const { t } = useI18n();
+  let icon;
+  let label;
+  switch (mark) {
+    case 'done':
+      icon = <CheckIcon size={14} />;
+      label = t('chapters.mark.done');
+      break;
+    case 'downloading':
+      icon = <Spinner size={12} />;
+      label = t('chapters.mark.downloading');
+      break;
+    case 'queued':
+      icon = null;
+      label = t('chapters.mark.queued');
+      break;
+    case 'failed':
+      icon = <ErrorIcon size={14} />;
+      label = t('chapters.mark.failed');
+      break;
+    case 'cancelled':
+      icon = <SkipIcon size={14} />;
+      label = t('chapters.mark.cancelled');
+      break;
+    default:
+      return <span className="mark" aria-hidden="true" />;
+  }
+  return (
+    <span className={`mark mark-${mark}`} role="img" title={label} aria-label={label}>
+      {icon}
+    </span>
+  );
+}
+
+/** The indices of the chapters a download left unsaved (failed or cancelled), locked ones aside */
+export function unfinishedOf(chapters: Chapter[], marks: ChapterMark[]): number[] {
+  return chapters
+    .filter((c) => !c.locked && (marks[c.index] === 'failed' || marks[c.index] === 'cancelled'))
+    .map((c) => c.index);
 }
 
 /** A range box with only blanks in it has nothing to apply, so Enter does nothing there */

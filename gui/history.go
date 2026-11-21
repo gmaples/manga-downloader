@@ -392,11 +392,16 @@ func (c *Controller) recordGroupLocked(g *group) {
 
 // markDone records chapter ch, fetched or listed, as saved. The caller holds c.mu.
 func (g *group) markDone(ch *grabber.Chapter) {
+	g.done[g.keyOf(ch)] = true
+}
+
+// keyOf is the chapKey of chapter ch, fetched or listed: a fetched one is
+// known by its listing entry, as its title can differ. The caller holds c.mu.
+func (g *group) keyOf(ch *grabber.Chapter) string {
 	if listed := g.listedOf[ch]; listed != nil {
-		g.done[chapKey(listed)] = true
-		return
+		return chapKey(listed)
 	}
-	g.done[chapKey(ch)] = true
+	return chapKey(ch)
 }
 
 // markVolumeDone records the chapters of volume v as saved. The caller holds c.mu.

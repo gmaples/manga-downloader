@@ -1,13 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { errorText } from './format';
 import type { Api } from './api';
-import type { Chapter, LogLine, State } from './types';
+import type { Chapter, ChapterMark, LogLine, State } from './types';
 
 export interface WindowData {
   state: State | null;
   chapters: Chapter[];
   /** Sorted indices of the selected chapters */
   selected: number[];
+  /** Each chapter's mark, by index (see ChapterMark) */
+  marks: ChapterMark[];
   log: LogLine[];
 }
 
@@ -17,11 +19,17 @@ export interface WindowData {
  * is a State the caller already read.
  */
 export function useWindow(api: Api, initial?: State): WindowData & { failure: string | null } {
-  const [data, setData] = useState<WindowData>({ state: initial ?? null, chapters: [], selected: [], log: [] });
+  const [data, setData] = useState<WindowData>({
+    state: initial ?? null,
+    chapters: [],
+    selected: [],
+    marks: [],
+    log: [],
+  });
   // the error's text; the window words it in the language shown when it renders
   const [failure, setFailure] = useState<string | null>(null);
   // which fields a push has already filled, so a late snapshot doesn't clobber them
-  const pushed = useRef({ state: false, chapters: false, selected: false, log: false });
+  const pushed = useRef({ state: false, chapters: false, selected: false, marks: false, log: false });
 
   // a newer State from the caller: it saw pushes that came before this window subscribed,
   // and stops mattering once the window's own subscription has delivered one
@@ -49,14 +57,18 @@ export function useWindow(api: Api, initial?: State): WindowData & { failure: st
         seen.selected = true;
         setData((d) => ({ ...d, selected }));
       }),
+      api.onMarks((marks) => {
+        seen.marks = true;
+        setData((d) => ({ ...d, marks }));
+      }),
       api.onLog((log) => {
         seen.log = true;
         setData((d) => ({ ...d, log }));
       }),
     ];
 
-    Promise.all([initial ?? api.state(), api.chapters(), api.selection(), api.log()])
-      .then(([state, chapters, selected, log]) => {
+    Promise.all([initial ?? api.state(), api.chapters(), api.selection(), api.marks(), api.log()])
+      .then(([state, chapters, selected, marks, log]) => {
         if (!alive) {
           return;
         }
@@ -64,6 +76,7 @@ export function useWindow(api: Api, initial?: State): WindowData & { failure: st
           state: seen.state ? d.state : state,
           chapters: seen.chapters ? d.chapters : chapters,
           selected: seen.selected ? d.selected : selected,
+          marks: seen.marks ? d.marks : marks,
           log: seen.log ? d.log : log,
         }));
       })
