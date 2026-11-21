@@ -304,6 +304,8 @@ folder up to date, run it from cron:
   <img alt="The command line downloading five chapters, then the same series with --skip-existing: the five are listed as skipped and three new ones are downloaded" src="../assets/demos/skip-existing-light.gif">
 </picture>
 
+**Several copies at once.** While a chapter downloads, a file named after it with `.downloading` added (`Series 12 - Title.cbz.downloading`) sits next to where it will be saved, and goes once the chapter is saved or has failed. Another copy of the program downloading into the same folder waits for that chapter instead of downloading it too, then skips it once its file is there, or downloads it if the first copy failed. A `.downloading` file left by a copy that was closed mid-chapter is ignored after 2 minutes; it can be deleted by hand. Volumes and single-file downloads aren't covered.
+
 ## Sites without built-in support
 
 A site none of the built-in handlers knows is read by the generic reader. It looks for the series' chapter list in the page's links (the largest set of links that differ only in a number, under the series' address or with a word like "chapter" or "read" in them) and for a chapter's pages in its images (the largest set served from one folder). When the plain page has no chapter list, as on sites built as JavaScript apps, it renders the page in a hidden browser, scrolls it, and reads that, along with the data the page fetched. It never opens a browser window by itself.
@@ -317,6 +319,8 @@ The chapter numbers and pages it finds are guesses, and a warning says so: check
 When a site answers 429 Too Many Requests, the downloader slows down for that site and remembers it. It writes a line such as `mangalib.org: 1s` to `site-rate-limits.txt` in the download root (`--output-dir`). Every later request to that site, in this run and the next ones, waits at least that long after the previous one.
 
 After a 429, every download from that site pauses: 15s after the first one, then 1.5 times longer after each further one, up to 5m. Only the pages that got the 429 are fetched again, so the chapter's file is still complete. A site's time also grows 1.5 times on each 429, up to 5m. A page that still gets a 429 after the 5m pause fails, and so does its chapter. The time comes back down as well: after 5m of downloads from the site with no 429, it's divided by 1.5 and saved, again after each further 5m, and once it would drop below 1s the site's line is taken out of the file. A time you wrote by hand comes down the same way.
+
+When several copies run at once on one download folder (two app windows, or the app and the command line), they share each site's pace through `site-pace.txt`, next to `site-rate-limits.txt`: the time between requests holds over all their requests together, and a 429 one copy gets pauses the others too. Each copy still learns its own level. The program rewrites that file as it runs, so leave it alone; it can be deleted when no copy is running.
 
 The file is plain text and can be edited: one `site: time` line per site, with times such as `500ms`, `15s` or `1m30s`, and `#` for comments. A site's line replaces any pacing built into the downloader for it. Because the file sits next to your series, it travels with the folder or card to another device.
 

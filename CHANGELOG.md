@@ -21,11 +21,31 @@ What the fork changes, and why, is described in the README's
 
 ## v25.3.0-series-folders.33 (2026-11-21)
 
-Master after PRs #13, #14 and #15 (builds 29 to 31), plus correct exit codes
+Master after PRs #13, #14 and #15 (builds 29 to 31) and PR #16 (build 32), plus correct exit codes
 on the command line: it exits 1 when any chapter, volume or bundle failed
 (fetch, file name, download or packing), not 0 as before; 0 only when
 everything was saved or already existed. A bundle written without its failed
-chapters exits 1 too. Ctrl+C still exits 130. Build 32 (PR #16) is not in it.
+chapters exits 1 too. Ctrl+C still exits 130.
+
+## v25.3.0-series-folders.32 (2026-11-21)
+
+Commits `714f133`, `bbaa178` and `fafba1c`, with build 31 (`site-mirrors`)
+merged in. Copies of the program running at once (two app windows, or the
+app and the command line) on one download folder share the work instead of
+stepping on each other. On 2026-11-21 two app windows saved 106 Gintama
+chapters twice, as " v2" copies.
+
+- **Chapters**: a chapter being downloaded is claimed with
+  `<file>.downloading` next to its file. Another copy waits for it, then skips
+  it once it's saved (with *Skip existing files*) or downloads it if the first
+  copy failed. A claim untouched for 2 minutes (a copy closed mid-chapter) is
+  ignored. Volumes and single-file downloads aren't covered.
+- **Pace**: `site-pace.txt` next to `site-rate-limits.txt` holds each site's
+  next request time, pause after a 429 and time between requests, shared by
+  the copies under `site-pace.lock`. Each copy still learns its own parallel
+  level.
+- **History** (app): a save of `history.txt` reads the file first and keeps
+  the series the other copy wrote.
 
 ## v25.3.0-series-folders.31 (2026-11-21)
 

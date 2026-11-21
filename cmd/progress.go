@@ -908,6 +908,11 @@ func (e *bubbleEvents) Exists(listed grabber.Filterable, _ string) {
 	e.prog.Send(chapterExistsMsg{listed: listed})
 }
 
+func (e *bubbleEvents) Waiting(c *grabber.Chapter, name string) {
+	e.println(color.YellowString("- waiting for %s: another copy is downloading %s",
+		core.ReleaseLabel(c, e.showLang, e.showGroup), name))
+}
+
 func (e *bubbleEvents) FilenameFailed(c *grabber.Chapter, err error) {
 	e.println(color.RedString(
 		"- error creating filename for %s: %s", core.ReleaseLabel(c, e.showLang, e.showGroup), err.Error()))
@@ -1012,6 +1017,10 @@ func (p plainEvents) Skipped(c *grabber.Chapter) {
 
 func (p plainEvents) Exists(listed grabber.Filterable, name string) {
 	yellow("- skipping %s: %s already exists", core.ReleaseLabel(listed, p.showLang, p.showGroup), name)
+}
+
+func (p plainEvents) Waiting(c *grabber.Chapter, name string) {
+	yellow("- waiting for %s: another copy is downloading %s", core.ReleaseLabel(c, p.showLang, p.showGroup), name)
 }
 
 func (p plainEvents) FilenameFailed(c *grabber.Chapter, err error) {

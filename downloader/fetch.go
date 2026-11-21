@@ -15,6 +15,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/elboletaire/manga-downloader/grabber"
@@ -137,6 +138,10 @@ func FetchChapterLimited(ctx context.Context, site grabber.Site, chapter *grabbe
 	wg := sync.WaitGroup{}
 	guard := make(chan struct{}, site.GetMaxConcurrency().Pages)
 	errChan := make(chan error, 1)
+	// failed is set by the first page that fails: the chapter has failed, so
+	// the pages not started yet aren't requested (each would still go
+	// through lim, and through the shared pace file, for nothing)
+	var failed atomic.Bool
 	done := make(chan bool)
 	// A local (not the named return) so page goroutines write into a slice that
 	// can never be nilled out from under them. If a page fails and the function
@@ -151,6 +156,10 @@ func FetchChapterLimited(ctx context.Context, site grabber.Site, chapter *grabbe
 		wg.Add(1)
 		go func(page grabber.Page, idx int) {
 			defer wg.Done()
+			if failed.Load() {
+				<-guard
+				return
+			}
 
 			referer := site.BaseUrl()
 			if page.NoReferer {
@@ -177,6 +186,7 @@ func FetchChapterLimited(ctx context.Context, site grabber.Site, chapter *grabbe
 			}
 
 			if err != nil {
+				failed.Store(true)
 				select {
 				case errChan <- fmt.Errorf("page %d: %w", page.Number, err):
 					onprogress(idx, idx, err)

@@ -159,6 +159,13 @@ button, *Load* and *Settings*. (To open on the full window instead, turn off
    left out before anything is fetched: it shows as skipped in the Activity tab,
    and the summary says how many were there.
 
+   If another copy of the app (or the command line) is downloading the same
+   chapter into the same folder, the log says so and the chapter waits for it,
+   then is skipped once that copy has saved it (or downloaded, if that copy
+   failed). Meanwhile a file named after the chapter with `.downloading` added
+   sits next to where it will be saved; it goes when the chapter is done, and
+   one left by a copy that was closed mid-chapter is ignored after 2 minutes.
+
    <picture>
      <source media="(prefers-color-scheme: dark)" srcset="../assets/screenshots/14-skip-existing-dark.webp">
      <img alt="A download in progress where the first two chapters were already in the folder, listed as skipped, while the others download" src="../assets/screenshots/14-skip-existing-light.webp">
@@ -203,7 +210,7 @@ window.
 The app keeps `history.txt` next to `gui.json`: the last 100 series you loaded
 or downloaded, newest first, written as it runs. It's plain text, one
 `key: value` line each (`title`, `url`, `adult`, `when`, `open`, then a `done`
-or `todo` line per chapter), so it can be read or edited with the app closed.
+or `todo` line per chapter), so it can be read or edited with the app closed. Two copies of the app open at once share it: each save first reads the file and keeps the series the other copy wrote, writing over only the series this copy changed since it last saved.
 
 When the app starts, the Activity tab shows again the series that were in it
 when it closed, under *From last session*: the chapters saved and the ones
@@ -236,6 +243,8 @@ The chapter numbers and pages it finds are guesses, and a warning says so: check
 When a site answers 429 Too Many Requests, the downloader slows down for that site and remembers it. It writes a line such as `mangalib.org: 1s` to `site-rate-limits.txt` in the download root (the folder picked under Save, not a series folder inside it). Every later request to that site, in this run and the next ones, waits at least that long after the previous one.
 
 After a 429, every download from that site pauses: 15s after the first one, then 1.5 times longer after each further one, up to 5m. Only the pages that got the 429 are fetched again, so the chapter's file is still complete. A site's time also grows 1.5 times on each 429, up to 5m. A page that still gets a 429 after the 5m pause fails, and so does its chapter. The time comes back down as well: after 5m of downloads from the site with no 429, it's divided by 1.5 and saved, again after each further 5m, and once it would drop below 1s the site's line is taken out of the file. A time you wrote by hand comes down the same way.
+
+When several copies run at once on one download folder (two app windows, or the app and the command line), they share each site's pace through `site-pace.txt`, next to `site-rate-limits.txt`: the time between requests holds over all their requests together, and a 429 one copy gets pauses the others too. Each copy still learns its own level. The program rewrites that file as it runs, so leave it alone; it can be deleted when no copy is running.
 
 The file is plain text and can be edited: one `site: time` line per site, with times such as `500ms`, `15s` or `1m30s`, and `#` for comments. A site's line replaces any pacing built into the downloader for it. Because the file sits next to your series, it travels with the folder or card to another device.
 

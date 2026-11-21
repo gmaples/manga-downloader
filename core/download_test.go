@@ -58,6 +58,7 @@ func (r *recorder) Skipped(c *grabber.Chapter) { r.add("skipped %g", c.Number) }
 func (r *recorder) Exists(l grabber.Filterable, name string) {
 	r.add("exists %g %s", l.GetNumber(), name)
 }
+func (r *recorder) Waiting(c *grabber.Chapter, name string)    { r.add("waiting %g %s", c.Number, name) }
 func (r *recorder) FilenameFailed(c *grabber.Chapter, _ error) { r.add("filename-failed %g", c.Number) }
 func (r *recorder) Started(c *grabber.Chapter)                 { r.add("started %g", c.Number) }
 func (r *recorder) Page(c *grabber.Chapter, idx int, err error) {

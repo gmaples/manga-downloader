@@ -45,6 +45,11 @@ type Events interface {
 	// directory (--skip-existing), before its pages are fetched (with its listing
 	// entry) or after the fetch when the name only came out then (fetched chapter)
 	Exists(listed grabber.Filterable, name string)
+	// Waiting is a chapter waiting for another copy of the program, which is
+	// downloading the same file into the same folder (see ClaimSuffix). It's
+	// followed by Exists when that copy saved it (with SkipExisting), or by
+	// the chapter's download.
+	Waiting(c *grabber.Chapter, name string)
 	// FilenameFailed reports a chapter whose filename couldn't be built
 	FilenameFailed(c *grabber.Chapter, err error)
 	// Fetching reports a chapter whose page list is about to be fetched, then
@@ -112,6 +117,7 @@ func (NoEvents) BundleStart(int64)                            {}
 func (NoEvents) FetchFailed(grabber.Filterable, error)        {}
 func (NoEvents) Skipped(*grabber.Chapter)                     {}
 func (NoEvents) Exists(grabber.Filterable, string)            {}
+func (NoEvents) Waiting(*grabber.Chapter, string)             {}
 func (NoEvents) FilenameFailed(*grabber.Chapter, error)       {}
 func (NoEvents) Fetching(grabber.Filterable)                  {}
 func (NoEvents) Fetched(grabber.Filterable, *grabber.Chapter) {}
@@ -513,6 +519,19 @@ loop:
 				if skipExisting && !bundle && packer.Exists(outDir, name) {
 					ev.Exists(chapter, name)
 					return
+				}
+				// another copy of the program downloading the same file is
+				// waited for, rather than downloaded alongside (see ClaimSuffix)
+				if !bundle {
+					cl, ok, err := claimChapter(ctx, outDir, name, chapter, skipExisting, ev)
+					if err != nil {
+						ev.DownloadFailed(chapter, err)
+						return
+					}
+					if !ok {
+						return
+					}
+					defer cl.release()
 				}
 			}
 
