@@ -301,6 +301,8 @@ folder up to date, run it from cron:
 
 A site none of the built-in handlers knows is read by the generic reader. It looks for the series' chapter list in the page's links (the largest set of links that differ only in a number, under the series' address or with a word like "chapter" or "read" in them) and for a chapter's pages in its images (the largest set served from one folder). When the plain page has no chapter list, as on sites built as JavaScript apps, it renders the page in a hidden browser, scrolls it, and reads that, along with the data the page fetched. It never opens a browser window by itself.
 
+A site that needs a real browser gets one in the background. When a site needs a window, it opens off the screen and only comes on screen when its check waits for you (the page hasn't loaded after 10 seconds). The browser keeps its profile between runs, in your cache folder under `manga-downloader/browser`, so a check passed once is skipped until it expires; several programs running at once each get their own (up to 4, then a throwaway one).
+
 The chapter numbers and pages it finds are guesses, and a warning says so: check the first chapter before downloading a whole series. When it finds nothing, the error lists what it tried and what it saw, for example a bot check, an age confirmation, or a page that says the site isn't available in your country.
 
 ## Rate limits

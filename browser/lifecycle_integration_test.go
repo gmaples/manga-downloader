@@ -94,12 +94,14 @@ func integration(t *testing.T) *httptest.Server {
 // forgets the hosts that escalated, so none starts visible
 func headlessOnly(t *testing.T) {
 	t.Helper()
+	// never the user's own saved profile
+	withProfileRoot(t, t.TempDir())
 	prev := launch
-	launch = func(abort context.Context, headed bool) (*instance, error) {
+	launch = func(abort context.Context, headed, offscreen bool) (*instance, error) {
 		if headed {
 			return nil, errors.New("no visible browser in the tests")
 		}
-		return launchChrome(abort, headed)
+		return launchChrome(abort, headed, offscreen)
 	}
 	t.Cleanup(func() {
 		launch = prev

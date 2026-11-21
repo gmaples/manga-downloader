@@ -19,6 +19,7 @@ import (
 type fakeBrowser struct {
 	mu        sync.Mutex
 	launched  []bool // headed, per launch
+	offscreen []bool // per launch
 	closed    int
 	instances []*instance
 	cancels   []context.CancelFunc
@@ -32,7 +33,7 @@ type fakeBrowser struct {
 	fronts int
 }
 
-func (f *fakeBrowser) launch(abort context.Context, headed bool) (*instance, error) {
+func (f *fakeBrowser) launch(abort context.Context, headed, offscreen bool) (*instance, error) {
 	if f.slow != nil {
 		close(f.slow)
 		// a browser that takes long to start: only abort ends it
@@ -50,6 +51,7 @@ func (f *fakeBrowser) launch(abort context.Context, headed bool) (*instance, err
 		return nil, err
 	}
 	f.launched = append(f.launched, headed)
+	f.offscreen = append(f.offscreen, offscreen)
 	ctx, cancel := context.WithCancel(context.Background())
 	var once sync.Once
 	i := &instance{ctx: ctx, lost: ctx, headed: headed, name: "Fakefox"}

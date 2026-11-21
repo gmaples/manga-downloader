@@ -121,17 +121,27 @@ func start(abort context.Context, host string) error {
 	}
 
 	headed := visible.Load() || auto
-	if headed {
+	// a window the site needs, not one the user asked for, opens off the
+	// screen: most checks pass by themselves in a few seconds, and the window
+	// comes on only when the page is slow to render (a check that waits for
+	// the user), through the alert's raise
+	offscreen := auto && !visible.Load()
+	switch {
+	case offscreen:
+		notice.Info("%s needs a real browser: starting it in a hidden window (this can take a few seconds)...", host)
+	case headed:
 		notice.Info("%s needs a real browser: starting it with a visible window (this can take a few seconds)...", host)
-	} else {
+	default:
 		notice.Info("%s needs a real browser: starting it in the background (this can take a few seconds)...", host)
 	}
-	i, err := launch(abort, headed)
+	i, err := launch(abort, headed, offscreen)
 	if err != nil {
 		return err
 	}
 	if headed && auto {
-		i.needsUser, i.greet = true, true
+		// a hidden window raises the alert (and shows) only once the page
+		// is slow to render, not at once
+		i.needsUser, i.greet = true, !offscreen
 	}
 	inst = i
 	current.Store(i)

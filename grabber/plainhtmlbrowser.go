@@ -25,8 +25,8 @@ func init() {
 	browser.RequireVisible("gaiatoon.com")
 	browser.RequireVisible("arcurafansub.com")
 	browser.RequireVisible("paradise-bl.com")
-	// Vercel's Security Checkpoint, not Cloudflare
-	browser.RequireVisible("joilmang.com")
+	// joilmang.com (Vercel's Security Checkpoint) isn't declared: a headless
+	// browser passes it, checked 2026-11-21
 }
 
 // BrowserSiteSelector is a SiteSelector for sites that need a real browser

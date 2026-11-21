@@ -56,7 +56,7 @@ func (f *fakeBrowser) frontCount() int {
 	return f.fronts
 }
 
-func TestDeclaredHostStartsVisible(t *testing.T) {
+func TestDeclaredHostStartsInAHiddenWindow(t *testing.T) {
 	f, notices := withFake(t)
 	got := attentions(t)
 	RequireVisible("example.com")
@@ -65,10 +65,35 @@ func TestDeclaredHostStartsVisible(t *testing.T) {
 		t.Fatal(err)
 	}
 	if l := f.launched; len(l) != 1 || !l[0] {
-		t.Fatalf("launches (headed) = %v, want one visible and no headless attempt", l)
+		t.Fatalf("launches (headed) = %v, want one window and no headless attempt", l)
 	}
-	if hasNotice(notices(), "headless") {
-		t.Errorf("a headless attempt was made: %q", notices())
+	if o := f.offscreen; len(o) != 1 || !o[0] {
+		t.Errorf("launches (offscreen) = %v, want the window off the screen", o)
+	}
+	if hasNotice(notices(), "headless") || !hasNotice(notices(), "example.com needs a real browser: starting it in a hidden window") {
+		t.Errorf("notices = %q, want the hidden window's", notices())
+	}
+	// the check passed by itself: nothing for the user to see
+	if as := got(); len(as) != 0 {
+		t.Errorf("attentions = %+v, want none for a page that rendered quickly", as)
+	}
+	if n := f.frontCount(); n != 0 {
+		t.Errorf("window brought on screen %d times, want never", n)
+	}
+}
+
+func TestHiddenWindowShowsWhenSlow(t *testing.T) {
+	f, _ := withFake(t)
+	got := attentions(t)
+	RequireVisible("example.com")
+	quickWaitNotice(t)
+
+	if err := run(func(context.Context, hooks) error {
+		// a check waiting for the user
+		time.Sleep(100 * time.Millisecond)
+		return nil
+	}); err != nil {
+		t.Fatal(err)
 	}
 	as := got()
 	if !equalBools(actives(as), []bool{true, false}) {
@@ -77,13 +102,45 @@ func TestDeclaredHostStartsVisible(t *testing.T) {
 	if as[0].Host != "example.com" || as[0].Browser != "Fakefox" {
 		t.Errorf("attention = %+v, want the host and the browser's name", as[0])
 	}
-	// brought forward in a goroutine: give it a moment
+	// brought on screen in a goroutine: give it a moment
 	deadline := time.Now().Add(time.Second)
 	for f.frontCount() != 1 && time.Now().Before(deadline) {
 		time.Sleep(5 * time.Millisecond)
 	}
 	if n := f.frontCount(); n != 1 {
-		t.Errorf("window brought to the front %d times, want once", n)
+		t.Errorf("window brought on screen %d times, want once", n)
+	}
+}
+
+// quickWaitNotice makes the "still waiting" notice, and so the alert of a
+// window that may need the user, come after 20ms, for the test
+func quickWaitNotice(t *testing.T) {
+	t.Helper()
+	mu.Lock()
+	prevAfter, prevEvery := waitNoticeAfter, waitNoticeEvery
+	waitNoticeAfter, waitNoticeEvery = 20*time.Millisecond, time.Hour
+	mu.Unlock()
+	t.Cleanup(func() {
+		mu.Lock()
+		waitNoticeAfter, waitNoticeEvery = prevAfter, prevEvery
+		mu.Unlock()
+	})
+}
+
+func TestUserChosenWindowForADeclaredHostAlertsAtOnce(t *testing.T) {
+	f, _ := withFake(t)
+	got := attentions(t)
+	RequireVisible("example.com")
+	SetVisible(true)
+
+	if err := run(ok); err != nil {
+		t.Fatal(err)
+	}
+	if o := f.offscreen; len(o) != 1 || o[0] {
+		t.Errorf("launches (offscreen) = %v, want the window the user asked for on screen", o)
+	}
+	if as := got(); !equalBools(actives(as), []bool{true, false}) {
+		t.Errorf("attentions = %+v, want raised then ended", as)
 	}
 }
 
@@ -123,8 +180,8 @@ func TestEscalatedHostStartsVisibleAfterClose(t *testing.T) {
 	if !NeedsVisible("https://example.com/") {
 		t.Fatal("the escalated host wasn't remembered")
 	}
-	if !equalBools(actives(got()), []bool{true, false}) {
-		t.Errorf("attentions = %+v, want the escalation raised then ended", got())
+	if len(got()) != 0 {
+		t.Errorf("attentions = %+v, want none: the hidden window passed by itself", got())
 	}
 
 	// the GUI closes the browser after every download
@@ -133,10 +190,10 @@ func TestEscalatedHostStartsVisibleAfterClose(t *testing.T) {
 		t.Fatal(err)
 	}
 	if l := f.launched; len(l) != 3 || l[0] || !l[1] || !l[2] {
-		t.Fatalf("launches (headed) = %v, want headless, visible, then visible straight away", l)
+		t.Fatalf("launches (headed) = %v, want headless, a window, then a window straight away", l)
 	}
-	if !equalBools(actives(got()), []bool{true, false, true, false}) {
-		t.Errorf("attentions = %+v, want the new window to raise one too", got())
+	if o := f.offscreen; o[1] != true || o[2] != true {
+		t.Errorf("launches (offscreen) = %v, want both windows hidden", o)
 	}
 
 	// other sites still go headless
@@ -174,6 +231,8 @@ func TestAttentionEndsWhenThePageRenders(t *testing.T) {
 	_, _ = withFake(t)
 	got := attentions(t)
 	RequireVisible("example.com")
+	// a window the user asked for alerts at once (a hidden one, when slow)
+	SetVisible(true)
 
 	if err := run(func(_ context.Context, h hooks) error {
 		h.rendered()
@@ -194,6 +253,8 @@ func TestAttentionEndsWhenTheLoadFails(t *testing.T) {
 	_, _ = withFake(t)
 	got := attentions(t)
 	RequireVisible("example.com")
+	// a window the user asked for alerts at once (a hidden one, when slow)
+	SetVisible(true)
 
 	boom := errors.New("boom")
 	if err := run(func(context.Context, hooks) error { return boom }); !errors.Is(err, boom) {
@@ -208,6 +269,8 @@ func TestAttentionEndsWhenClosed(t *testing.T) {
 	_, _ = withFake(t)
 	got := attentions(t)
 	RequireVisible("example.com")
+	// a window the user asked for alerts at once (a hidden one, when slow)
+	SetVisible(true)
 
 	started := make(chan struct{})
 	done := make(chan error, 1)
@@ -232,15 +295,8 @@ func TestReusedWindowAlertsOnlyWhenSlow(t *testing.T) {
 	_, _ = withFake(t)
 	got := attentions(t)
 	RequireVisible("example.com")
-	mu.Lock()
-	prevAfter, prevEvery := waitNoticeAfter, waitNoticeEvery
-	waitNoticeAfter, waitNoticeEvery = 20*time.Millisecond, time.Hour
-	mu.Unlock()
-	t.Cleanup(func() {
-		mu.Lock()
-		waitNoticeAfter, waitNoticeEvery = prevAfter, prevEvery
-		mu.Unlock()
-	})
+	SetVisible(true)
+	quickWaitNotice(t)
 
 	if err := run(ok); err != nil {
 		t.Fatal(err)

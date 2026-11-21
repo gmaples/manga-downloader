@@ -21,9 +21,15 @@ import (
 // killed
 const closeTimeout = 5 * time.Second
 
-// launchChrome starts a Chrome-like browser and its first tab. If abort ends
-// first, the half-started browser is killed and ErrClosed returned.
-func launchChrome(abort context.Context, headed bool) (*instance, error) {
+// offscreenPosition is where a hidden window opens: a real, headed window
+// (which passes checks a headless browser fails) that shows nowhere on the
+// screen until bringToFront moves it on
+const offscreenPosition = "-32000,-32000"
+
+// launchChrome starts a Chrome-like browser and its first tab, its window
+// off the screen when offscreen is set. If abort ends first, the
+// half-started browser is killed and ErrClosed returned.
+func launchChrome(abort context.Context, headed, offscreen bool) (*instance, error) {
 	execPath, err := findBrowser(systemHost())
 	if err != nil {
 		return nil, err
@@ -35,6 +41,20 @@ func launchChrome(abort context.Context, headed bool) (*instance, error) {
 		// not minimized: when visible it's because a challenge needs to be seen
 		// (and possibly solved) by the user
 		opts = append(opts, chromedp.Flag("headless", false))
+		if offscreen {
+			opts = append(opts, chromedp.Flag("window-position", offscreenPosition))
+		}
+	}
+	// a saved profile keeps the cookies of checks already passed, for the
+	// next runs; without one chromedp uses a throwaway profile
+	prof := claimProfile()
+	if prof != nil {
+		opts = append(opts, chromedp.UserDataDir(prof.dir))
+	}
+	releaseProfile := func() {
+		if prof != nil {
+			prof.release()
+		}
 	}
 	// reduce automation fingerprint: this flag adds navigator.webdriver etc.
 	opts = append(opts, chromedp.Flag("disable-blink-features", "AutomationControlled"))
@@ -65,6 +85,7 @@ func launchChrome(abort context.Context, headed bool) (*instance, error) {
 		unwatch()
 		browserStop()
 		allocCancel()
+		releaseProfile()
 		if abort.Err() != nil {
 			return nil, ErrClosed
 		}
@@ -113,6 +134,7 @@ func launchChrome(abort context.Context, headed bool) (*instance, error) {
 		browserStop()
 		guard.release()
 		allocCancel()
+		releaseProfile()
 		lose()
 		return nil, ErrClosed
 	}
@@ -142,6 +164,9 @@ func launchChrome(abort context.Context, headed bool) (*instance, error) {
 				// cancels the process context (killing it, if it's still
 				// up) and waits for it to exit
 				allocCancel()
+				// only once the process is gone, so the next run can't
+				// open the profile while this browser still writes to it
+				releaseProfile()
 				lose()
 			})
 		},

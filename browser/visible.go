@@ -195,13 +195,33 @@ func bringToFront(ctx context.Context) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	_ = chromedp.Do(ctx, chromedp.Func(func(ctx context.Context, t *chromedp.Target) error {
-		// a minimized window has to be restored before it can come forward
-		if win, err := cdp.Call(ctx, t, cdpbrowser.GetWindowForTarget, cdpbrowser.GetWindowForTargetParams{}); err == nil && needsRestore(win.Bounds) {
-			_, _ = cdp.Call(ctx, t, cdpbrowser.SetWindowBounds, cdpbrowser.SetWindowBoundsParams{WindowID: win.WindowID, Bounds: &cdpbrowser.Bounds{WindowState: cdpbrowser.WindowStateNormal}})
+		// a minimized window has to be restored before it can come forward,
+		// and a hidden one moved onto the screen
+		if win, err := cdp.Call(ctx, t, cdpbrowser.GetWindowForTarget, cdpbrowser.GetWindowForTargetParams{}); err == nil {
+			if needsRestore(win.Bounds) {
+				_, _ = cdp.Call(ctx, t, cdpbrowser.SetWindowBounds, cdpbrowser.SetWindowBoundsParams{WindowID: win.WindowID, Bounds: &cdpbrowser.Bounds{WindowState: cdpbrowser.WindowStateNormal}})
+			}
+			if offscreenBounds(win.Bounds) {
+				_, _ = cdp.Call(ctx, t, cdpbrowser.SetWindowBounds, cdpbrowser.SetWindowBoundsParams{WindowID: win.WindowID, Bounds: onscreenBounds()})
+			}
 		}
 		_, err := cdp.Call(ctx, t, page.BringToFront, cdp.Empty{})
 		return err
 	}))
+}
+
+// onscreenBounds is where a hidden window is moved to when it has to show:
+// near the top left corner of the main screen
+func onscreenBounds() *cdpbrowser.Bounds {
+	margin := int64(10)
+	return &cdpbrowser.Bounds{Left: &margin, Top: &margin}
+}
+
+// offscreenBounds reports whether a window is off the screen, as a hidden
+// one opens (offscreenPosition; Windows clamps it to about -21845)
+func offscreenBounds(b *cdpbrowser.Bounds) bool {
+	far := func(v *int64) bool { return v != nil && *v < -10000 }
+	return b != nil && (far(b.Left) || far(b.Top))
 }
 
 // needsRestore reports whether a window must be restored to come forward:

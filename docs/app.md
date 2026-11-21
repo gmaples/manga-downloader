@@ -68,7 +68,11 @@ button, *Load* and *Settings*. (To open on the full window instead, turn off
    pages* drops positions from every chapter (`2`, or `-1` for the last page).
    Under *Advanced* are the *Filename template*, the *JPEG quality* of every
    page saved as JPEG, and *Show the browser window*, which you rarely need: a
-   site that needs the window opens it by itself.
+   site that needs a window opens one by itself, off the screen, and it only
+   comes on screen when its check waits for you. The browser keeps its
+   profile between runs (in your cache folder under
+   `manga-downloader/browser`), so a check passed once is skipped until it
+   expires.
    *Series folders* and *Guess language* are app-only: the CLI has no flag
    for them.
 
@@ -94,7 +98,8 @@ button, *Load* and *Settings*. (To open on the full window instead, turn off
      <img alt="Pack as Merged: the chapter list with each chapter's parts grouped under it" src="../assets/screenshots/08-parts-light.webp">
    </picture>
 
-   When a site's browser window needs you (a captcha or a puzzle to solve), an
+   When a site's browser window needs you (a captcha or a puzzle to solve: its
+   page hasn't loaded after 10 seconds), the window comes on screen and an
    alert says so, with *Show the browser window* to bring it to the front and
    *Dismiss* to hide the alert.
 
