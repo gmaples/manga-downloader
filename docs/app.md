@@ -188,6 +188,16 @@ The mouse wheel scrolls a pane wherever the pointer is over it: over the
 series' title or the toolbar it scrolls the chapter list, and over a run's
 summary or the Download button it scrolls the Activity tab's chapters.
 
+## The log file
+
+The log at the bottom of the window is also written to `log.txt` next to
+`gui.json`, one line per entry with its date and time, so it can still be read
+after the app is closed (for example to see why chapters failed). When
+`log.txt` has grown past 5 MB at a start, it's renamed to `log-old.txt`
+(replacing an older one) and a new `log.txt` is begun. *Clear* empties the
+window's log only. Adult titles are masked in the file as they are in the
+window.
+
 ## History and the last session
 
 The app keeps `history.txt` next to `gui.json`: the last 100 series you loaded
@@ -225,7 +235,7 @@ The chapter numbers and pages it finds are guesses, and a warning says so: check
 
 When a site answers 429 Too Many Requests, the downloader slows down for that site and remembers it. It writes a line such as `mangalib.org: 1s` to `site-rate-limits.txt` in the download root (the folder picked under Save, not a series folder inside it). Every later request to that site, in this run and the next ones, waits at least that long after the previous one.
 
-After a 429, every download from that site pauses: 15s after the first one, then 1.5 times longer after each further one, up to 5m. Only the pages that got the 429 are fetched again, so the chapter's file is still complete. A site's time also grows 1.5 times on each 429, up to 5m. A page that still gets a 429 after the 5m pause fails, and so does its chapter.
+After a 429, every download from that site pauses: 15s after the first one, then 1.5 times longer after each further one, up to 5m. Only the pages that got the 429 are fetched again, so the chapter's file is still complete. A site's time also grows 1.5 times on each 429, up to 5m. A page that still gets a 429 after the 5m pause fails, and so does its chapter. The time comes back down as well: after 5m of downloads from the site with no 429, it's divided by 1.5 and saved, again after each further 5m, and once it would drop below 1s the site's line is taken out of the file. A time you wrote by hand comes down the same way.
 
 The file is plain text and can be edited: one `site: time` line per site, with times such as `500ms`, `15s` or `1m30s`, and `#` for comments. A site's line replaces any pacing built into the downloader for it. Because the file sits next to your series, it travels with the folder or card to another device.
 

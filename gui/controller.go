@@ -281,6 +281,9 @@ type Controller struct {
 	// flightSeq orders the chapters in flight across groups (see flight)
 	flightSeq uint64
 	log       []LogLine
+	// logFile is where every log line is appended too, nil for nowhere (see
+	// SetLogFile)
+	logFile *os.File
 
 	// history is history.txt's series, newest first, and historyPath where
 	// it's saved, "" for nowhere (see history.go)
@@ -627,6 +630,7 @@ func (c *Controller) appendMsgLocked(level LogLevel, m Message) {
 
 func (c *Controller) appendLineLocked(line LogLine) {
 	line = c.maskLineLocked(line)
+	c.writeLogFileLocked(line)
 	c.logGen++
 	c.log = append(c.log, line)
 	if len(c.log) > maxLogLines {

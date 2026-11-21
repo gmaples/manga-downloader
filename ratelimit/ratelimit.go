@@ -16,6 +16,11 @@
 // first 429 for the site, times Growth after each further one, up to MaxWait.
 // A 429 that comes when the cooldown is already at MaxWait gives up.
 //
+// A site that goes CalmFor without a 429 while it's in use gets its gap
+// divided by Growth, saved at once, and again after each further CalmFor.
+// Once the gap would drop below StartGap its line is taken out of the file,
+// so a few 429s don't slow the site down for good.
+//
 // Beside the gap, each site learns how many of its requests to have under way
 // at once from how fast it answers, saved in ParallelFileName (see
 // parallel.go).
@@ -45,6 +50,9 @@ var (
 	StartWait = 15 * time.Second
 	// MaxWait caps the cooldown; a 429 at this cooldown gives up
 	MaxWait = 5 * time.Minute
+	// CalmFor is how long a site goes without a 429 before its gap is
+	// divided by Growth
+	CalmFor = 5 * time.Minute
 )
 
 // Growth is what a gap or a cooldown is multiplied by on each 429
@@ -253,6 +261,42 @@ func (b *Book) save(key string, gap time.Duration) {
 	}
 }
 
+// drop takes key's line out of the file (the first one naming it), keeping
+// every other line as it is now on disk
+func (b *Book) drop(key string) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	delete(b.gaps, key)
+	match := func(line string) bool {
+		k, _, ok, err := parseLine(line)
+		return err == nil && ok && k == key
+	}
+	if err := removeLine(b.path, match); err != nil {
+		b.warn("saving %s: %s", FileName, err)
+	}
+}
+
+// removeLine takes the first line match accepts out of the file at path,
+// keeping every other line as it is now on disk. A missing file, or one
+// without such a line, is left alone.
+func removeLine(path string, match func(line string) bool) error {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	lines := strings.Split(string(data), "\n")
+	for i, line := range lines {
+		if match(line) {
+			lines = append(lines[:i], lines[i+1:]...)
+			return replaceFile(path, []byte(strings.Join(lines, "\n")))
+		}
+	}
+	return nil
+}
+
 // writeLine writes entry into the file at path in place of the first line
 // match accepts, or appends it, keeping every other line as it is now on
 // disk, so edits made during the run aren't lost. A new file starts with
@@ -284,8 +328,14 @@ func writeLine(path, header, entry string, match func(line string) bool) error {
 		}
 		lines = append(lines, entry, "")
 	}
+	return replaceFile(path, []byte(strings.Join(lines, "\n")))
+}
+
+// replaceFile writes data to path through a temporary file and a rename, so
+// the file is never left half written
+func replaceFile(path string, data []byte) error {
 	tmp := path + ".tmp"
-	if err := os.WriteFile(tmp, []byte(strings.Join(lines, "\n")), 0o644); err != nil {
+	if err := os.WriteFile(tmp, data, 0o644); err != nil {
 		return err
 	}
 	if err := os.Rename(tmp, path); err != nil {
@@ -314,6 +364,9 @@ type Site struct {
 	gen uint64
 	// changed is closed and replaced on each change, waking the waiters
 	changed chan struct{}
+	// calm is when the site's last 429, or the last lowering of its gap, came;
+	// the zero time before the site's first request
+	calm time.Time
 
 	// the learned level, see parallel.go: par requests may be under way at
 	// once, inflight are, waiting are queued for a slot, and free is closed
@@ -376,6 +429,7 @@ func (s *Site) paced(ctx context.Context) (uint64, error) {
 		if s.until.After(slot) {
 			slot = s.until
 		}
+		lowered, cleared := s.calmDownLocked(now)
 		listed := s.listed
 		if listed && s.next.After(slot) {
 			slot = s.next
@@ -385,6 +439,15 @@ func (s *Site) paced(ctx context.Context) (uint64, error) {
 		}
 		gen, changed := s.gen, s.changed
 		s.mu.Unlock()
+
+		switch {
+		case cleared:
+			s.book.info("%s: no 429 for %s, so its time is taken out of %s", s.key, Format(CalmFor), FileName)
+			s.book.drop(s.key)
+		case lowered > 0:
+			s.book.info("%s: no 429 for %s, now one request every %s (saved in %s)", s.key, Format(CalmFor), Format(lowered), FileName)
+			s.book.save(s.key, lowered)
+		}
 
 		if d := time.Until(slot); d > 0 {
 			t := time.NewTimer(d)
@@ -402,6 +465,28 @@ func (s *Site) paced(ctx context.Context) (uint64, error) {
 	}
 }
 
+// calmDownLocked divides the gap by Growth when the site has gone CalmFor
+// without a 429, and returns the new gap, or cleared when it would drop below
+// StartGap and the site is no longer listed. The calm starts at the site's
+// first request. s.mu is held.
+func (s *Site) calmDownLocked(now time.Time) (lowered time.Duration, cleared bool) {
+	if s.calm.IsZero() {
+		s.calm = now
+		return 0, false
+	}
+	if !s.listed || s.gap <= 0 || now.Sub(s.calm) < CalmFor {
+		return 0, false
+	}
+	s.calm = now
+	gap := time.Duration(float64(s.gap) / Growth)
+	if gap < StartGap {
+		s.gap, s.listed = 0, false
+		return 0, true
+	}
+	s.gap = gap
+	return gap, false
+}
+
 // Hit records a 429 to a request of generation gen. retryAfter is what the
 // server asked for, 0 if nothing. It raises the gap and the cooldown, unless
 // another 429 already did since that request was sent, and reports whether
@@ -417,6 +502,7 @@ func (s *Site) Hit(gen uint64, retryAfter time.Duration) (giveUp bool) {
 		return true
 	}
 	s.gen++
+	s.calm = time.Now()
 	if !s.listed || s.gap <= 0 {
 		s.gap = max(StartGap, s.gap)
 		s.listed = true
