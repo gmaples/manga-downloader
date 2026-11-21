@@ -239,19 +239,22 @@ func TestDownloadIntoSeriesFolderAndRerun(t *testing.T) {
 	}
 }
 
-// the archivers don't make folders, so the folder has to exist first
-func TestDownloadIntoMissingFolderFails(t *testing.T) {
+// Download makes the series folder before anything is fetched (upstream's
+// output-dir fix), so a series folder nobody created yet still gets the chapter
+func TestDownloadIntoMissingSeriesFolder(t *testing.T) {
 	site := newFakeSite(t, fakeChapter{number: 1, pages: 1})
 	series, root := newSeries(t, site, false)
 	dir := SeriesDir(root, series.Title, "")
 	rec := &recorder{}
 
-	_, _ = series.WithOutputDir(dir).Download(context.Background(), listed(site), nil, "", rec)
-
-	if _, err := os.Stat(filepath.Join(dir, "Test Series 1 - Chapter 1.cbz")); err == nil {
-		t.Fatal("packed into a folder nobody created; the controller's MkdirAll would be redundant")
+	if _, err := series.WithOutputDir(dir).Download(context.Background(), listed(site), nil, "", rec); err != nil {
+		t.Fatalf("Download: %v", err)
 	}
-	if !strings.Contains(strings.Join(rec.events, "|"), "failed") {
-		t.Errorf("no failure reported: %q", rec.events)
+
+	if _, err := os.Stat(filepath.Join(dir, "Test Series 1 - Chapter 1.cbz")); err != nil {
+		t.Fatalf("chapter not packed into the new series folder: %v", err)
+	}
+	if strings.Contains(strings.Join(rec.events, "|"), "failed") {
+		t.Errorf("failure reported: %q", rec.events)
 	}
 }

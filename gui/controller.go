@@ -1401,7 +1401,7 @@ func (c *Controller) SelectionGen() uint64 {
 	return c.selGen
 }
 
-// LogGen changes whenever a line is added to the log (see logGen)
+// LogGen changes whenever the log does: a line added, or ClearLog (see logGen)
 func (c *Controller) LogGen() uint64 {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -1767,6 +1767,16 @@ func (c *Controller) Log() []LogLine {
 	return append([]LogLine(nil), c.log...)
 }
 
+// ClearLog empties the log. A running download keeps going: its later lines
+// just start the log again.
+func (c *Controller) ClearLog() {
+	c.mu.Lock()
+	c.logGen++
+	c.log = nil
+	c.mu.Unlock()
+	c.emit()
+}
+
 // Start validates the settings and starts downloading the selected chapters
 // in the background. Validation errors are returned synchronously.
 //
@@ -2053,9 +2063,17 @@ func (g *group) savedNow(c *Controller) int {
 // own, the bundle written ("" for none) and the chapters a bundle already in
 // the folder accounts for, and marks s cancelled or failed. The caller holds c.mu.
 func (c *Controller) endPassLocked(g *group, s *Summary, n, saved int, file string, err error) (extra []Failure, bundle string, existing int) {
+	var serr *core.SettingError
 	switch {
+	case errors.As(err, &serr) && serr.Setting == "output-dir":
+		// raised before anything was fetched, so no chapter has a result to show
+		s.Err = err
+		m := msg("log.outputDirFailed", map[string]any{"folder": serr.Value, "error": serr.Err.Error()})
+		extra = append(extra, windowFailure("", m))
+		c.appendMsgLocked(LogError, m)
 	case err != nil && g.runinfo.Volumes && !errors.Is(err, context.Canceled):
-		// only the volumes check Start already ran can fail a volume run
+		// a volume run's Download fails only on its setting checks (--volumes,
+		// the volume filename template), before anything is fetched
 		s.Err = err
 		m := msg("log.volumesFailed", map[string]any{"reason": err.Error()})
 		extra = append(extra, windowFailure("", m))

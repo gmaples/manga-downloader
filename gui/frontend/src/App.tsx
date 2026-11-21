@@ -390,6 +390,9 @@ export function App({ api, initial }: { api: Api; initial?: State }) {
           limits={() => [LOG_MIN, Math.max(LOG_MIN, window.innerHeight - LOG_ROOM)]}
           onResize={setLogDrag}
           onCommit={(px) => savePanes(sideWidth, px)}
+          onClear={() => {
+            api.clearLog().catch(() => undefined);
+          }}
         />
       )}
       {state.browserAlert !== '' && (

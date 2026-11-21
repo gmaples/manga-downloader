@@ -19,6 +19,8 @@ export interface Api {
   log(): Promise<LogLine[]>;
 
   // Actions. A rejected promise carries the reason as a string (or Error).
+  /** Empties the log the window shows; a running download goes on logging after it */
+  clearLog(): Promise<void>;
   load(url: string): Promise<void>;
   /** Forgets the loaded series (URL, chapters, selection, load error) and the groups that ended; refused while one loads */
   clear(): Promise<void>;
@@ -124,6 +126,7 @@ export function createWailsApi(): Api {
     marks: () => app.Marks() as Promise<ChapterMark[]>,
     log: () => app.Log() as unknown as Promise<LogLine[]>,
 
+    clearLog: () => app.ClearLog(),
     load: (url) => app.Load(url),
     clear: () => app.Clear(),
     setSelected: (index, on) => app.SetSelected(index, on),
