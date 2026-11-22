@@ -108,3 +108,30 @@ describe('say', () => {
     expect(say(es, undefined, 'plain')).toBe('plain');
   });
 });
+
+describe('Ukrainian', () => {
+  const uk = createT('uk');
+
+  it('follows a Ukrainian system', () => {
+    expect(resolveLanguage('', ['uk-UA', 'en-US'])).toBe('uk');
+    expect(LANG_INFO.uk.name).toBe('Українська');
+  });
+
+  it('picks one, few and many by the count', () => {
+    const chapters = (count: number) => uk('count.chapter', { count });
+    expect(chapters(1)).toBe('1 розділ');
+    expect(chapters(21)).toBe('21 розділ');
+    expect(chapters(2)).toBe('2 розділи');
+    expect(chapters(24)).toBe('24 розділи');
+    expect(chapters(5)).toBe('5 розділів');
+    expect(chapters(11)).toBe('11 розділів');
+    expect(chapters(12)).toBe('12 розділів');
+    expect(chapters(0)).toBe('0 розділів');
+    expect(chapters(111)).toBe('111 розділів');
+  });
+
+  it('renders a message the Go side sent', () => {
+    const msg = { key: 'log.loaded', args: { title: 'Berserk', count: 3 }, text: 'Loaded Berserk: 3 chapters' };
+    expect(say(uk, msg, msg.text)).toBe('Відкрито Berserk: 3 розділи');
+  });
+});

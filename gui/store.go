@@ -84,7 +84,7 @@ func defaultPrefs() PrefsDTO {
 // "" for the system's
 func validUILanguage(lang string) bool {
 	switch lang {
-	case "", "en", "es", "ca", "ja":
+	case "", "en", "es", "ca", "ja", "uk":
 		return true
 	}
 

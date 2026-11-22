@@ -1,0 +1,41 @@
+{
+  "merged_one": "{{count}} розділ зібрано з частин",
+  "merged_few": "{{count}} розділи зібрано з частин",
+  "merged_many": "{{count}} розділів зібрано з частин",
+  "merged_other": "{{count}} розділу зібрано з частин",
+  "headline": {
+    "cancelledNoBundle": "Скасовано, пакет не записано",
+    "cancelled": "Скасовано, {{saved}}",
+    "bundleFailed": "Не вдалося записати пакет",
+    "bundleExists": "Уже завантажено",
+    "bundleSaved": "Збережено {{bundle}}",
+    "inVolumes": "{{saved}} ({{volumes}})",
+    "mergedFromParts": "{{saved}}, {{merged}}",
+    "nothingSaved": "Нічого не збережено",
+    "separator": ", "
+  },
+  "sentence": {
+    "cancelledNoBundle": "Скасовано. Пакет не записано.",
+    "cancelledBeforeSaving": "Скасовано, перш ніж щось було збережено.",
+    "savedBefore_one": "Скасовано. До зупинки збережено {{count}} розділ у {{dir}}.",
+    "savedBefore_few": "Скасовано. До зупинки збережено {{count}} розділи у {{dir}}.",
+    "savedBefore_many": "Скасовано. До зупинки збережено {{count}} розділів у {{dir}}.",
+    "savedBefore_other": "Скасовано. До зупинки збережено {{count}} розділу в {{dir}}.",
+    "bundleFailed": "Не вдалося записати пакет.",
+    "bundleExists": "Пакет уже був у {{dir}}, тож нічого не завантажувалося.",
+    "bundleSaved": "{{bundle}} збережено в {{dir}} ({{chapters}}).",
+    "mergedFromParts_one": "Збережено {{count}} розділ у {{dir}}; з них {{merged}}.",
+    "mergedFromParts_few": "Збережено {{count}} розділи у {{dir}}; з них {{merged}}.",
+    "mergedFromParts_many": "Збережено {{count}} розділів у {{dir}}; з них {{merged}}.",
+    "mergedFromParts_other": "Збережено {{count}} розділу в {{dir}}; з них {{merged}}.",
+    "volumeFiles_one": "Збережено {{count}} розділ у {{dir}}: {{files}}.",
+    "volumeFiles_few": "Збережено {{count}} розділи у {{dir}}: {{files}}.",
+    "volumeFiles_many": "Збережено {{count}} розділів у {{dir}}: {{files}}.",
+    "volumeFiles_other": "Збережено {{count}} розділу в {{dir}}: {{files}}.",
+    "saved_one": "Збережено {{count}} розділ у {{dir}}.",
+    "saved_few": "Збережено {{count}} розділи у {{dir}}.",
+    "saved_many": "Збережено {{count}} розділів у {{dir}}.",
+    "saved_other": "Збережено {{count}} розділу в {{dir}}.",
+    "nothingSaved": "Нічого не збережено."
+  }
+}

@@ -1391,6 +1391,11 @@ code,
   padding-inline: 4px;
 }
 
+/* Ukrainian language names run long (en · Англійська): widen the filter selectors */
+:lang(uk) .field.inline-field .input {
+  width: 160px;
+}
+
 .advanced {
   display: block;
 }

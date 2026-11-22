@@ -312,7 +312,7 @@ Ordinary failures (a 400, a plain 403, a 404, a 429, a 5xx, a timeout) never sho
 
 The gear icon (below the URL box on the start screen, in the header of the full
 app) or Ctrl+, / ⌘, opens Settings: the app's language (English, Español,
-Català or 日本語), whether it opens with the simple start screen, and whether it
+Català, 日本語 or Українська; the Ukrainian guide is [uk/app.md](uk/app.md)), whether it opens with the simple start screen, and whether it
 checks for new versions at startup.
 
 <picture>
