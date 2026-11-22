@@ -19,6 +19,24 @@ as they are.
 What the fork changes, and why, is described in the README's
 "About this fork" section. Android details are in [docs/android.md](docs/android.md).
 
+## v25.3.0-series-folders.40 (2026-11-22)
+
+Build 38 plus a Ukrainian interface. (Build 39 is reserved for the
+senkuro.com grabber.)
+
+- **App**: *Settings → Language* offers Українська, and a Ukrainian system
+  picks it by itself. Every label, button, tooltip, dialog, status, log and
+  error message the window words itself is translated, the newer features
+  included (series folders, download groups, history, chapter marks,
+  Download N missing, Delete series, duplicate cleanup, the VPN? tag), with
+  Ukrainian's four plural forms.
+- **Guide**: [docs/uk/app.md](docs/uk/app.md), the app guide in Ukrainian,
+  and [docs/uk/glossary.md](docs/uk/glossary.md), the terms and rules the
+  translation follows.
+- **Still English** by design: chapter and file names, reasons that come
+  from sites and the downloader, file sizes, `log.txt`, and the command
+  line.
+
 ## v25.3.0-series-folders.38 (2026-11-21)
 
 Build 37 plus *Delete series*, for a series downloaded twice under two
