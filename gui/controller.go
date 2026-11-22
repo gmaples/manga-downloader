@@ -319,8 +319,9 @@ type Controller struct {
 	adultTitles map[string]bool
 	// onDisk is which chapters of the loaded list have their file in the
 	// folder, and onDiskKey what it was worked out for (see diskMarksLocked)
-	onDisk    []bool
-	onDiskKey string
+	onDisk     []bool
+	onDiskName []string
+	onDiskKey  string
 }
 
 // group is one press of Download: its chapters' rows, its cancel and its
@@ -396,6 +397,18 @@ type group struct {
 	// of the chapter list (see ChapterMarks)
 	started map[string]bool
 	failed  map[string]bool
+	// cleanup is what the correlation of the group's folder did, nil until
+	// it ran (see events.Correlated)
+	cleanup *Cleanup
+}
+
+// Cleanup is what the correlation of a group's folder did when its download
+// started (see core.Series.Correlate): the duplicate files moved to the
+// Recycle Bin, their size, and the ones that couldn't be moved
+type Cleanup struct {
+	Removed int
+	Bytes   int64
+	Failed  int
 }
 
 // flight is the progress of one chapter of a group from its fetch to its end,
@@ -525,6 +538,9 @@ type GroupState struct {
 	// Unfinished counts the chapters Restart would download again for the
 	// whole group (see Controller.Restart)
 	Unfinished int
+	// Cleanup is what the correlation of the group's folder did, nil when it
+	// didn't run
+	Cleanup *Cleanup
 }
 
 // NewController returns a controller that works on its own copy of settings
@@ -1726,6 +1742,10 @@ func (c *Controller) Groups() []GroupState {
 // state is a copy of the group. The caller holds c.mu.
 func (g *group) state() GroupState {
 	st := GroupState{ID: g.id, Title: g.title, Running: g.running, Cancelling: g.cancelling, Run: g.runinfo, Restored: g.restored, URL: g.url, Adult: g.adult}
+	if g.cleanup != nil {
+		cl := *g.cleanup
+		st.Cleanup = &cl
+	}
 	st.Jobs = make([]Job, len(g.jobs))
 	for i, j := range g.jobs {
 		st.Jobs[i] = *j
@@ -2394,6 +2414,52 @@ func (e events) Waiting(ch *grabber.Chapter, name string) {
 	c.appendMsgLocked(LogInfo, msg("log.waiting", map[string]any{"label": g.releaseLabel(ch), "name": name}))
 	c.mu.Unlock()
 	c.emit()
+}
+
+// Correlated is what the correlation of the folder did before the download
+// started: each file moved to the Recycle Bin and each that couldn't be are
+// logged, and the group's header says how many went. A later pass of the
+// group adds to it.
+func (e events) Correlated(r *core.Correlation) {
+	c, g := e.c, e.g
+	c.mu.Lock()
+	if g.cleanup == nil {
+		g.cleanup = &Cleanup{}
+	}
+	g.cleanup.Removed += len(r.Removed)
+	g.cleanup.Bytes += r.RemovedBytes
+	g.cleanup.Failed += len(r.Failed)
+	for _, d := range r.Removed {
+		if d.SameBytes {
+			c.appendMsgLocked(LogInfo, msg("log.removedSame", map[string]any{"name": d.Name, "kept": d.Kept}))
+		} else {
+			c.appendMsgLocked(LogInfo, msg("log.removedNumber", map[string]any{"name": d.Name, "kept": d.Kept, "number": d.Number}))
+		}
+	}
+	for _, d := range r.Failed {
+		c.appendMsgLocked(LogWarn, msg("log.removeFailed", map[string]any{"name": d.Name, "reason": d.Err.Error()}))
+	}
+	if len(r.Removed) > 0 {
+		c.appendMsgLocked(LogInfo, msg("log.removed", map[string]any{"count": len(r.Removed), "size": sizeText(r.RemovedBytes), "folder": r.Dir}))
+	}
+	// the marks look at the folder again
+	c.onDiskKey = ""
+	c.mu.Unlock()
+	c.emit()
+}
+
+// sizeText writes a size the way people read it: 912 kB, 1.4 GB
+func sizeText(n int64) string {
+	const unit = 1000
+	if n < unit {
+		return fmt.Sprintf("%d B", n)
+	}
+	div, exp := int64(unit), 0
+	for m := n / unit; m >= unit; m /= unit {
+		div *= unit
+		exp++
+	}
+	return fmt.Sprintf("%.1f %cB", float64(n)/float64(div), "kMGTPE"[exp])
 }
 
 // Exists is a chapter left out because its file is already in the output folder.

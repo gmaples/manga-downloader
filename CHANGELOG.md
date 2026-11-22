@@ -19,6 +19,33 @@ as they are.
 What the fork changes, and why, is described in the README's
 "About this fork" section. Android details are in [docs/android.md](docs/android.md).
 
+## v25.3.0-series-folders.34 (2026-11-21)
+
+No more downloads of chapters that are already in the folder under another
+name, and an Activity tab that shows only what is happening. On 2026-11-21 the
+Gintama folder held every chapter from 1 to 704 except 34, but 674 of them
+were named as mangalib titled them on 2026-11-14 (`Гинтама 141 - Chapter 141 …
+[Sherlyn].cbz`), so *Skip existing files* looked for today's names, found
+nothing, and counted 505 chapters missing.
+
+- **Duplicates go to the Recycle Bin when a download starts** (with *Skip
+  existing files* / `--skip-existing`, chapters packed one file each): two
+  files with the same bytes, or two files of one chapter number whatever their
+  title or group, are one chapter; the older is kept and the others are moved
+  to the Recycle Bin (the Trash on macOS and Linux). Names that give two
+  different chapter numbers are never merged, even with the same bytes.
+- **A chapter number in the folder isn't downloaded again**, whatever its
+  file is called, and of several releases of one missing number only the
+  first listed is downloaded.
+- **Chapter list**: a chapter is marked done when any file of its number is
+  in the folder; hovering over the tick names the file, and over a failed
+  mark says why.
+- **Activity tab**: a row only for each chapter being fetched, downloaded or
+  packed now. Each download's header counts the rest (downloading, queued,
+  saved, already in the folder, failed) and the duplicates moved when it
+  started. The log names each file moved and the file it duplicates.
+- **Command line**: the same, printing each file moved and a total.
+
 ## v25.3.0-series-folders.33 (2026-11-21)
 
 Master after PRs #13, #14 and #15 (builds 29 to 31) and PR #16 (build 32), plus correct exit codes

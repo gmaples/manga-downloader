@@ -50,6 +50,12 @@ type Events interface {
 	// followed by Exists when that copy saved it (with SkipExisting), or by
 	// the chapter's download.
 	Waiting(c *grabber.Chapter, name string)
+	// Correlated reports what the correlation of the output folder found and
+	// did, once, before any chapter is fetched: with SkipExisting, when the
+	// chapters are packed one file each (not bundle, not volumes). A chapter
+	// whose number is in r.Have, or that another release of its number in
+	// this download covers, then gets Exists without being fetched.
+	Correlated(r *Correlation)
 	// FilenameFailed reports a chapter whose filename couldn't be built
 	FilenameFailed(c *grabber.Chapter, err error)
 	// Fetching reports a chapter whose page list is about to be fetched, then
@@ -118,6 +124,7 @@ func (NoEvents) FetchFailed(grabber.Filterable, error)        {}
 func (NoEvents) Skipped(*grabber.Chapter)                     {}
 func (NoEvents) Exists(grabber.Filterable, string)            {}
 func (NoEvents) Waiting(*grabber.Chapter, string)             {}
+func (NoEvents) Correlated(*Correlation)                      {}
 func (NoEvents) FilenameFailed(*grabber.Chapter, error)       {}
 func (NoEvents) Fetching(grabber.Filterable)                  {}
 func (NoEvents) Fetched(grabber.Filterable, *grabber.Chapter) {}
@@ -376,6 +383,23 @@ func (s *Series) Download(ctx context.Context, chapters grabber.Filterables, ski
 		}
 	}
 
+	// the folder's duplicates go and the chapter numbers it holds aren't
+	// downloaded again (see Correlate); taking are the numbers this download
+	// takes, by the name of the release that takes them
+	var have, taking map[string]string
+	if skipExisting && !bundle && volumeOf == nil && format != packer.FormatRaw {
+		dir := outDir
+		if dir == "" {
+			dir = "."
+		}
+		r, err := s.Correlate(dir)
+		if err != nil {
+			notice.Warn("looking for duplicates in %s: %s", dir, err)
+		}
+		ev.Correlated(r)
+		have, taking = r.Have, map[string]string{}
+	}
+
 	// a bundle already in the output directory is skipped before anything is fetched
 	if bundle && skipExisting {
 		if name, err := s.bundleName(chapters, rng); err == nil && packer.Exists(outDir, name) {
@@ -444,9 +468,22 @@ loop:
 		// checked before a slot is taken, so a skipped chapter costs no request;
 		// a volume's chapters are skipped only with their volume, see above
 		if skipExisting && !bundle && volumeOf[chap] == nil {
-			if name, err := packer.ChapterName(s.Title, s.Site.GetFilenameTemplate(), format, grabber.ChapterOf(chap)); err == nil && packer.Exists(outDir, name) {
+			name, err := packer.ChapterName(s.Title, s.Site.GetFilenameTemplate(), format, grabber.ChapterOf(chap))
+			if err == nil && packer.Exists(outDir, name) {
 				ev.Exists(chap, name)
 				continue
+			}
+			if have != nil {
+				num := numberOf(chap)
+				if file, ok := have[num]; ok {
+					ev.Exists(chap, file)
+					continue
+				}
+				if file, ok := taking[num]; ok {
+					ev.Exists(chap, file)
+					continue
+				}
+				taking[num] = name
 			}
 		}
 		select {

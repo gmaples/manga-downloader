@@ -16,6 +16,8 @@ export interface Api {
   selection(): Promise<number[]>;
   /** The mark of each chapter of the list, by index; empty when nothing is loaded */
   marks(): Promise<ChapterMark[]>;
+  /** What each chapter's mark can say more, by index: the file of a chapter in the folder, a failure's reason, else '' */
+  markNotes?(): Promise<string[]>;
   log(): Promise<LogLine[]>;
 
   // Actions. A rejected promise carries the reason as a string (or Error).
@@ -83,6 +85,7 @@ export interface Api {
   onChapters(cb: (c: Chapter[]) => void): Unsubscribe;
   onSelection(cb: (indices: number[]) => void): Unsubscribe;
   onMarks(cb: (marks: ChapterMark[]) => void): Unsubscribe;
+  onMarkNotes?(cb: (notes: string[]) => void): Unsubscribe;
   onLog(cb: (lines: LogLine[]) => void): Unsubscribe;
 }
 
@@ -115,6 +118,7 @@ export function createWailsApi(): Api {
   const chapters = fanOut<Chapter[]>('chapters');
   const selection = fanOut<number[]>('selection');
   const marks = fanOut<ChapterMark[]>('marks');
+  const markNotes = fanOut<string[]>('markNotes');
   const log = fanOut<LogLine[]>('log');
 
   return {
@@ -124,6 +128,7 @@ export function createWailsApi(): Api {
     chapters: () => app.Chapters() as unknown as Promise<Chapter[]>,
     selection: () => app.Selection(),
     marks: () => app.Marks() as Promise<ChapterMark[]>,
+    markNotes: () => app.MarkNotes(),
     log: () => app.Log() as unknown as Promise<LogLine[]>,
 
     clearLog: () => app.ClearLog(),
@@ -163,6 +168,7 @@ export function createWailsApi(): Api {
     onChapters: (cb) => chapters.subscribe(cb),
     onSelection: (cb) => selection.subscribe(cb),
     onMarks: (cb) => marks.subscribe(cb),
+    onMarkNotes: (cb) => markNotes.subscribe(cb),
     onLog: (cb) => log.subscribe(cb),
   };
 }

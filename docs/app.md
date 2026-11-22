@@ -28,9 +28,11 @@ button, *Load* and *Settings*. (To open on the full window instead, turn off
    a lock and can't be selected.
    A mark beside each checkbox says what became of the chapter: a green tick
    when its file is already in the folder (the name *Skip existing files*
-   looks for) or it was saved this session, a spinner while it downloads, a
+   looks for, or any file of the chapter's number, see below; hovering over
+   the tick names the file) or it was saved this session, a spinner while it downloads, a
    grey dot while it waits its turn, and an amber mark when it failed (!) or a
-   cancel left it unsaved (a circled dash). No mark means no file and no
+   cancel left it unsaved (a circled dash; hovering over a failed mark says
+   why). No mark means no file and no
    download. Once anything of the series was saved or tried, **Download N
    missing** above the list downloads every chapter that isn't saved yet,
    the failed and cancelled ones included, in one click (chapters already on
@@ -156,8 +158,22 @@ button, *Load* and *Settings*. (To open on the full window instead, turn off
    </picture>
 
    With *Skip existing files*, a chapter whose file is already in the folder is
-   left out before anything is fetched: it shows as skipped in the Activity tab,
-   and the summary says how many were there.
+   left out before anything is fetched, and the summary says how many were
+   there. When the chapters are packed one file each, the download first tidies
+   the folder: two files with the same bytes, or two files of one chapter
+   number whatever their title or group, are one chapter, and the older file is
+   kept while the others go to the Recycle Bin (the Trash on macOS and Linux).
+   A chapter whose number is in the folder isn't downloaded again, and of
+   several releases of one missing number only the first is. The log names
+   each file moved and the file it duplicates. The command line guide's
+   "Skipping existing files" section has the details.
+
+   The Activity tab shows only what is happening: a row for each chapter
+   being fetched, downloaded or packed now. Each download's header counts the
+   rest (downloading, queued, saved, already in the folder, failed) and how
+   many duplicates went to the Recycle Bin when it started; the chapter list's
+   marks say what became of each chapter, and failed ones are downloaded again
+   from the header's *Restart* or the list's *Download N missing*.
 
    If another copy of the app (or the command line) is downloading the same
    chapter into the same folder, the log says so and the chapter waits for it,

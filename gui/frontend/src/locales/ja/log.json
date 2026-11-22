@@ -43,5 +43,10 @@
   "errorPacking": "{{label}}の書き出しエラー: {{reason}}",
   "saved": "{{name}}を保存しました",
   "historyFailed": "履歴を保存できませんでした: {{reason}}",
-  "restartFailed": "話を再開できませんでした：{{reason}}"
+  "restartFailed": "話を再開できませんでした：{{reason}}",
+  "removedSame": "{{name}}をごみ箱に移動しました: {{kept}}と同じファイルです",
+  "removedNumber": "{{name}}をごみ箱に移動しました: 第{{number}}話はすでに{{kept}}です",
+  "removeFailed": "重複ファイル{{name}}をごみ箱に移動できませんでした: {{reason}}",
+  "removed_one": "{{folder}}の重複ファイル{{count}}個（{{size}}）をごみ箱に移動しました",
+  "removed_other": "{{folder}}の重複ファイル{{count}}個（{{size}}）をごみ箱に移動しました"
 }

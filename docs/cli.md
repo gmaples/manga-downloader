@@ -290,14 +290,38 @@ downloads (with `Capítulo` in place of `Chapter` for InManga):
 `--skip-existing` leaves out a chapter, volume or bundle whose file is already
 in the output folder, before its pages are fetched. It looks for the file's
 plain name (without a ` v2` suffix), usually without a request to the site, and
-never deletes or overwrites anything: to download a broken or partial file
-again, delete it first. It assumes the template tells chapters apart: one that
-names only the series would skip every chapter after the first. To keep a
-folder up to date, run it from cron:
+never overwrites anything: to download a broken or partial file again, delete
+it first. It assumes the template tells chapters apart: one that names only the
+series would skip every chapter after the first. To keep a folder up to date,
+run it from cron:
 
 ~~~bash
 0 6 * * * manga-downloader --skip-existing -o ~/Manga/Series "<series url>" all
 ~~~
+
+When chapters are packed one file each (not `--bundle`, not `--volumes`, not
+`--format raw`), it also tidies the folder first and recognises a chapter saved
+under another name:
+
+- **The same bytes** under two names are one chapter: the older file is kept.
+  Two names that give different chapter numbers are kept apart even then (a
+  site may serve one placeholder for every locked chapter).
+- **The same chapter number** in two files is one chapter, whatever their
+  title or group: an earlier download made before the site renamed its
+  chapters, another group's release, or a ` v2` copy. The older file is kept.
+  The number is read from the name the template gives it: what comes before
+  `{{.Number}}` (the series), the number, and what follows it up to the title,
+  so a template that writes the title before the number turns this off.
+- The other copies go to the **Recycle Bin** on Windows, the Trash on macOS
+  (`~/.Trash`) and the freedesktop.org trash elsewhere
+  (`~/.local/share/Trash`), each printed with the file it duplicates. On a
+  Windows drive with no Recycle Bin they're deleted, as Explorer does; on
+  macOS and Linux a file on another drive than the trash stays and is reported.
+  A file another copy of the program is writing (with a `.downloading` file
+  next to it) is left alone.
+- A chapter whose number is in the folder is then not downloaded again, and
+  of several releases of one missing number only the first listed is
+  downloaded.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="../assets/demos/skip-existing.gif">

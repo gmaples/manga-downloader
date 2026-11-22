@@ -37,6 +37,8 @@ interface Props {
   selected: number[];
   /** What became of each chapter, by index, shown beside its checkbox */
   marks: ChapterMark[];
+  /** What each mark can say more, by index: the file of a chapter in the folder, a failure's reason */
+  markNotes?: string[];
   /** Locked while a series loads or a download runs */
   disabled: boolean;
   onToggle: (index: number, on: boolean) => Promise<void>;
@@ -139,6 +141,7 @@ function ChapterList({
   chapters,
   selected,
   marks,
+  markNotes,
   disabled,
   onToggle,
   onToggleMany,
@@ -581,7 +584,7 @@ function ChapterList({
                 onClick={(e) => toggleRow(pos, e.shiftKey)}
               >
                 <ChapterBox on={on} locked={ch.locked} />
-                <ChapterMarkIcon mark={marks[ch.index] ?? ''} />
+                <ChapterMarkIcon mark={marks[ch.index] ?? ''} note={markNotes?.[ch.index] ?? ''} />
                 {!row.part && <span className="num">{formatNumber(ch.number)}</span>}
                 <ChapterTitle title={row.part ? row.part.label : ch.title} locked={ch.locked} />
                 {(ch.language !== '' || ch.group !== '') && (
@@ -620,8 +623,11 @@ export function ChapterBox({ on, locked }: { on: boolean; locked: boolean }) {
   return <span className={`box${on ? ' on' : ''}${locked ? ' disabled' : ''}`} aria-hidden="true" />;
 }
 
-/** A chapter's mark, beside its checkbox: what became of it (see ChapterMark) */
-export function ChapterMarkIcon({ mark }: { mark: ChapterMark }) {
+/**
+ * A chapter's mark, beside its checkbox: what became of it (see ChapterMark),
+ * with its note, the file it is in the folder as or why it failed, on hover
+ */
+export function ChapterMarkIcon({ mark, note = '' }: { mark: ChapterMark; note?: string }) {
   const { t } = useI18n();
   let icon;
   let label;
@@ -648,6 +654,9 @@ export function ChapterMarkIcon({ mark }: { mark: ChapterMark }) {
       break;
     default:
       return <span className="mark" aria-hidden="true" />;
+  }
+  if (note !== '') {
+    label = `${label}: ${note}`;
   }
   return (
     <span className={`mark mark-${mark}`} role="img" title={label} aria-label={label}>

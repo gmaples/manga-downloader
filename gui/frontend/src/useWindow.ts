@@ -10,6 +10,8 @@ export interface WindowData {
   selected: number[];
   /** Each chapter's mark, by index (see ChapterMark) */
   marks: ChapterMark[];
+  /** What each chapter's mark can say more, by index (see Api.markNotes) */
+  markNotes: string[];
   log: LogLine[];
 }
 
@@ -24,12 +26,13 @@ export function useWindow(api: Api, initial?: State): WindowData & { failure: st
     chapters: [],
     selected: [],
     marks: [],
+    markNotes: [],
     log: [],
   });
   // the error's text; the window words it in the language shown when it renders
   const [failure, setFailure] = useState<string | null>(null);
   // which fields a push has already filled, so a late snapshot doesn't clobber them
-  const pushed = useRef({ state: false, chapters: false, selected: false, marks: false, log: false });
+  const pushed = useRef({ state: false, chapters: false, selected: false, marks: false, markNotes: false, log: false });
 
   // a newer State from the caller: it saw pushes that came before this window subscribed,
   // and stops mattering once the window's own subscription has delivered one
@@ -61,14 +64,29 @@ export function useWindow(api: Api, initial?: State): WindowData & { failure: st
         seen.marks = true;
         setData((d) => ({ ...d, marks }));
       }),
+      ...(api.onMarkNotes
+        ? [
+            api.onMarkNotes((markNotes) => {
+              seen.markNotes = true;
+              setData((d) => ({ ...d, markNotes }));
+            }),
+          ]
+        : []),
       api.onLog((log) => {
         seen.log = true;
         setData((d) => ({ ...d, log }));
       }),
     ];
 
-    Promise.all([initial ?? api.state(), api.chapters(), api.selection(), api.marks(), api.log()])
-      .then(([state, chapters, selected, marks, log]) => {
+    Promise.all([
+      initial ?? api.state(),
+      api.chapters(),
+      api.selection(),
+      api.marks(),
+      api.log(),
+      api.markNotes ? api.markNotes() : Promise.resolve<string[]>([]),
+    ])
+      .then(([state, chapters, selected, marks, log, markNotes]) => {
         if (!alive) {
           return;
         }
@@ -77,6 +95,7 @@ export function useWindow(api: Api, initial?: State): WindowData & { failure: st
           chapters: seen.chapters ? d.chapters : chapters,
           selected: seen.selected ? d.selected : selected,
           marks: seen.marks ? d.marks : marks,
+          markNotes: seen.markNotes ? d.markNotes : markNotes,
           log: seen.log ? d.log : log,
         }));
       })

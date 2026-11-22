@@ -116,7 +116,7 @@ describe('ActivityPanel', () => {
     expect(render(one({ summary, jobs: [] }))).not.toContain('already in the folder');
   });
 
-  it('shows a volume row and its reason in Spanish', () => {
+  it('shows a running volume row in Spanish, and counts a failed one without a row', () => {
     const volume: Job = {
       ...job,
       title: 'Vol. 01 · chapters 1–7',
@@ -125,13 +125,31 @@ describe('ActivityPanel', () => {
         args: { volume: 'Vol. 01', first: '1', last: '7' },
         text: 'Vol. 01 · chapters 1–7',
       },
+      state: 'downloading',
+    };
+    const failed: Job = {
+      ...volume,
+      title: 'Vol. 02 · chapters 8–9',
+      titleMsg: { key: 'job.title.volume', args: { volume: 'Vol. 02', first: '8', last: '9' }, text: 'Vol. 02 · chapters 8–9' },
       state: 'failed',
       reason: 'download: x',
       reasonMsg: { key: 'job.reason.download', args: { reason: 'x' }, text: 'download: x' },
     };
-    const html = render(one({ summary: null, jobs: [volume], run: { chapters: 7, bundle: false, volumes: true, rows: 1 } }), 'es');
+    const html = render(
+      one({ summary: null, jobs: [volume, failed], run: { chapters: 9, bundle: false, volumes: true, rows: 2 } }),
+      'es',
+    );
     expect(html).toContain('Vol. 01 · capítulos 1–7');
-    expect(html).toContain('descarga: x');
+    expect(html).not.toContain('Vol. 02');
+    expect(html).not.toContain('descarga: x');
+    expect(html).toContain('1 fallido');
+  });
+
+  it('says how many duplicates the download moved to the Recycle Bin', () => {
+    const html = render(one({ summary: null, jobs: [job], cleanup: { removed: 212, bytes: 1_400_000_000, failed: 1 } }));
+    expect(html).toContain('Moved 212 duplicate files (1.4 GB) to the Recycle Bin');
+    expect(html).toContain('1 duplicate couldn&#x27;t be moved: see the log');
+    expect(html).toContain('This run · 1 downloading');
   });
 
   it('translates the window words of a failure line and keeps a core reason as it is', () => {
@@ -205,7 +223,7 @@ describe('ActivityPanel restarts', () => {
     ...extra,
   });
 
-  it('offers the group\'s unfinished chapters and a restartable row\'s own', () => {
+  it('offers the group\'s unfinished chapters from its header; a failed chapter has no row', () => {
     const html = render(
       one({
         summary,
@@ -214,8 +232,9 @@ describe('ActivityPanel restarts', () => {
       }),
     );
     expect(html).toContain('Restart 2 unfinished');
-    expect(html).toContain('aria-label="Download Romance Dawn again"');
-    expect(html.match(/job-restart/g)?.length).toBe(1);
+    expect(html).not.toContain('Romance Dawn');
+    expect(html).not.toContain('job-restart');
+    expect(html).toContain('1 saved · 1 failed');
   });
 
   it('offers nothing when nothing is unfinished', () => {

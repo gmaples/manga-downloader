@@ -54,6 +54,10 @@ export function Marks() {
   return window['go']['main']['App']['Marks']();
 }
 
+export function MarkNotes() {
+  return window['go']['main']['App']['MarkNotes']();
+}
+
 export function OpenFolder(arg1) {
   return window['go']['main']['App']['OpenFolder'](arg1);
 }

@@ -908,6 +908,16 @@ func (e *bubbleEvents) Exists(listed grabber.Filterable, _ string) {
 	e.prog.Send(chapterExistsMsg{listed: listed})
 }
 
+func (e *bubbleEvents) Correlated(r *core.Correlation) {
+	for _, l := range correlationLines(r) {
+		if l.warn {
+			e.println(color.RedString("%s", l.text))
+		} else {
+			e.println(color.YellowString("%s", l.text))
+		}
+	}
+}
+
 func (e *bubbleEvents) Waiting(c *grabber.Chapter, name string) {
 	e.println(color.YellowString("- waiting for %s: another copy is downloading %s",
 		core.ReleaseLabel(c, e.showLang, e.showGroup), name))
@@ -1017,6 +1027,16 @@ func (p plainEvents) Skipped(c *grabber.Chapter) {
 
 func (p plainEvents) Exists(listed grabber.Filterable, name string) {
 	yellow("- skipping %s: %s already exists", core.ReleaseLabel(listed, p.showLang, p.showGroup), name)
+}
+
+func (p plainEvents) Correlated(r *core.Correlation) {
+	for _, l := range correlationLines(r) {
+		if l.warn {
+			red("%s", l.text)
+		} else {
+			yellow("%s", l.text)
+		}
+	}
 }
 
 func (p plainEvents) Waiting(c *grabber.Chapter, name string) {

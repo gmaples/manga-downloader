@@ -1,7 +1,11 @@
 // What the downloads are doing and how they ended: one section per group (each
 // press of Download), in the order they started, under a header with the
-// series and its own Cancel. Each has its summary once it ended, then one row
-// per chapter (or the single bundle job). Rows are windowed like the chapter
+// series, its own Cancel and its counts (downloading, queued, saved, already
+// in the folder, failed, and the duplicates moved to the Recycle Bin when it
+// started). Each has its summary once it ended, then one row per chapter
+// that is happening now (or the single bundle job): a chapter that ended or
+// waits its turn has no row, and the chapter list's marks say what became of
+// each. Rows are windowed like the chapter
 // list, since "select all" on a long series makes thousands of them. A group
 // of the last session (restored) shows what was done and what's still to do,
 // with a button that loads the series with those chapters selected. A group's
@@ -13,7 +17,7 @@ import { useI18n } from './i18n/react';
 import { jobFraction, jobShortStatus, jobStatus, summaryHeadline, summarySentence } from './format';
 import { AlertIcon, CheckIcon, ErrorIcon, FolderIcon, PackageIcon, RefreshIcon, SkipIcon, Spinner, TodoIcon, XIcon } from './icons';
 import { MaskedTitle, useMask } from './Masked';
-import { overallProgress, summaryTone } from './run';
+import { groupCounts, isActive, overallProgress, sizeText, summaryTone } from './run';
 import type { Group, Job, State, Summary } from './types';
 import { useVirtualList } from './virtual';
 
@@ -131,14 +135,51 @@ function GroupSection({
           </button>
         )}
       </div>
+      <GroupCountsLine group={group} />
       {group.summary && <SummaryCard summary={group.summary} mask={mask} onOpenFolder={onOpenFolder} />}
       {group.jobs.length > 0 &&
+        (group.run.bundle || group.jobs.some(isActive)) &&
         (group.run.bundle ? (
           <BundleCard job={group.jobs[0]} chapters={group.run.chapters} />
         ) : (
           <JobList group={group} multi={multi} mask={mask} busy={busy} onRestart={onRestart} />
         ))}
     </section>
+  );
+}
+
+/** The header's counts: what became of the group's chapters, and the duplicates it removed */
+function GroupCountsLine({ group }: { group: Group }) {
+  const { t } = useI18n();
+  if (group.run.bundle) {
+    return null;
+  }
+  const c = groupCounts(group);
+  const parts: string[] = [];
+  if (c.active > 0) parts.push(t('activity.count.active', { count: c.active }));
+  if (c.queued > 0) parts.push(t('activity.count.queued', { count: c.queued }));
+  if (c.saved > 0) parts.push(t('activity.count.saved', { count: c.saved }));
+  if (c.had > 0) parts.push(t('activity.count.had', { count: c.had }));
+  if (c.skipped > 0) parts.push(t('activity.count.skipped', { count: c.skipped }));
+  if (c.failed > 0) parts.push(t('activity.count.failed', { count: c.failed }));
+  if (c.todo > 0) parts.push(t('activity.count.todo', { count: c.todo }));
+  if (parts.length > 0) {
+    parts.unshift(group.running ? t('activity.thisRun') : group.restored ? t('activity.restored') : t('activity.lastRun'));
+  }
+  const cleanup = group.cleanup;
+  if (parts.length === 0 && (cleanup == null || cleanup.removed + cleanup.failed === 0)) {
+    return null;
+  }
+  return (
+    <div className="run-group-counts small">
+      {parts.length > 0 && <p className="muted">{parts.join(' · ')}</p>}
+      {cleanup != null && cleanup.removed > 0 && (
+        <p className="muted">{t('activity.cleanup', { count: cleanup.removed, size: sizeText(cleanup.bytes) })}</p>
+      )}
+      {cleanup != null && cleanup.failed > 0 && (
+        <p className="error-text">{t('activity.cleanupFailed', { count: cleanup.failed })}</p>
+      )}
+    </div>
   );
 }
 
@@ -240,8 +281,9 @@ function JobList({
 }) {
   const { t } = useI18n();
   const overall = overallProgress(group);
-  const queued = group.running ? overall.queued : 0;
-  const rows = group.jobs.length + (queued > 0 ? 1 : 0);
+  // only what is happening now has a row; the header counts the rest
+  const active = group.jobs.filter(isActive);
+  const rows = active.length;
   const list = useVirtualList(rows, JOB_HEIGHT, 4);
   const { first, last } = list.span;
 
@@ -265,14 +307,9 @@ function JobList({
           {Array.from({ length: last - first }, (_, i) => {
             const pos = first + i;
             const style = { transform: `translateY(${pos * JOB_HEIGHT}px)`, height: JOB_HEIGHT };
-            const job = group.jobs[pos];
+            const job = active[pos];
             if (job === undefined) {
-              return (
-                <div key="queued" role="listitem" className="job job-queued" style={style}>
-                  <span className="job-icon" aria-hidden="true" />
-                  <span className="job-title muted">{t('activity.queued', { count: queued })}</span>
-                </div>
-              );
+              return null;
             }
             return <JobRow key={pos} job={job} style={style} mask={mask} busy={busy} onRestart={onRestart} />;
           })}

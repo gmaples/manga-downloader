@@ -4,9 +4,11 @@ import { createMockApi } from './mock';
 import {
   downloadBlocker,
   downloadLabel,
+  groupCounts,
   hostOf,
   overallProgress,
   summaryTone,
+  sizeText,
   tally,
 } from './run';
 import type { Job, State, Summary } from './types';
@@ -274,5 +276,43 @@ describe('hostOf', () => {
     expect(hostOf('https://www.example.com/series/a')).toBe('example.com');
     expect(hostOf(' https://sub.example.org/x ')).toBe('sub.example.org');
     expect(hostOf('not a url')).toBe('');
+  });
+});
+
+describe('groupCounts', () => {
+  const j = (state: Job['state'], key = ''): Job => ({
+    title: 'x',
+    tags: '',
+    number: 1,
+    total: 1,
+    done: 0,
+    state,
+    reason: '',
+    status: '',
+    volume: false,
+    reasonMsg: key ? { key, text: '' } : undefined,
+  });
+  it('counts what became of the chapters, and the ones still to start', () => {
+    const jobs = [
+      j('fetching'),
+      j('downloading'),
+      j('archiving'),
+      j('done'),
+      j('failed'),
+      j('skipped', 'job.reason.exists'),
+      j('skipped', 'job.reason.skipPages'),
+    ];
+    const c = groupCounts({ jobs, running: true, run: { chapters: 10, bundle: false, volumes: false, rows: 10 } });
+    expect(c).toEqual({ active: 3, queued: 3, saved: 1, had: 1, skipped: 1, failed: 1, todo: 0 });
+    const ended = groupCounts({ jobs, running: false, run: { chapters: 10, bundle: false, volumes: false, rows: 10 } });
+    expect(ended.queued).toBe(0);
+  });
+});
+
+describe('sizeText', () => {
+  it('writes sizes the way people read them', () => {
+    expect(sizeText(912)).toBe('912 B');
+    expect(sizeText(912_400)).toBe('912.4 kB');
+    expect(sizeText(1_400_000_000)).toBe('1.4 GB');
   });
 });

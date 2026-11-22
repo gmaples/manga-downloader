@@ -4,6 +4,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/elboletaire/manga-downloader/grabber"
 	"github.com/elboletaire/manga-downloader/packer"
@@ -82,7 +83,11 @@ func (g *group) markOf(k string) string {
 }
 
 // diskMarksLocked returns which chapters of the loaded list have their file
-// in the folder a run of the whole list saves into. It looks again only when
+// in the folder a run of the whole list saves into: the file Skip existing
+// looks for, or any file of the chapter's number (the name an earlier
+// download gave it, with another title or group, see
+// packer.NewNumberMatcher), as a download with Skip existing then leaves it
+// out. c.onDiskName gets the file of each. It looks again only when
 // the series, the folder, the format or the file names change, or a download
 // ends, so the pushes while a run goes on cost no disk access. The caller
 // holds c.mu.
@@ -94,13 +99,19 @@ func (c *Controller) diskMarksLocked() []bool {
 		return c.onDisk
 	}
 	disk := make([]bool, len(c.series.Chapters))
+	names := make([]string, len(c.series.Chapters))
 	if dir != "" {
+		numbers := numbersIn(dir, c.series.Title, s.FilenameTemplate, s.Format)
 		for i, chap := range c.series.Chapters {
 			name, err := packer.ChapterName(c.series.Title, s.FilenameTemplate, s.Format, grabber.ChapterOf(chap))
-			disk[i] = err == nil && packer.Exists(dir, name)
+			if err == nil && packer.Exists(dir, name) {
+				disk[i], names[i] = true, name
+			} else if file, ok := numbers[packer.NumberText(chap.GetNumber())]; ok {
+				disk[i], names[i] = true, file
+			}
 		}
 	}
-	c.onDisk, c.onDiskKey = disk, key
+	c.onDisk, c.onDiskName, c.onDiskKey = disk, names, key
 
 	return disk
 }
@@ -141,4 +152,64 @@ func (c *Controller) DownloadMissing() error {
 	c.mu.Unlock()
 	c.emit()
 	return c.Start()
+}
+
+// numbersIn returns the chapter files in dir by their number, read from their
+// names (see packer.NumberMatcher); the first by name when a number has
+// several. It's empty when the template doesn't name chapters by number.
+func numbersIn(dir, title, template, format string) map[string]string {
+	out := map[string]string{}
+	m, ok := packer.NewNumberMatcher(title, template, format)
+	if !ok {
+		return out
+	}
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return out
+	}
+	for _, e := range entries {
+		if !e.Type().IsRegular() {
+			continue
+		}
+		if n, ok := m.Number(e.Name()); ok {
+			if _, seen := out[n]; !seen {
+				out[n] = e.Name()
+			}
+		}
+	}
+	return out
+}
+
+// ChapterNotes returns, by index, what the mark of each chapter of the loaded
+// list can say more: the file of a chapter that's in the folder, the reason
+// of one whose download failed, else "". It's nil when nothing is loaded.
+func (c *Controller) ChapterNotes() []string {
+	marks := c.ChapterMarks()
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.series == nil || len(marks) != len(c.series.Chapters) {
+		return nil
+	}
+	disk := c.diskMarksLocked()
+	reasons := map[string]string{}
+	for _, g := range c.groups {
+		if g.restored || g.url != c.url {
+			continue
+		}
+		for _, j := range g.jobs {
+			if j.State == JobFailed && j.Key != "" {
+				reasons[j.Key] = j.Reason
+			}
+		}
+	}
+	notes := make([]string, len(c.series.Chapters))
+	for i, chap := range c.series.Chapters {
+		switch {
+		case marks[i] == MarkFailed:
+			notes[i] = reasons[chapKey(chap)]
+		case marks[i] == MarkDone && disk[i]:
+			notes[i] = c.onDiskName[i]
+		}
+	}
+	return notes
 }

@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"slices"
 	"testing"
+	"time"
 
 	"github.com/elboletaire/manga-downloader/grabber"
 	"github.com/elboletaire/manga-downloader/packer"
@@ -161,5 +162,85 @@ func TestDownloadMissing(t *testing.T) {
 	}
 	if got := c.SelectedIndices(); !slices.Equal(got, []int{1}) {
 		t.Errorf("selection = %v, want the last download's kept after the refusal", got)
+	}
+}
+
+// A chapter whose number is in the folder under another name (another
+// title or group, from an earlier download) is done too, and its note names
+// the file
+func TestMarksFindAChapterByItsNumber(t *testing.T) {
+	c, _, dir := newTestController(t, false, nil, chapters(3, 1)...)
+	if err := os.WriteFile(filepath.Join(dir, "Test Series 2 - Chapter 2 Old title [Sherlyn].cbz"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Load(testURL); err != nil {
+		t.Fatal(err)
+	}
+	wantMarks(t, c, "", "done", "")
+	if got := c.ChapterNotes(); !slices.Equal(got, []string{"", "Test Series 2 - Chapter 2 Old title [Sherlyn].cbz", ""}) {
+		t.Errorf("notes = %q", got)
+	}
+}
+
+// With Skip existing, a download first moves the folder's duplicates to the
+// trash, says so in the group's cleanup and the log, and leaves out the
+// chapters whose number is already there
+func TestDownloadCorrelatesTheFolder(t *testing.T) {
+	data := t.TempDir()
+	t.Setenv("XDG_DATA_HOME", data)
+	c, _, dir := newTestController(t, false, nil, chapters(2, 1)...)
+	for _, f := range []struct {
+		name string
+		age  time.Duration
+	}{
+		{"Test Series 1 - Chapter 1 Old [Sherlyn].cbz", 2 * time.Hour},
+		{"Test Series 1 - Chapter 1.cbz", time.Hour},
+	} {
+		p := filepath.Join(dir, f.name)
+		if err := os.WriteFile(p, []byte(f.name), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		when := time.Now().Add(-f.age)
+		if err := os.Chtimes(p, when, when); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := c.Configure(func(s *grabber.Settings) { s.SkipExisting = true }); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Load(testURL); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.SetAll(true); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Start(); err != nil {
+		t.Fatal(err)
+	}
+	waitFinished(t, c)
+
+	groups := c.Groups()
+	g := groups[len(groups)-1]
+	if g.Cleanup == nil || g.Cleanup.Removed != 1 || g.Cleanup.Failed != 0 {
+		t.Fatalf("cleanup = %+v", g.Cleanup)
+	}
+	if _, err := os.Stat(filepath.Join(data, "Trash", "files", "Test Series 1 - Chapter 1.cbz")); err != nil {
+		t.Errorf("duplicate not in the trash: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "Test Series 1 - Chapter 1 Old [Sherlyn].cbz")); err != nil {
+		t.Errorf("older file gone: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "Test Series 2 - Chapter 2.cbz")); err != nil {
+		t.Errorf("chapter 2 not saved: %v", err)
+	}
+	wantMarks(t, c, "done", "done")
+	found := false
+	for _, l := range c.Log() {
+		if l.Msg != nil && l.Msg.Key == "log.removedNumber" {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("no log line for the removed duplicate")
 	}
 }

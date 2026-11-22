@@ -22,6 +22,63 @@ export function tally(jobs: Job[]): Tally {
   return t;
 }
 
+/** A job that is happening now: its page list or pages being fetched, or its file being written */
+export function isActive(j: Job): boolean {
+  return j.state === 'fetching' || j.state === 'downloading' || j.state === 'archiving';
+}
+
+/** What a group's header counts: its chapters (or volumes) by what became of them */
+export interface GroupCounts {
+  active: number;
+  queued: number;
+  saved: number;
+  /** Left out because the folder already holds the chapter */
+  had: number;
+  /** Left out because the skip-pages option excluded every page */
+  skipped: number;
+  failed: number;
+  /** A restored group's chapters still to do */
+  todo: number;
+}
+
+export function groupCounts(group: Pick<Group, 'jobs' | 'run' | 'running'>): GroupCounts {
+  const c: GroupCounts = { active: 0, queued: 0, saved: 0, had: 0, skipped: 0, failed: 0, todo: 0 };
+  for (const j of group.jobs) {
+    if (isActive(j)) {
+      c.active++;
+    } else if (j.state === 'done') {
+      c.saved++;
+    } else if (j.state === 'failed') {
+      c.failed++;
+    } else if (j.state === 'todo') {
+      c.todo++;
+    } else if (j.reasonMsg?.key === 'job.reason.exists') {
+      c.had++;
+    } else {
+      c.skipped++;
+    }
+  }
+  if (group.running) {
+    c.queued = overallProgress(group).queued;
+  }
+  return c;
+}
+
+/** A size in bytes the way people read it: 912 kB, 1.4 GB */
+export function sizeText(n: number): string {
+  if (n < 1000) {
+    return `${n} B`;
+  }
+  const units = 'kMGTPE';
+  let v = n / 1000;
+  let i = 0;
+  while (v >= 1000 && i < units.length - 1) {
+    v /= 1000;
+    i++;
+  }
+  return `${v.toFixed(1)} ${units[i]}B`;
+}
+
 export interface Overall {
   /** Rows (chapters, volumes or the one bundle) that reached an end state */
   finished: number;

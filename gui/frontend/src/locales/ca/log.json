@@ -43,5 +43,10 @@
   "errorPacking": "error en empaquetar {{label}}: {{reason}}",
   "saved": "desat {{name}}",
   "historyFailed": "no s'ha pogut desar l'historial: {{reason}}",
-  "restartFailed": "no s'han pogut reiniciar els capítols: {{reason}}"
+  "restartFailed": "no s'han pogut reiniciar els capítols: {{reason}}",
+  "removedSame": "{{name}} s'ha mogut a la paperera de reciclatge: és el mateix fitxer que {{kept}}",
+  "removedNumber": "{{name}} s'ha mogut a la paperera de reciclatge: el capítol {{number}} ja és {{kept}}",
+  "removeFailed": "no s'ha pogut moure el duplicat {{name}} a la paperera de reciclatge: {{reason}}",
+  "removed_one": "{{count}} fitxer duplicat ({{size}}) de {{folder}} s'ha mogut a la paperera de reciclatge",
+  "removed_other": "{{count}} fitxers duplicats ({{size}}) de {{folder}} s'han mogut a la paperera de reciclatge"
 }

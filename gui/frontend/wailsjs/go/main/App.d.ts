@@ -27,6 +27,8 @@ export function Log():Promise<Array<main.LogDTO>>;
 
 export function Marks():Promise<Array<string>>;
 
+export function MarkNotes():Promise<Array<string>>;
+
 export function OpenFolder(arg1:number):Promise<void>;
 
 export function Options():Promise<main.OptionsDTO>;
