@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"runtime"
 	"syscall"
 	"unsafe"
@@ -24,41 +25,54 @@ const (
 
 var procSHFileOperationW = syscall.NewLazyDLL("shell32.dll").NewProc("SHFileOperationW")
 
-// files sends the files to the Recycle Bin with SHFileOperationW and
-// FOF_ALLOWUNDO, one call per file so one that fails doesn't stop the others.
-// As in Explorer, a file on a drive with no Recycle Bin is deleted outright.
+// files sends the files to the Recycle Bin with one SHFileOperationW call
+// and FOF_ALLOWUNDO, then looks at which are still there: those failed. As in
+// Explorer, a file on a drive with no Recycle Bin is deleted outright.
 func files(paths []string, failed map[string]error) {
+	var from []uint16
+	var present []string
 	for _, p := range paths {
-		if err := recycle(p); err != nil {
-			failed[p] = err
+		if _, err := os.Lstat(p); errors.Is(err, os.ErrNotExist) {
+			continue
 		}
+		u, err := syscall.UTF16FromString(path(p))
+		if err != nil {
+			failed[p] = err
+			continue
+		}
+		// each path ends with its NUL, and the list with one more
+		from = append(from, u...)
+		present = append(present, p)
 	}
-}
-
-// recycle sends one file to the Recycle Bin
-func recycle(path string) error {
-	if _, err := os.Lstat(path); errors.Is(err, os.ErrNotExist) {
-		return nil
+	if len(present) == 0 {
+		return
 	}
-	from, err := syscall.UTF16FromString(path)
-	if err != nil {
-		return err
-	}
-	// pFrom is a list ending with two NULs
 	from = append(from, 0)
 	op := newFileOp(foDelete, &from[0], trashFlags)
 	r, _, _ := procSHFileOperationW.Call(uintptr(unsafe.Pointer(&op[0])))
 	runtime.KeepAlive(from)
-	if r != 0 {
-		return fmt.Errorf("couldn't move %s to the Recycle Bin (error 0x%x)", path, r)
+	var callErr error
+	switch {
+	case r != 0:
+		callErr = fmt.Errorf("the Recycle Bin refused it (error 0x%x)", r)
+	case aborted(op):
+		callErr = errors.New("moving to the Recycle Bin was cancelled")
+	default:
+		callErr = errors.New("it's still there after moving it to the Recycle Bin")
 	}
-	if aborted(op) {
-		return fmt.Errorf("moving %s to the Recycle Bin was cancelled", path)
+	for _, p := range present {
+		if _, err := os.Lstat(p); err == nil {
+			failed[p] = callErr
+		}
 	}
-	if _, err := os.Lstat(path); err == nil {
-		return fmt.Errorf("%s is still there after moving it to the Recycle Bin", path)
+}
+
+// path is p as SHFileOperationW takes it: a full path
+func path(p string) string {
+	if abs, err := filepath.Abs(p); err == nil {
+		return abs
 	}
-	return nil
+	return p
 }
 
 // SHFILEOPSTRUCTW is packed to 1 byte on 32-bit Windows and to 8 on 64-bit,

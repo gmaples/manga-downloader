@@ -3,9 +3,11 @@
   "title": "Sèries anteriors",
   "close": "Tanca l'historial",
   "empty": "Encara no hi ha sèries. Les sèries que carreguis apareixeran aquí.",
-  "hint": "Fes clic en una sèrie per obrir-ne la pàgina al navegador, o en el lloc per obrir el lloc. Es desen les 100 últimes.",
+  "hint": "Fes clic en una sèrie per obrir-ne la pàgina al navegador, o en el lloc per obrir el lloc. Carrega la posa a la barra d'URL i en carrega els capítols. Es desen les 100 últimes.",
   "clear": "Esborra",
   "counts": "{{done}} desats, {{todo}} pendents",
   "dropdown": "Sèries anteriors",
-  "noMatch": "Cap sèrie anterior no coincideix."
+  "noMatch": "Cap sèrie anterior no coincideix.",
+  "load": "Carrega",
+  "loadLabel": "Posa aquesta sèrie a la barra d'URL i carrega'n els capítols"
 }

@@ -175,13 +175,15 @@ func FetchChapterLimited(ctx context.Context, site grabber.Site, chapter *grabbe
 			if err != nil && ctx.Err() == nil {
 				// the other servers site-mirrors.txt names for the page's host
 				for _, u := range mirrorURLs(lim, page.URL) {
+					notice.Info("page %d: %s failed (%s), trying %s", page.Number, hostOf(page.URL), err, hostOf(u))
 					params.URL = u
 					f, merr := fetchFile(ctx, params, uint(page.Number), site.GetRetries(), page.Transform, pace, page.RetryFlaky, lim)
 					if merr == nil {
-						notice.Info("page %d: %s failed (%s), got it from %s", page.Number, hostOf(page.URL), err, hostOf(u))
+						notice.Info("page %d: got it from %s", page.Number, hostOf(u))
 						file, err = f, nil
 						break
 					}
+					notice.Info("page %d: %s failed too (%s)", page.Number, hostOf(u), merr)
 				}
 			}
 
@@ -279,6 +281,7 @@ func fetchFile(ctx context.Context, params http.RequestParams, page uint, retrie
 			if lim.Hit(gen, se.RetryAfter) {
 				return nil, err
 			}
+			notice.Info("page %d: %s answered 429 (too many requests), waiting to try again", page, hostOf(params.URL))
 			// lim.Wait sits out the cooldown; a 429 isn't one of the retries
 			attempt--
 			continue
@@ -295,6 +298,7 @@ func fetchFile(ctx context.Context, params http.RequestParams, page uint, retrie
 		if retryFlaky && isFlaky(err) {
 			params.URL = bustCache(orig)
 		}
+		notice.Info("page %d: %s, trying again in %s (try %d of %d)", page, err, wait.Round(time.Millisecond), attempt+2, limit+1)
 
 		t := time.NewTimer(wait)
 		select {

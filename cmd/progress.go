@@ -908,8 +908,17 @@ func (e *bubbleEvents) Exists(listed grabber.Filterable, _ string) {
 	e.prog.Send(chapterExistsMsg{listed: listed})
 }
 
+func (e *bubbleEvents) Correlating(p core.CorrelateProgress) {
+	e.printLines(progressLines(p))
+}
+
 func (e *bubbleEvents) Correlated(r *core.Correlation) {
-	for _, l := range correlationLines(r) {
+	e.printLines(correlationLines(r))
+}
+
+// printLines prints the lines above the bars, a warning in red
+func (e *bubbleEvents) printLines(lines []line) {
+	for _, l := range lines {
 		if l.warn {
 			e.println(color.RedString("%s", l.text))
 		} else {
@@ -1029,8 +1038,17 @@ func (p plainEvents) Exists(listed grabber.Filterable, name string) {
 	yellow("- skipping %s: %s already exists", core.ReleaseLabel(listed, p.showLang, p.showGroup), name)
 }
 
+func (p plainEvents) Correlating(c core.CorrelateProgress) {
+	printLines(progressLines(c))
+}
+
 func (p plainEvents) Correlated(r *core.Correlation) {
-	for _, l := range correlationLines(r) {
+	printLines(correlationLines(r))
+}
+
+// printLines prints the lines, a warning in red
+func printLines(lines []line) {
+	for _, l := range lines {
 		if l.warn {
 			red("%s", l.text)
 		} else {
@@ -1062,10 +1080,12 @@ func (p plainEvents) DownloadFailed(c *grabber.Chapter, err error) {
 	red("- error downloading %s: %s", core.ReleaseLabel(c, p.showLang, p.showGroup), err.Error())
 }
 
-func (plainEvents) Packed(_ *grabber.Chapter, _ string, err error) {
+func (plainEvents) Packed(_ *grabber.Chapter, name string, err error) {
 	if err != nil {
 		red(err.Error())
+		return
 	}
+	fmt.Fprintf(color.Output, "saved %s\n", name)
 }
 
 func (plainEvents) VolumeStart(v *core.Volume) {
@@ -1091,7 +1111,9 @@ func (plainEvents) VolumePacked(v *core.Volume, name string, err error) {
 	}
 	if err != nil {
 		red("- error packing %s: %s", v.Label(), err.Error())
+		return
 	}
+	fmt.Fprintf(color.Output, "saved %s\n", name)
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────────────

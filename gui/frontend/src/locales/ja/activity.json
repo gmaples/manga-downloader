@@ -42,5 +42,11 @@
   "cleanup_one": "重複ファイル{{count}}個（{{size}}）をごみ箱に移動しました",
   "cleanup_other": "重複ファイル{{count}}個（{{size}}）をごみ箱に移動しました",
   "cleanupFailed_one": "重複ファイル{{count}}個を移動できませんでした: ログを参照してください",
-  "cleanupFailed_other": "重複ファイル{{count}}個を移動できませんでした: ログを参照してください"
+  "cleanupFailed_other": "重複ファイル{{count}}個を移動できませんでした: ログを参照してください",
+  "status": {
+    "listed_one": "{{count}}個のファイルから重複を探しています",
+    "listed_other": "{{count}}個のファイルから重複を探しています",
+    "comparing": "重複を探しています: {{total}}個中{{done}}個を比較",
+    "moving": "重複をごみ箱に移動中: {{total}}個中{{done}}個"
+  }
 }

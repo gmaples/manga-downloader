@@ -381,6 +381,10 @@ export function App({ api, initial }: { api: Api; initial?: State }) {
           onClear={() => api.clearHistory()}
           onClose={() => setHistoryOpen(false)}
           onOpenURL={(url) => api.openURL(url)}
+          onLoadURL={(url) => {
+            setHistoryOpen(false);
+            load(url);
+          }}
         />
       )}
       {logOpen && (

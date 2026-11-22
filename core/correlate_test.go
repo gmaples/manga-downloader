@@ -4,6 +4,7 @@ package core
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -69,7 +70,7 @@ func TestCorrelateRemovesDuplicates(t *testing.T) {
 	writeAt(t, dir, "Other 1 - One.cbz", "other", time.Hour)
 	writeAt(t, dir, "Test Series 1 - notes.txt", "one", time.Hour)
 
-	r, err := series.Correlate(dir)
+	r, err := series.Correlate(dir, nil)
 	if err != nil {
 		t.Fatalf("Correlate: %v", err)
 	}
@@ -110,7 +111,7 @@ func TestCorrelateLeavesClaimedFiles(t *testing.T) {
 	writeAt(t, dir, "Test Series 1 - B.cbz", "b", time.Hour)
 	writeAt(t, dir, "Test Series 1 - B.cbz"+ClaimSuffix, "claim", 0)
 
-	r, err := series.Correlate(dir)
+	r, err := series.Correlate(dir, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -123,7 +124,7 @@ func TestCorrelateLeavesClaimedFiles(t *testing.T) {
 func TestCorrelateMissingFolder(t *testing.T) {
 	site := newFakeSite(t)
 	series, dir := newSeries(t, site, false)
-	r, err := series.Correlate(filepath.Join(dir, "nope"))
+	r, err := series.Correlate(filepath.Join(dir, "nope"), nil)
 	if err != nil || len(r.Have) != 0 {
 		t.Errorf("got %v, %v", r, err)
 	}
@@ -181,5 +182,31 @@ func TestDownloadWithoutSkipExistingKeepsDuplicates(t *testing.T) {
 	}
 	if got := names(t, dir); got != "Test Series 1 - A.cbz|Test Series 1 - B.cbz" {
 		t.Errorf("folder: %q", got)
+	}
+}
+
+// the correlation says what it does as it goes: the files it looks at, each
+// file it reads, each batch it moves
+func TestCorrelateReportsProgress(t *testing.T) {
+	trashIn(t)
+	site := newFakeSite(t)
+	series, dir := newSeries(t, site, false)
+	writeAt(t, dir, "Test Series 1 - A.cbz", "same", 3*time.Hour)
+	writeAt(t, dir, "Test Series 1 - A v2.cbz", "same", 2*time.Hour)
+	writeAt(t, dir, "Test Series 2 - B.cbz", "b", time.Hour)
+	var steps []string
+	_, err := series.Correlate(dir, func(p CorrelateProgress) {
+		s := fmt.Sprintf("%d %d/%d", p.Step, p.Done, p.Total)
+		for _, d := range p.Moved {
+			s += " " + d.Name
+		}
+		steps = append(steps, s)
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "0 3/3|1 1/2|1 2/2|2 1/1 Test Series 1 - A v2.cbz"
+	if got := strings.Join(steps, "|"); got != want {
+		t.Errorf("steps:\n got %q\nwant %q", got, want)
 	}
 }

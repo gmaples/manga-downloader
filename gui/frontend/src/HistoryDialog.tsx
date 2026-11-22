@@ -1,6 +1,7 @@
 // The history pop-up: the series loaded or downloaded, newest first (the last
 // 100, as history.txt keeps them). A series opens its page in the system's
-// browser, its site the site's home page. An adult title shows masked until
+// browser, its site the site's home page, and its Load button puts it in the
+// URL box and loads it, closing the pop-up. An adult title shows masked until
 // clicked. Clear empties the history.
 
 import { useEffect, useRef, useState, type MouseEvent } from 'react';
@@ -18,9 +19,11 @@ interface Props {
   onClear: () => Promise<void>;
   onClose: () => void;
   onOpenURL: (url: string) => void;
+  /** Loads a series into the URL box and the chapter list */
+  onLoadURL?: (url: string) => void;
 }
 
-export function HistoryDialog({ load, onClear, onClose, onOpenURL }: Props) {
+export function HistoryDialog({ load, onClear, onClose, onOpenURL, onLoadURL }: Props) {
   const { t } = useI18n();
   const dialog = useRef<HTMLDialogElement>(null);
   const [items, setItems] = useState<HistoryItem[] | null>(null);
@@ -90,7 +93,7 @@ export function HistoryDialog({ load, onClear, onClose, onOpenURL }: Props) {
               <p className="muted small">{t('history.hint')}</p>
               <ul className="history-list">
                 {items.map((item) => (
-                  <HistoryRow key={item.url} item={item} onOpenURL={onOpenURL} />
+                  <HistoryRow key={item.url} item={item} onOpenURL={onOpenURL} onLoadURL={onLoadURL} />
                 ))}
               </ul>
             </>
@@ -108,7 +111,15 @@ export function HistoryDialog({ load, onClear, onClose, onOpenURL }: Props) {
 }
 
 /** One series of the list; exported for the rendered-strings test */
-export function HistoryRow({ item, onOpenURL }: { item: HistoryItem; onOpenURL: (url: string) => void }) {
+export function HistoryRow({
+  item,
+  onOpenURL,
+  onLoadURL,
+}: {
+  item: HistoryItem;
+  onOpenURL: (url: string) => void;
+  onLoadURL?: (url: string) => void;
+}) {
   const { t, lang } = useI18n();
   const shown = useShown(item.title, item.adult);
   const when = item.when > 0 ? new Date(item.when).toLocaleString(lang, { dateStyle: 'medium', timeStyle: 'short' }) : '';
@@ -133,6 +144,16 @@ export function HistoryRow({ item, onOpenURL }: { item: HistoryItem; onOpenURL: 
         {when !== '' && <span>{when}</span>}
         {item.done + item.todo > 0 && <span>{t('history.counts', { done: item.done, todo: item.todo })}</span>}
       </span>
+      {onLoadURL && (
+        <button
+          type="button"
+          className="btn small history-load"
+          title={t('history.loadLabel')}
+          onClick={() => onLoadURL(item.url)}
+        >
+          {t('history.load')}
+        </button>
+      )}
     </li>
   );
 }

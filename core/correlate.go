@@ -41,6 +41,33 @@ type Correlation struct {
 	Have map[string]string
 }
 
+// CorrelateStep is a step of Series.Correlate
+type CorrelateStep int
+
+const (
+	// CorrelateListed is the folder listed: Total is how many files may be chapters
+	CorrelateListed CorrelateStep = iota
+	// CorrelateComparing is the files whose size another one shares being
+	// read: Done of Total read
+	CorrelateComparing
+	// CorrelateMoving is the duplicates being moved to the trash, a batch at
+	// a time: Done of Total moved or failed, Moved the batch just done
+	CorrelateMoving
+)
+
+// trashBatch is how many files go to the trash in one call: few calls, and
+// still a count that moves
+const trashBatch = 100
+
+// CorrelateProgress is what Series.Correlate is doing, reported as it goes
+type CorrelateProgress struct {
+	Step        CorrelateStep
+	Done, Total int
+	// Moved are the duplicates of the batch just done (CorrelateMoving), with
+	// Err set on those that couldn't be moved
+	Moved []Duplicate
+}
+
 // Duplicate is a file found to be the same chapter as Kept, a file kept in
 // the folder: SameBytes when their bytes are equal, else by chapter number
 type Duplicate struct {
@@ -81,8 +108,12 @@ func older(a, b *folderFile) bool {
 // chapter files are then grouped by the number in their
 // name (packer.NumberMatcher). A file another copy of the program is writing
 // (it has a claim, see ClaimSuffix) is left alone. A dir that doesn't exist
-// yet has nothing to correlate.
-func (s *Series) Correlate(dir string) (*Correlation, error) {
+// yet has nothing to correlate. progress, when not nil, is told each step as
+// it goes: the listing, each file read, each batch moved.
+func (s *Series) Correlate(dir string, progress func(CorrelateProgress)) (*Correlation, error) {
+	if progress == nil {
+		progress = func(CorrelateProgress) {}
+	}
 	r := &Correlation{Dir: dir, Have: map[string]string{}}
 	format := s.Site.GetFormat()
 	matcher, byNumber := packer.NewNumberMatcher(s.Title, s.Site.GetFilenameTemplate(), format)
@@ -120,6 +151,7 @@ func (s *Series) Correlate(dir string) (*Correlation, error) {
 		files = append(files, f)
 	}
 	sort.Slice(files, func(i, j int) bool { return older(files[i], files[j]) })
+	progress(CorrelateProgress{Step: CorrelateListed, Done: len(files), Total: len(files)})
 
 	removed := map[*folderFile]bool{}
 	var dups []Duplicate
@@ -130,12 +162,25 @@ func (s *Series) Correlate(dir string) (*Correlation, error) {
 	for _, f := range files {
 		bySize[f.size] = append(bySize[f.size], f)
 	}
+	toRead := 0
+	for _, f := range files {
+		if len(bySize[f.size]) > 1 && f.size > 0 {
+			toRead++
+		}
+	}
+	read := 0
+	hash := func(f *folderFile) bool {
+		ok := hashFile(dir, f)
+		read++
+		progress(CorrelateProgress{Step: CorrelateComparing, Done: read, Total: toRead})
+		return ok
+	}
 	for _, f := range files {
 		same := bySize[f.size]
 		if len(same) < 2 || removed[f] || f.size == 0 {
 			continue
 		}
-		if !f.hashed && !hashFile(dir, f) {
+		if !f.hashed && !hash(f) {
 			continue
 		}
 		for _, g := range same {
@@ -145,7 +190,7 @@ func (s *Series) Correlate(dir string) (*Correlation, error) {
 			if g == f || removed[g] || !older(f, g) || f.number != "" && g.number != "" && f.number != g.number {
 				continue
 			}
-			if !g.hashed && !hashFile(dir, g) {
+			if !g.hashed && !hash(g) {
 				continue
 			}
 			if g.hash == f.hash {
@@ -169,19 +214,25 @@ func (s *Series) Correlate(dir string) (*Correlation, error) {
 		kept[f.number] = f
 	}
 
-	paths := make([]string, len(dups))
-	for i, d := range dups {
-		paths[i] = filepath.Join(dir, d.Name)
-	}
-	failed := trash.Files(paths)
-	for i, d := range dups {
-		if err := failed[paths[i]]; err != nil {
-			d.Err = err
-			r.Failed = append(r.Failed, d)
-			continue
+	for start := 0; start < len(dups); start += trashBatch {
+		batch := dups[start:min(start+trashBatch, len(dups))]
+		paths := make([]string, len(batch))
+		for i, d := range batch {
+			paths[i] = filepath.Join(dir, d.Name)
 		}
-		r.Removed = append(r.Removed, d)
-		r.RemovedBytes += d.Size
+		failed := trash.Files(paths)
+		moved := make([]Duplicate, len(batch))
+		for i, d := range batch {
+			if err := failed[paths[i]]; err != nil {
+				d.Err = err
+				r.Failed = append(r.Failed, d)
+			} else {
+				r.Removed = append(r.Removed, d)
+				r.RemovedBytes += d.Size
+			}
+			moved[i] = d
+		}
+		progress(CorrelateProgress{Step: CorrelateMoving, Done: start + len(batch), Total: len(dups), Moved: moved})
 	}
 	sort.Slice(r.Removed, func(i, j int) bool { return r.Removed[i].Name < r.Removed[j].Name })
 	for n, f := range kept {

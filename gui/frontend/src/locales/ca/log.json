@@ -48,5 +48,9 @@
   "removedNumber": "{{name}} s'ha mogut a la paperera de reciclatge: el capítol {{number}} ja és {{kept}}",
   "removeFailed": "no s'ha pogut moure el duplicat {{name}} a la paperera de reciclatge: {{reason}}",
   "removed_one": "{{count}} fitxer duplicat ({{size}}) de {{folder}} s'ha mogut a la paperera de reciclatge",
-  "removed_other": "{{count}} fitxers duplicats ({{size}}) de {{folder}} s'han mogut a la paperera de reciclatge"
+  "removed_other": "{{count}} fitxers duplicats ({{size}}) de {{folder}} s'han mogut a la paperera de reciclatge",
+  "started": "es baixa {{label}} ({{pages}} pàgines)",
+  "correlating_one": "es busquen duplicats entre {{count}} fitxer de la carpeta",
+  "correlating_other": "es busquen duplicats entre {{count}} fitxers de la carpeta",
+  "compared": "es busquen duplicats: {{done}} de {{total}} fitxers de la mateixa mida comparats"
 }

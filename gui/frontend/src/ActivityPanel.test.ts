@@ -152,6 +152,13 @@ describe('ActivityPanel', () => {
     expect(html).toContain('This run · 1 downloading');
   });
 
+  it('says live what the download is doing before any chapter starts', () => {
+    const status = { key: 'activity.status.moving', args: { done: 200, total: 433 }, text: '' };
+    const html = render(one({ summary: null, jobs: [], status, run: { chapters: 402, bundle: false, volumes: false, rows: 402 } }));
+    expect(html).toContain('Moving duplicates to the Recycle Bin: 200 of 433');
+    expect(html).toContain('402 queued');
+  });
+
   it('translates the window words of a failure line and keeps a core reason as it is', () => {
     const failures = [
       {

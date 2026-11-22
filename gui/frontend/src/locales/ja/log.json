@@ -48,5 +48,9 @@
   "removedNumber": "{{name}}をごみ箱に移動しました: 第{{number}}話はすでに{{kept}}です",
   "removeFailed": "重複ファイル{{name}}をごみ箱に移動できませんでした: {{reason}}",
   "removed_one": "{{folder}}の重複ファイル{{count}}個（{{size}}）をごみ箱に移動しました",
-  "removed_other": "{{folder}}の重複ファイル{{count}}個（{{size}}）をごみ箱に移動しました"
+  "removed_other": "{{folder}}の重複ファイル{{count}}個（{{size}}）をごみ箱に移動しました",
+  "started": "{{label}}をダウンロード中（{{pages}}ページ）",
+  "correlating_one": "フォルダーの{{count}}個のファイルから重複を探しています",
+  "correlating_other": "フォルダーの{{count}}個のファイルから重複を探しています",
+  "compared": "重複を探しています: 同じサイズの{{total}}個中{{done}}個を比較"
 }

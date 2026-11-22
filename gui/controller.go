@@ -400,6 +400,9 @@ type group struct {
 	// cleanup is what the correlation of the group's folder did, nil until
 	// it ran (see events.Correlated)
 	cleanup *Cleanup
+	// status is what the group is doing that no row shows (the folder's
+	// correlation), nil when nothing
+	status *Message
 }
 
 // Cleanup is what the correlation of a group's folder did when its download
@@ -541,6 +544,8 @@ type GroupState struct {
 	// Cleanup is what the correlation of the group's folder did, nil when it
 	// didn't run
 	Cleanup *Cleanup
+	// Status is what the group is doing that no row shows, nil when nothing
+	Status *Message
 }
 
 // NewController returns a controller that works on its own copy of settings
@@ -1746,6 +1751,10 @@ func (g *group) state() GroupState {
 		cl := *g.cleanup
 		st.Cleanup = &cl
 	}
+	if g.status != nil {
+		m := *g.status
+		st.Status = &m
+	}
 	st.Jobs = make([]Job, len(g.jobs))
 	for i, j := range g.jobs {
 		st.Jobs[i] = *j
@@ -2416,10 +2425,48 @@ func (e events) Waiting(ch *grabber.Chapter, name string) {
 	c.emit()
 }
 
+// Correlating is a step of the folder's correlation, as it goes: the
+// group's header says what it's doing, with its count, and the log gets the
+// folder's file count, the files read every compareLogEvery, and each file
+// moved (or not) as its batch is done.
+func (e events) Correlating(p core.CorrelateProgress) {
+	c, g := e.c, e.g
+	c.mu.Lock()
+	var m Message
+	switch p.Step {
+	case core.CorrelateListed:
+		m = msg("activity.status.listed", map[string]any{"count": p.Total})
+		c.appendMsgLocked(LogInfo, msg("log.correlating", map[string]any{"count": p.Total}))
+	case core.CorrelateComparing:
+		m = msg("activity.status.comparing", map[string]any{"done": p.Done, "total": p.Total})
+		if p.Done%compareLogEvery == 0 || p.Done == p.Total {
+			c.appendMsgLocked(LogInfo, msg("log.compared", map[string]any{"done": p.Done, "total": p.Total}))
+		}
+	case core.CorrelateMoving:
+		m = msg("activity.status.moving", map[string]any{"done": p.Done, "total": p.Total})
+		for _, d := range p.Moved {
+			switch {
+			case d.Err != nil:
+				c.appendMsgLocked(LogWarn, msg("log.removeFailed", map[string]any{"name": d.Name, "reason": d.Err.Error()}))
+			case d.SameBytes:
+				c.appendMsgLocked(LogInfo, msg("log.removedSame", map[string]any{"name": d.Name, "kept": d.Kept}))
+			default:
+				c.appendMsgLocked(LogInfo, msg("log.removedNumber", map[string]any{"name": d.Name, "kept": d.Kept, "number": d.Number}))
+			}
+		}
+	}
+	g.status = &m
+	c.mu.Unlock()
+	c.emit()
+}
+
+// compareLogEvery is how many files read between two log lines; the
+// header counts each one
+const compareLogEvery = 50
+
 // Correlated is what the correlation of the folder did before the download
-// started: each file moved to the Recycle Bin and each that couldn't be are
-// logged, and the group's header says how many went. A later pass of the
-// group adds to it.
+// started: the group's header says how many files went (a later pass of the
+// group adds to it), its status ends, and the log gets the total.
 func (e events) Correlated(r *core.Correlation) {
 	c, g := e.c, e.g
 	c.mu.Lock()
@@ -2429,16 +2476,7 @@ func (e events) Correlated(r *core.Correlation) {
 	g.cleanup.Removed += len(r.Removed)
 	g.cleanup.Bytes += r.RemovedBytes
 	g.cleanup.Failed += len(r.Failed)
-	for _, d := range r.Removed {
-		if d.SameBytes {
-			c.appendMsgLocked(LogInfo, msg("log.removedSame", map[string]any{"name": d.Name, "kept": d.Kept}))
-		} else {
-			c.appendMsgLocked(LogInfo, msg("log.removedNumber", map[string]any{"name": d.Name, "kept": d.Kept, "number": d.Number}))
-		}
-	}
-	for _, d := range r.Failed {
-		c.appendMsgLocked(LogWarn, msg("log.removeFailed", map[string]any{"name": d.Name, "reason": d.Err.Error()}))
-	}
+	g.status = nil
 	if len(r.Removed) > 0 {
 		c.appendMsgLocked(LogInfo, msg("log.removed", map[string]any{"count": len(r.Removed), "size": sizeText(r.RemovedBytes), "folder": r.Dir}))
 	}
@@ -2542,6 +2580,7 @@ func (e events) Started(ch *grabber.Chapter) {
 		g.jobs = append(g.jobs, j)
 		g.byChap[ch] = j
 	}
+	c.appendMsgLocked(LogInfo, msg("log.started", map[string]any{"label": g.releaseLabel(ch), "pages": ch.PagesCount}))
 	c.mu.Unlock()
 	c.emit()
 }

@@ -48,5 +48,9 @@
   "removedNumber": "moved {{name}} to the Recycle Bin: chapter {{number}} is already {{kept}}",
   "removeFailed": "couldn't move the duplicate {{name}} to the Recycle Bin: {{reason}}",
   "removed_one": "moved {{count}} duplicate file ({{size}}) from {{folder}} to the Recycle Bin",
-  "removed_other": "moved {{count}} duplicate files ({{size}}) from {{folder}} to the Recycle Bin"
+  "removed_other": "moved {{count}} duplicate files ({{size}}) from {{folder}} to the Recycle Bin",
+  "started": "downloading {{label}} ({{pages}} pages)",
+  "correlating_one": "looking for duplicates among {{count}} file in the folder",
+  "correlating_other": "looking for duplicates among {{count}} files in the folder",
+  "compared": "looking for duplicates: compared {{done}} of {{total}} files that share a size"
 }

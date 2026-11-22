@@ -42,5 +42,11 @@
   "cleanup_one": "Moved {{count}} duplicate file ({{size}}) to the Recycle Bin",
   "cleanup_other": "Moved {{count}} duplicate files ({{size}}) to the Recycle Bin",
   "cleanupFailed_one": "{{count}} duplicate couldn't be moved: see the log",
-  "cleanupFailed_other": "{{count}} duplicates couldn't be moved: see the log"
+  "cleanupFailed_other": "{{count}} duplicates couldn't be moved: see the log",
+  "status": {
+    "listed_one": "Looking for duplicates among {{count}} file",
+    "listed_other": "Looking for duplicates among {{count}} files",
+    "comparing": "Looking for duplicates: compared {{done}} of {{total}} files",
+    "moving": "Moving duplicates to the Recycle Bin: {{done}} of {{total}}"
+  }
 }

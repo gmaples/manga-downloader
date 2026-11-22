@@ -278,6 +278,7 @@ function components({ state, chapters, selected, log }: Snapshot): Screen[] {
         createElement(HistoryRow, {
           item: { title: 'Night Garden', url: 'https://example.com/n', site: 'https://example.com/', adult: true, when: 0, done: 3, todo: 1 },
           onOpenURL: noop,
+          onLoadURL: noop,
         }),
       ),
     },
