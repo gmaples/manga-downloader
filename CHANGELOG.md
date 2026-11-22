@@ -19,6 +19,12 @@ as they are.
 What the fork changes, and why, is described in the README's
 "About this fork" section. Android details are in [docs/android.md](docs/android.md).
 
+## v25.3.0-series-folders.36 (2026-11-21)
+
+Master after PR #18 (build 34, duplicate cleanup) and PR #19 (build 35, live
+activity and the history Load button), merged by merge commits. No other
+changes from build 35.
+
 ## v25.3.0-series-folders.35 (2026-11-21)
 
 Build 34 with live updates on everything a download does. In build 34 the
