@@ -15,6 +15,10 @@ export function Clear():Promise<void>;
 export function ClearHistory():Promise<void>;
 export function ClearLog():Promise<void>;
 
+export function DeleteInfo():Promise<main.DeleteInfo>;
+
+export function DeleteSeries():Promise<void>;
+
 export function DismissBrowserAlert():Promise<void>;
 
 export function DownloadMissing():Promise<void>;

@@ -5,7 +5,7 @@
 import * as app from '../wailsjs/go/main/App';
 import { BrowserOpenURL, ClipboardGetText, EventsOn } from '../wailsjs/runtime/runtime';
 import type { LangPref } from './i18n';
-import type { Chapter, ChapterMark, HistoryItem, LogLine, Options, State } from './types';
+import type { Chapter, ChapterMark, DeleteInfo, DeleteProgress, HistoryItem, LogLine, Options, State } from './types';
 
 export type Unsubscribe = () => void;
 
@@ -79,6 +79,10 @@ export interface Api {
   restart(id: number, key: string): Promise<void>;
   /** Selects and downloads every chapter of the loaded series not saved yet, failed and cancelled included */
   downloadMissing(): Promise<void>;
+  /** What Delete series would take from the loaded series' folder; rejects when there's nothing, or it's downloading */
+  deleteInfo?(): Promise<DeleteInfo>;
+  /** Moves the loaded series' files to the Recycle Bin, a batch at a time (onDeleteProgress) */
+  deleteSeries?(): Promise<void>;
 
   // Pushes. Each returns a function that stops the callback.
   onState(cb: (s: State) => void): Unsubscribe;
@@ -87,6 +91,7 @@ export interface Api {
   onMarks(cb: (marks: ChapterMark[]) => void): Unsubscribe;
   onMarkNotes?(cb: (notes: string[]) => void): Unsubscribe;
   onLog(cb: (lines: LogLine[]) => void): Unsubscribe;
+  onDeleteProgress?(cb: (p: DeleteProgress) => void): Unsubscribe;
 }
 
 /** Events are registered once each; callbacks are fanned out from a set */
@@ -120,6 +125,7 @@ export function createWailsApi(): Api {
   const marks = fanOut<ChapterMark[]>('marks');
   const markNotes = fanOut<string[]>('markNotes');
   const log = fanOut<LogLine[]>('log');
+  const deleteProgress = fanOut<DeleteProgress>('deleteProgress');
 
   return {
     // The bindings' types are structurally the same as ours; the cast only
@@ -163,6 +169,8 @@ export function createWailsApi(): Api {
     resume: (id) => app.Resume(id),
     restart: (id, key) => app.Restart(id, key),
     downloadMissing: () => app.DownloadMissing(),
+    deleteInfo: () => app.DeleteInfo(),
+    deleteSeries: () => app.DeleteSeries(),
 
     onState: (cb) => state.subscribe(cb),
     onChapters: (cb) => chapters.subscribe(cb),
@@ -170,5 +178,6 @@ export function createWailsApi(): Api {
     onMarks: (cb) => marks.subscribe(cb),
     onMarkNotes: (cb) => markNotes.subscribe(cb),
     onLog: (cb) => log.subscribe(cb),
+    onDeleteProgress: (cb) => deleteProgress.subscribe(cb),
   };
 }

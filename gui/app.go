@@ -905,6 +905,21 @@ func (a *App) DownloadMissing() error {
 	return a.ctrl.DownloadMissing()
 }
 
+// DeleteInfo says what Delete series would take: the folder, its file count
+// and size, for the window to confirm (see Controller.DeleteInfo)
+func (a *App) DeleteInfo() (*DeleteInfo, error) {
+	return a.ctrl.DeleteInfo()
+}
+
+// DeleteSeries moves the loaded series' files to the Recycle Bin or trash,
+// pushing "deleteProgress" ({done, total, failed}) after each batch (see
+// Controller.DeleteSeries)
+func (a *App) DeleteSeries() error {
+	return a.ctrl.DeleteSeries(func(p core.DeleteProgress) {
+		a.sink.Emit("deleteProgress", map[string]int{"done": p.Done, "total": p.Total, "failed": p.Failed})
+	})
+}
+
 // Start downloads the selected chapters in the background, as a new group
 // beside any running. Refusals (nothing selected, invalid options, a series
 // loading) are returned here.

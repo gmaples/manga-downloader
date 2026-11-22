@@ -166,6 +166,24 @@ export interface Group {
   status?: Message | null;
 }
 
+/** What Delete series would take from the loaded series' folder, for the confirmation */
+export interface DeleteInfo {
+  title: string;
+  dir: string;
+  /** The series' own folder, taken whole */
+  whole: boolean;
+  files: number;
+  /** The files' size, written to read (1.4 GB) */
+  size: string;
+}
+
+/** A Delete series' count, after each batch */
+export interface DeleteProgress {
+  done: number;
+  total: number;
+  failed: number;
+}
+
 /** What the correlation of a group's folder did when its download started */
 export interface Cleanup {
   removed: number;

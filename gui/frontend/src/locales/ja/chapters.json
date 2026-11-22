@@ -24,6 +24,18 @@
   "failedCount_other": "失敗 {{count}}",
   "pickMissingHint": "フォルダーにない話を選択して強調表示",
   "pickFailedHint": "失敗またはキャンセルされた話を選択して強調表示",
+  "delete": {
+    "button": "シリーズを削除",
+    "hint": "確認のうえ、このシリーズのファイルをごみ箱へ移動",
+    "title": "このシリーズを削除しますか？",
+    "bodyWhole_one": "{{title}} のフォルダー {{folder}} をごみ箱へ移動します：{{count}} ファイル、{{size}}。",
+    "bodyWhole_other": "{{title}} のフォルダー {{folder}} をごみ箱へ移動します：{{count}} ファイル、{{size}}。",
+    "bodyFiles_one": "{{folder}} にある {{title}} の話ファイル {{count}} 件（{{size}}）をごみ箱へ移動します。ほかのシリーズのファイルはそのままです。",
+    "bodyFiles_other": "{{folder}} にある {{title}} の話ファイル {{count}} 件（{{size}}）をごみ箱へ移動します。ほかのシリーズのファイルはそのままです。",
+    "progress": "ごみ箱へ移動中：{{done}} / {{total}}",
+    "confirm": "削除",
+    "deleting": "削除中…"
+  },
   "selectAll": "すべて選択",
   "selectNone": "選択を解除",
   "addRange": "範囲を選択に追加",

@@ -24,6 +24,18 @@
   "failedCount_other": "{{count}} fallits",
   "pickMissingHint": "Selecciona i ressalta els capítols que no són a la carpeta",
   "pickFailedHint": "Selecciona i ressalta els capítols que han fallat o s'han cancel·lat",
+  "delete": {
+    "button": "Esborra la sèrie",
+    "hint": "Mou els fitxers d'aquesta sèrie a la Paperera de reciclatge, després de preguntar",
+    "title": "Vols esborrar aquesta sèrie?",
+    "bodyWhole_one": "Moure la carpeta {{folder}} de {{title}} a la Paperera de reciclatge: {{count}} fitxer, {{size}}.",
+    "bodyWhole_other": "Moure la carpeta {{folder}} de {{title}} a la Paperera de reciclatge: {{count}} fitxers, {{size}}.",
+    "bodyFiles_one": "Moure {{count}} fitxer de capítol de {{title}} ({{size}}) de {{folder}} a la Paperera de reciclatge. Els fitxers d'altres sèries s'hi queden.",
+    "bodyFiles_other": "Moure {{count}} fitxers de capítols de {{title}} ({{size}}) de {{folder}} a la Paperera de reciclatge. Els fitxers d'altres sèries s'hi queden.",
+    "progress": "Movent a la Paperera de reciclatge: {{done}} de {{total}}",
+    "confirm": "Esborra",
+    "deleting": "Esborrant…"
+  },
   "selectAll": "Selecciona-ho tot",
   "selectNone": "Desselecciona-ho tot",
   "addRange": "Afegeix el rang a la selecció",

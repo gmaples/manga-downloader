@@ -281,12 +281,15 @@ describe('ChapterPanel marks', () => {
         onRange: async () => 0,
         onVolumes: noop,
         onDownloadMissing: noop,
+        onDeleteSeries: () => {},
         onReload: () => {},
         onError: () => {},
       }),
     );
     expect(markup).toContain('1 missing</button>');
     expect(markup).toContain('2 failed</button>');
+    // Delete series comes last on the line, once something of the series is there or was tried
+    expect(markup).toMatch(/2 failed<\/button>.*Delete series<\/button>/s);
   });
 
   it('absentOf and failedOf pick by mark, never a locked chapter', async () => {

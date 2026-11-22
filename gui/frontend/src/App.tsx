@@ -21,6 +21,7 @@ import { LogDrawer, StatusBar } from './LogPanel';
 import { createOptionsWriter } from './optionsWriter';
 import { OptionsPanel } from './OptionsPanel';
 import { CHAPTERS_MIN, forwardWheel, LOG_MIN, LOG_ROOM, SIDE_MIN, Splitter } from './panes';
+import { DeleteSeriesDialog } from './DeleteSeriesDialog';
 import { HistoryDialog } from './HistoryDialog';
 import { SettingsDialog } from './SettingsDialog';
 import { SourceBar } from './SourceBar';
@@ -45,6 +46,7 @@ export function App({ api, initial }: { api: Api; initial?: State }) {
   const [optionError, setOptionError] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const gear = useRef<HTMLButtonElement>(null);
   const wasSettingsOpen = useRef(false);
   // null until the first State, which picks the view the window opens on
@@ -263,6 +265,7 @@ export function App({ api, initial }: { api: Api; initial?: State }) {
             onRange={(text) => api.selectRange(text)}
             onVolumes={(text) => api.setVolumes(text)}
             onDownloadMissing={() => api.downloadMissing()}
+            onDeleteSeries={api.deleteSeries ? () => setDeleteOpen(true) : undefined}
             onReload={() => load(state.url)}
             onError={setActionError}
           />
@@ -373,6 +376,14 @@ export function App({ api, initial }: { api: Api; initial?: State }) {
           }}
           onOpenURL={(url) => api.openURL(url)}
           onError={setOptionError}
+        />
+      )}
+      {deleteOpen && api.deleteInfo && api.deleteSeries && api.onDeleteProgress && (
+        <DeleteSeriesDialog
+          load={api.deleteInfo}
+          onDelete={api.deleteSeries}
+          onProgress={api.onDeleteProgress}
+          onClose={() => setDeleteOpen(false)}
         />
       )}
       {historyOpen && (
