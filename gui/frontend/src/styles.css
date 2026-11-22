@@ -705,6 +705,44 @@ code,
   font-weight: 650;
 }
 
+/* the count is two lines: what's selected, then the missing and failed links */
+.count p {
+  margin: 0;
+}
+
+.count-states {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+}
+
+.count-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent-text);
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+}
+
+.count-link.failed {
+  color: var(--warning);
+}
+
+.count-link.lit {
+  font-weight: 650;
+  text-decoration-style: solid;
+}
+
+.count-link:disabled {
+  color: var(--text-3);
+  cursor: default;
+  text-decoration: none;
+}
+
 .toolbar-buttons {
   display: flex;
   gap: 2px;
@@ -779,6 +817,16 @@ code,
 
 .row.on:hover {
   background: var(--accent-soft);
+}
+
+/* the chapters the missing or failed link picked */
+.row.lit {
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.row.lit .num {
+  color: var(--text);
+  font-weight: 650;
 }
 
 .list:focus-visible .row.active {

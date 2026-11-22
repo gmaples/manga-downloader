@@ -12,6 +12,8 @@ import {
   canApplyRange,
   partsCount,
   missingOf,
+  absentOf,
+  failedOf,
 } from './ChapterPanel';
 import { createMockApi } from './mock';
 
@@ -227,7 +229,10 @@ describe('ChapterPanel marks', () => {
         onError: () => {},
       }),
     );
-    expect(markup).not.toContain('missing');
+    expect(markup).not.toContain('download-missing');
+    // the count's second line still says how many have no file
+    expect(markup).toContain(`${chapters.filter((c) => !c.locked).length} missing`);
+    expect(markup).toContain('0 failed');
   });
 
   it('offers nothing while no chapter is missing', async () => {
@@ -252,7 +257,45 @@ describe('ChapterPanel marks', () => {
         onError: () => {},
       }),
     );
-    expect(markup).not.toContain('missing');
+    expect(markup).not.toContain('download-missing');
+    expect(markup).toContain('0 missing');
+    expect(markup).toContain('0 failed');
+  });
+
+  it('counts the missing and failed chapters under the selection, as links', async () => {
+    const api = createMockApi({ scenario: 'loaded' });
+    const state = await api.state();
+    const chapters = (await api.chapters()).map((c) => ({ ...c, locked: false }));
+    const marks = chapters.map((_, i) => (i === 0 ? ('failed' as const) : i === 1 ? ('cancelled' as const) : i === 2 ? ('' as const) : ('done' as const)));
+    const noop = async () => {};
+    const markup = renderToStaticMarkup(
+      createElement(ChapterPanel, {
+        state,
+        chapters,
+        selected: [],
+        marks,
+        disabled: false,
+        onToggle: noop,
+        onToggleMany: noop,
+        onSetAll: noop,
+        onRange: async () => 0,
+        onVolumes: noop,
+        onDownloadMissing: noop,
+        onReload: () => {},
+        onError: () => {},
+      }),
+    );
+    expect(markup).toContain('1 missing</button>');
+    expect(markup).toContain('2 failed</button>');
+  });
+
+  it('absentOf and failedOf pick by mark, never a locked chapter', async () => {
+    const api = createMockApi({ scenario: 'loaded' });
+    const chapters = (await api.chapters()).slice(0, 5).map((c, i) => ({ ...c, index: i, locked: i === 4 }));
+    const marks = ['', 'failed', 'cancelled', 'done', ''] as const;
+    expect(absentOf(chapters, [...marks])).toEqual([0]);
+    expect(failedOf(chapters, [...marks])).toEqual([1, 2]);
+    expect(absentOf(chapters, [])).toEqual([]);
   });
 });
 

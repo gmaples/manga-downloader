@@ -19,6 +19,14 @@ as they are.
 What the fork changes, and why, is described in the README's
 "About this fork" section. Android details are in [docs/android.md](docs/android.md).
 
+## v25.3.0-series-folders.37 (2026-11-21)
+
+- **Missing and failed counts under the selection**: the "N of M selected"
+  box above the chapter list is two lines; the second reads "N missing ·
+  N failed". Missing is a chapter with no file and no mark; failed includes
+  cancelled. Clicking either count selects exactly those chapters,
+  highlights them in the list and scrolls to the first.
+
 ## v25.3.0-series-folders.36 (2026-11-21)
 
 Master after PR #18 (build 34, duplicate cleanup) and PR #19 (build 35, live

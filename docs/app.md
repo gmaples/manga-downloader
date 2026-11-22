@@ -33,7 +33,11 @@ button, *Load* and *Settings*. (To open on the full window instead, turn off
    grey dot while it waits its turn, and an amber mark when it failed (!) or a
    cancel left it unsaved (a circled dash; hovering over a failed mark says
    why). No mark means no file and no
-   download. Once anything of the series was saved or tried, **Download N
+   download. Under "N of M selected", a second line counts them: **N
+   missing** (no mark) and **N failed** (failed or cancelled). Clicking
+   either selects exactly those chapters, highlights them with a bar at the
+   left of their row and scrolls to the first one, so Download takes just
+   them. Once anything of the series was saved or tried, **Download N
    missing** above the list downloads every chapter that isn't saved yet,
    the failed and cancelled ones included, in one click (chapters already on
    their way are left to their download). In the Activity tab, each download's
