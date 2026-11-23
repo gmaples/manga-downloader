@@ -3,11 +3,13 @@
 package grabber
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	nethttp "net/http"
 	"net/http/httptest"
 	"os"
+	"slices"
 	"strings"
 	"testing"
 
@@ -361,5 +363,26 @@ func TestGenericChapterTitleDropsDates(t *testing.T) {
 	links := genericChapterLinks(mustDoc(t, html), "https://site.example/s/x")
 	if len(links) != 2 || links[0].Title != "Том 1 - Розділ 1" || links[1].Title != "Chapter 2 - The Fight" {
 		t.Errorf("links %+v", links)
+	}
+}
+
+// A page list kept as an object's values comes out in the same order every
+// time: by key, not Go's random map order
+func TestGenericJSONStringsObjectOrderIsStable(t *testing.T) {
+	var v any
+	if err := json.Unmarshal([]byte(`{"pages":{"p3":"https://x/3.jpg","p1":"https://x/1.jpg","p2":"https://x/2.jpg","p10":"https://x/10.jpg"}}`), &v); err != nil {
+		t.Fatal(err)
+	}
+	var first []string
+	for i := range 50 {
+		var got []string
+		genericJSONStrings(v, func(s string) { got = append(got, s) })
+		if i == 0 {
+			first = got
+			continue
+		}
+		if !slices.Equal(got, first) {
+			t.Fatalf("run %d gave %v, run 0 gave %v", i, got, first)
+		}
 	}
 }

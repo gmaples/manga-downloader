@@ -5,8 +5,9 @@
 #
 #   ANDROID_HOME=<sdk> ANDROID_NDK_HOME=<ndk> android/build-android.sh <build number>
 #
-# PRODUCT_VERSION (25.3.0.<n>) and TAG (v25.3.0-series-folders.<n>) follow the
-# build number unless set. MD_KEYSTORE (and MD_KEYSTORE_PASSWORD) sign it with
+# PRODUCT_VERSION (<release>.<n>) and TAG (v<release>-series-folders.<n>) follow
+# the upstream release (the upstream remote's latest tag) and the build number
+# unless set. MD_KEYSTORE (and MD_KEYSTORE_PASSWORD) sign it with
 # a kept key, so each build installs over the last; without, the debug key.
 set -euo pipefail
 
@@ -15,8 +16,15 @@ here=$(cd "$(dirname "$0")" && pwd)
 repo=$(dirname "$here")
 : "${ANDROID_HOME:?set ANDROID_HOME to the Android SDK}"
 : "${ANDROID_NDK_HOME:?set ANDROID_NDK_HOME to the Android NDK}"
-PRODUCT_VERSION=${PRODUCT_VERSION:-25.3.0.$n}
-TAG=${TAG:-v25.3.0-series-folders.$n}
+# the upstream release merged in, from its latest tag (v25.3.0 -> 25.3.0)
+base=$(git -C "$repo" describe --tags --abbrev=0 upstream/master 2>/dev/null) || {
+	echo "build-android.sh: can't read the upstream release: add elboletaire's repository as the upstream remote" >&2
+	echo "  git remote add upstream https://github.com/elboletaire/manga-downloader && git fetch upstream --tags" >&2
+	exit 1
+}
+base=${base#v}
+PRODUCT_VERSION=${PRODUCT_VERSION:-$base.$n}
+TAG=${TAG:-v$base-series-folders.$n}
 API=24
 
 # The frontend is built for Chrome 83 (Android 11's own WebView), not the
