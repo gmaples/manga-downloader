@@ -5,9 +5,7 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
-	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -15,11 +13,9 @@ import (
 	"github.com/elboletaire/manga-downloader/browser"
 	"github.com/elboletaire/manga-downloader/core"
 	"github.com/elboletaire/manga-downloader/grabber"
-	"github.com/elboletaire/manga-downloader/http"
 	"github.com/elboletaire/manga-downloader/notice"
 	"github.com/elboletaire/manga-downloader/ranges"
 	"github.com/elboletaire/manga-downloader/ratelimit"
-	"github.com/elboletaire/manga-downloader/trash"
 )
 
 // maxLogLines caps the log so a long download can't grow it without bound
@@ -331,245 +327,6 @@ type Controller struct {
 	permanent permanentState
 }
 
-// group is one press of Download: its chapters' rows, its cancel and its
-// summary. Groups run at once, each with the settings in force when it started
-// (see Start), and report to their own rows through events.
-type group struct {
-	id    int
-	title string
-	// url is the URL the group's series was loaded from
-	url string
-	// deleted is set once Delete series took the series' files: what the
-	// group saved is gone, so its rows stay but it no longer marks the list
-	deleted bool
-	// settings are the pointer the group's series and site read. The window
-	// stops writing it when the group starts (see Start).
-	settings *grabber.Settings
-	// site is the loaded site the group downloads with, shared with any other
-	// group of the same load
-	site    grabber.Site
-	running bool
-	// cancelling is set once the group has been asked to stop, so repeated
-	// cancels log once
-	cancelling bool
-	cancel     context.CancelFunc
-	// stop is closed when the group is cancelled, and forGood is set once
-	// the user let its dedupe delete for good (see permanent.go)
-	stop    <-chan struct{}
-	forGood bool
-	// ended orders the groups that finished (see Controller.lastEnd)
-	ended   uint64
-	runinfo RunInfo
-	rng     string
-	// hasDuplicates and hasGroupDuplicates are the loaded list's, as of the
-	// start, for the release labels
-	hasDuplicates      bool
-	hasGroupDuplicates bool
-	jobs               []*Job
-	byChap             map[*grabber.Chapter]*Job
-	bundle             *Job
-	failedC            map[*grabber.Chapter]bool
-	// the rows of the volumes, by volume, by listed chapter (for a failed
-	// fetch) and by fetched chapter
-	byVolume  map[*core.Volume]*Job
-	listedVol map[grabber.Filterable]*Job
-	chapVol   map[*grabber.Chapter]*Job
-	// fetching holds the rows of the chapters whose page list is being
-	// fetched, by listed chapter, until Fetched moves them to byChap
-	fetching map[grabber.Filterable]*Job
-	stats    runStats
-	summary  *Summary
-	// series and skip are what the group downloads with, kept for the
-	// chapters added to it while it runs (see queueLocked)
-	series *core.Series
-	skip   []ranges.Range
-	// keys are the chapters in the group's run, by chapKey, and pending the
-	// added passes waiting for the one running to end
-	keys    map[string]bool
-	pending []pass
-	// siteKey names the group's site as site-rate-limits.txt does, and
-	// flights are its chapters in flight, by fetched chapter and, until
-	// fetched, by listing entry (see SiteBars)
-	siteKey  string
-	flights  map[*grabber.Chapter]*flight
-	flightOf map[grabber.Filterable]*flight
-	// restored is set on a group read back from history.txt at startup: its
-	// rows are the done and to-do chapters of the last session, and it
-	// downloads nothing
-	restored bool
-	// todoIDs are a restored group's to-do chapters' ids (historyID), by
-	// row, from the todo-id lines of history.txt
-	todoIDs map[*Job]string
-	// adult is set when the site rates the series 18+
-	adult bool
-	// chapters are the listed chapters of the group's run, every pass, and
-	// done those of them saved (or already in the folder), by chapKey;
-	// listedOf maps a fetched chapter to its listing entry. They're what
-	// history.txt records (see recordGroupLocked).
-	chapters grabber.Filterables
-	done     map[string]bool
-	listedOf map[*grabber.Chapter]grabber.Filterable
-	// started and failed are the chapters of the run, by chapKey, that
-	// began (their page list was asked for) and that failed, for the marks
-	// of the chapter list (see ChapterMarks)
-	started map[string]bool
-	failed  map[string]bool
-	// cleanup is what the correlation of the group's folder did, nil until
-	// it ran (see events.Correlated)
-	cleanup *Cleanup
-	// status is what the group is doing that no row shows (the folder's
-	// correlation), nil when nothing
-	status *Message
-}
-
-// Cleanup is what the correlation of a group's folder did when its download
-// started (see core.Series.Correlate): the duplicate files moved to the
-// Recycle Bin, their size, and the ones that couldn't be moved
-type Cleanup struct {
-	Removed int
-	Bytes   int64
-	Failed  int
-	// Permanent is set when the removed files were deleted for good, and
-	// Kept are the duplicates left as the drive has no Recycle Bin and the
-	// user said no
-	Permanent bool
-	Kept      int
-}
-
-// flight is the progress of one chapter of a group from its fetch to its end,
-// whatever row it's in (its own, a volume's or the bundle's): Done of Total is
-// its pages' download steps, plus their archive steps when it's packed on its
-// own. Total is 0 while its page list is being fetched. seq orders the
-// chapters by when they started.
-type flight struct {
-	seq         uint64
-	title, tags string
-	done, total int64
-}
-
-// pass is chapters added to a running group, downloaded once the chapters
-// before them are done, and the range a bundle of them is named by
-type pass struct {
-	chapters grabber.Filterables
-	rng      string
-}
-
-// chapKey identifies a listed chapter across loads of the same URL: by the
-// site's own id for the release when it has one, else by its number, title,
-// language and groups, which tell apart the copies of a number
-func chapKey(f grabber.Filterable) string {
-	c := grabber.ChapterOf(f)
-	if c.ID != "" {
-		return "id:" + c.ID
-	}
-	return fmt.Sprintf("%v\x00%s\x00%s\x00%s", c.Number, c.Title, c.Language, strings.Join(c.GetGroups(), "\x00"))
-}
-
-// newGroup returns a group with its row maps made
-func newGroup() *group {
-	return &group{
-		byChap:    map[*grabber.Chapter]*Job{},
-		failedC:   map[*grabber.Chapter]bool{},
-		byVolume:  map[*core.Volume]*Job{},
-		listedVol: map[grabber.Filterable]*Job{},
-		chapVol:   map[*grabber.Chapter]*Job{},
-		fetching:  map[grabber.Filterable]*Job{},
-		keys:      map[string]bool{},
-		flights:   map[*grabber.Chapter]*flight{},
-		flightOf:  map[grabber.Filterable]*flight{},
-		done:      map[string]bool{},
-		listedOf:  map[*grabber.Chapter]grabber.Filterable{},
-		started:   map[string]bool{},
-		failed:    map[string]bool{},
-	}
-}
-
-// SiteBar is the progress of one site that's downloading: the first chapter
-// in flight of its running groups (Title and Tags, Done of Total, Total 0
-// while its page list is fetched, Title "" between chapters), Until, the
-// end of its pause after a 429, zero when it isn't paused, and Parallel, how
-// many of its requests may be under way at once as learned from its speed
-// (see ratelimit.Parallel)
-type SiteBar struct {
-	Site        string
-	Title, Tags string
-	Done, Total int64
-	Until       time.Time
-	Parallel    int
-	// VPN is why a VPN might help with the site, "" when nothing says so
-	// (see Controller.VPNHint)
-	VPN string
-}
-
-// SiteBars returns a bar for each site a running group downloads from, in the
-// order their groups started. Groups from one site share its bar, which shows
-// the chapter of theirs that started first.
-func (c *Controller) SiteBars() []SiteBar {
-	c.mu.Lock()
-	var bars []SiteBar
-	first := map[string]*flight{}
-	index := map[string]int{}
-	for _, g := range c.groups {
-		if !g.running {
-			continue
-		}
-		if _, ok := index[g.siteKey]; !ok {
-			index[g.siteKey] = len(bars)
-			bars = append(bars, SiteBar{Site: g.siteKey})
-		}
-		for _, f := range g.flights {
-			if cur := first[g.siteKey]; cur == nil || f.seq < cur.seq {
-				first[g.siteKey] = f
-			}
-		}
-		for _, f := range g.flightOf {
-			if cur := first[g.siteKey]; cur == nil || f.seq < cur.seq {
-				first[g.siteKey] = f
-			}
-		}
-	}
-	for key, f := range first {
-		b := &bars[index[key]]
-		b.Title, b.Tags, b.Done, b.Total = f.title, f.tags, f.done, f.total
-	}
-	for i := range bars {
-		bars[i].VPN = c.vpn[bars[i].Site]
-	}
-	c.mu.Unlock()
-	// read outside c.mu: the pacing has locks of its own
-	for i := range bars {
-		bars[i].Until = ratelimit.Cooling(bars[i].Site)
-		bars[i].Parallel = ratelimit.Parallel(bars[i].Site)
-	}
-	return bars
-}
-
-// GroupState is a copy of a group for the window: its rows in chapter order
-// (completion order is what the events arrive in) and, once it ended, its
-// summary
-type GroupState struct {
-	ID         int
-	Title      string
-	Running    bool
-	Cancelling bool
-	Run        RunInfo
-	Jobs       []Job
-	Summary    *Summary
-	// Restored is set on a group of the last session (see group.restored),
-	// URL is its series' URL, and Adult is set when the site rates it 18+
-	Restored bool
-	URL      string
-	Adult    bool
-	// Unfinished counts the chapters Restart would download again for the
-	// whole group (see Controller.Restart)
-	Unfinished int
-	// Cleanup is what the correlation of the group's folder did, nil when it
-	// didn't run
-	Cleanup *Cleanup
-	// Status is what the group is doing that no row shows, nil when nothing
-	Status *Message
-}
-
 // NewController returns a controller that works on its own copy of settings
 // and routes the library's warnings into its log.
 func NewController(settings *grabber.Settings, notifyFn func()) *Controller {
@@ -599,33 +356,6 @@ func NewController(settings *grabber.Settings, notifyFn func()) *Controller {
 	})
 	browser.SetAttentionHandler(c.onAttention)
 	return c
-}
-
-// noteVPNLocked records what err says about a VPN for the site key: a sign of
-// a block (http.VPNHint) sets the site's hint, a nil err (the site worked)
-// clears it, and any other failure leaves it as it is. Called with c.mu held.
-func (c *Controller) noteVPNLocked(key string, err error) {
-	if key == "" {
-		return
-	}
-	if err == nil {
-		delete(c.vpn, key)
-		return
-	}
-	if hint := http.VPNHint(err); hint != "" {
-		if c.vpn == nil {
-			c.vpn = map[string]string{}
-		}
-		c.vpn[key] = hint
-	}
-}
-
-// VPNHint returns why a VPN might help with the site of url (http.VPNRegion,
-// http.VPNDNS), "" when nothing the site answered says so
-func (c *Controller) VPNHint(url string) string {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	return c.vpn[ratelimit.SiteKey(url)]
 }
 
 // onAttention keeps the browser's attention requests, which the view shows
@@ -1056,107 +786,6 @@ func setSiteSettings(site grabber.Site, s *grabber.Settings) {
 	if su, ok := site.(interface{ SetSettings(*grabber.Settings) }); ok {
 		su.SetSettings(s)
 	}
-}
-
-// siteInUseLocked reports whether a running group downloads with site. The
-// caller holds c.mu.
-func (c *Controller) siteInUseLocked(site grabber.Site) bool {
-	for _, g := range c.groups {
-		if g.running && g.site == site {
-			return true
-		}
-	}
-	return false
-}
-
-// runningLocked reports whether any group runs. The caller holds c.mu.
-func (c *Controller) runningLocked() bool {
-	for _, g := range c.groups {
-		if g.running {
-			return true
-		}
-	}
-	return false
-}
-
-// seriesGroupLocked returns the running group of the loaded series (of this
-// load, or of an earlier load of its URL), nil when none runs. The caller
-// holds c.mu.
-func (c *Controller) seriesGroupLocked() *group {
-	if c.series == nil {
-		return nil
-	}
-	for _, g := range c.groups {
-		if g.running && (g.site == c.series.Site || g.url == c.url) {
-			return g
-		}
-	}
-	return nil
-}
-
-// selectedKeysLocked returns the selected chapters by chapKey. The caller
-// holds c.mu.
-func (c *Controller) selectedKeysLocked() map[string]bool {
-	keys := map[string]bool{}
-	for i, chap := range c.series.Chapters {
-		if c.selected[i] {
-			keys[chapKey(chap)] = true
-		}
-	}
-	return keys
-}
-
-// rememberStartLocked records the selection Download was pressed with, for
-// DownloadMode. The caller holds c.mu.
-func (c *Controller) rememberStartLocked() {
-	if c.started == nil {
-		c.started = map[string]map[string]bool{}
-	}
-	c.started[c.url] = c.selectedKeysLocked()
-}
-
-// DownloadMode tells the window what Download would do. addTo is the id of
-// the running group of the loaded series, 0 when none runs, and fresh counts
-// the selected chapters not in its run yet, which Download adds to it.
-// unchanged is set, when no such group runs, while the selection is the one
-// Download was last pressed with for this URL.
-func (c *Controller) DownloadMode() (addTo, fresh int, unchanged bool) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	if c.series == nil || c.loading {
-		return 0, 0, false
-	}
-	if g := c.seriesGroupLocked(); g != nil {
-		for i, chap := range c.series.Chapters {
-			if c.selected[i] && !g.keys[chapKey(chap)] {
-				fresh++
-			}
-		}
-		return g.id, fresh, false
-	}
-	last := c.started[c.url]
-	keys := c.selectedKeysLocked()
-	if len(keys) == 0 || len(keys) != len(last) {
-		return 0, 0, false
-	}
-	for k := range keys {
-		if !last[k] {
-			return 0, 0, false
-		}
-	}
-	return 0, 0, true
-}
-
-// dropFinishedLocked forgets the groups that ended, keeping the running ones.
-// The caller holds c.mu.
-func (c *Controller) dropFinishedLocked() {
-	var kept []*group
-	for _, g := range c.groups {
-		if g.running {
-			kept = append(kept, g)
-		}
-	}
-	c.groups = kept
 }
 
 // dropUnmatchedFilters handles a load that found nothing for a filter the
@@ -1758,112 +1387,6 @@ func (c *Controller) runVolumes() string {
 	return c.volumesText
 }
 
-// Groups returns a copy of the groups, in the order they started
-func (c *Controller) Groups() []GroupState {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	out := make([]GroupState, len(c.groups))
-	for i, g := range c.groups {
-		out[i] = g.state()
-		c.restartInfoLocked(g, &out[i])
-	}
-	return out
-}
-
-// state is a copy of the group. The caller holds c.mu.
-func (g *group) state() GroupState {
-	st := GroupState{ID: g.id, Title: g.title, Running: g.running, Cancelling: g.cancelling, Run: g.runinfo, Restored: g.restored, URL: g.url, Adult: g.adult}
-	if g.cleanup != nil {
-		cl := *g.cleanup
-		st.Cleanup = &cl
-	}
-	if g.status != nil {
-		m := *g.status
-		st.Status = &m
-	}
-	st.Jobs = make([]Job, len(g.jobs))
-	for i, j := range g.jobs {
-		st.Jobs[i] = *j
-	}
-	sort.SliceStable(st.Jobs, func(i, j int) bool { return st.Jobs[i].Number < st.Jobs[j].Number })
-	if g.summary != nil {
-		sum := *g.summary
-		sum.Failures = append([]Failure(nil), g.summary.Failures...)
-		st.Summary = &sum
-	}
-	return st
-}
-
-// runDir is the folder a run of chapters saves into: settings.OutputDir, or
-// with SeriesFolders the series' folder inside it, tagged with the run's
-// language when GuessLanguage is on too (see core.SeriesDir)
-func runDir(settings *grabber.Settings, series *core.Series, chapters grabber.Filterables) string {
-	if !settings.SeriesFolders || series == nil {
-		return settings.OutputDir
-	}
-	lang := ""
-	if settings.GuessLanguage {
-		declared := ""
-		if p, ok := series.Site.(grabber.PageLanguager); ok {
-			declared = p.PageLanguage()
-		}
-		lang = core.FolderLanguage(chapters, settings.Language, series.Languages, series.Title, declared)
-	}
-
-	return core.SeriesDir(settings.OutputDir, series.Title, lang)
-}
-
-// Destination is the folder a run of the selected chapters would save into,
-// for the window to show before it starts; "" when no series is loaded
-func (c *Controller) Destination() string {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	if c.series == nil {
-		return ""
-	}
-	var chapters grabber.Filterables
-	for i, chap := range c.series.Chapters {
-		if i < len(c.selected) && c.selected[i] {
-			chapters = append(chapters, chap)
-		}
-	}
-
-	return runDir(c.settings, c.series, chapters)
-}
-
-// LastSummary returns the outcome of the group that ended last, nil while
-// any group runs or when none has ended
-func (c *Controller) LastSummary() *Summary {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	var last *group
-	for _, g := range c.groups {
-		if g.running {
-			return nil
-		}
-		if g.summary != nil && (last == nil || g.ended > last.ended) {
-			last = g
-		}
-	}
-	if last == nil {
-		return nil
-	}
-	return last.state().Summary
-}
-
-// GroupSummary returns the outcome of group id, nil while it runs or when
-// there's no such group
-func (c *Controller) GroupSummary(id int) *Summary {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	for _, g := range c.groups {
-		if g.id == id {
-			return g.state().Summary
-		}
-	}
-	return nil
-}
-
 // Log returns a copy of the log
 func (c *Controller) Log() []LogLine {
 	c.mu.Lock()
@@ -2045,55 +1568,6 @@ func (c *Controller) Start() error {
 	return nil
 }
 
-// queueLocked adds the selected chapters that aren't in g's run yet to it,
-// as a pass of their own that starts once the chapters before it are done.
-// They're downloaded with the group's settings, not the window's. It unlocks
-// c.mu.
-func (c *Controller) queueLocked(g *group) error {
-	var fresh grabber.Filterables
-	var numbers []float64
-	var selected []bool
-	for i, chap := range c.series.Chapters {
-		add := c.selected[i] && !g.keys[chapKey(chap)]
-		numbers = append(numbers, chap.GetNumber())
-		selected = append(selected, add)
-		if add {
-			fresh = append(fresh, chap)
-		}
-	}
-	if len(fresh) == 0 {
-		c.mu.Unlock()
-		return uiErr("errors.nothingNew", nil, nil)
-	}
-	rows := len(fresh)
-	if g.runinfo.Bundle {
-		rows = 1
-	}
-	if g.runinfo.Volumes {
-		spec, _ := core.ParseVolumes(g.settings.Volumes)
-		groups, loose, err := core.GroupVolumes(fresh, spec)
-		if err != nil {
-			c.mu.Unlock()
-			return err
-		}
-		rows = len(groups) + len(loose)
-	}
-	for _, chap := range fresh {
-		g.keys[chapKey(chap)] = true
-	}
-	g.pending = append(g.pending, pass{chapters: fresh, rng: bundleRange(numbers, selected)})
-	g.runinfo.Chapters += len(fresh)
-	g.runinfo.Rows += rows
-	g.chapters = append(g.chapters, fresh...)
-	c.recordGroupLocked(g)
-	c.kickHistory()
-	c.rememberStartLocked()
-	c.appendMsgLocked(LogInfo, msg("log.queued", map[string]any{"count": len(fresh), "title": g.title}))
-	c.mu.Unlock()
-	c.emit()
-	return nil
-}
-
 // run is the download goroutine of group g. It downloads chapters, then each
 // pass added to the group while it runs (see queueLocked), in turn, unless the
 // group was cancelled, and sums them up in one summary.
@@ -2166,109 +1640,11 @@ func (c *Controller) run(ctx context.Context, g *group, series *core.Series, cha
 	}
 }
 
-// savedNow is g's saved count, read under c.mu
-func (g *group) savedNow(c *Controller) int {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	return g.stats.saved
-}
-
-// endPassLocked settles one pass of g's run: n chapters, saved of them kept,
-// and Download's file and err. It returns the failures that aren't a chapter's
-// own, the bundle written ("" for none) and the chapters a bundle already in
-// the folder accounts for, and marks s cancelled or failed. The caller holds c.mu.
-func (c *Controller) endPassLocked(g *group, s *Summary, n, saved int, file string, err error) (extra []Failure, bundle string, existing int) {
-	var serr *core.SettingError
-	switch {
-	case errors.As(err, &serr) && serr.Setting == "output-dir":
-		// raised before anything was fetched, so no chapter has a result to show
-		s.Err = err
-		m := msg("log.outputDirFailed", map[string]any{"folder": serr.Value, "error": serr.Err.Error()})
-		extra = append(extra, windowFailure("", m))
-		c.appendMsgLocked(LogError, m)
-	case err != nil && g.runinfo.Volumes && !errors.Is(err, context.Canceled):
-		// a volume run's Download fails only on its setting checks (--volumes,
-		// the volume filename template), before anything is fetched
-		s.Err = err
-		m := msg("log.volumesFailed", map[string]any{"reason": err.Error()})
-		extra = append(extra, windowFailure("", m))
-		c.appendMsgLocked(LogError, m)
-	case errors.Is(err, context.Canceled):
-		// a cancelled bundle is never packed: the chapters it never started
-		// would be silently missing from it
-		s.Cancelled = true
-	case errors.Is(err, core.ErrExists):
-		// the bundle is named by Download's file; none of its chapters was fetched
-		existing = n
-		m := msg("job.reason.exists", map[string]any{"name": file})
-		if g.bundle != nil {
-			g.bundle.setReason(m)
-		}
-		c.appendMsgLocked(LogInfo, msg("log.exists", map[string]any{"name": file}))
-	case err != nil:
-		s.Err = err
-		m := msg("log.packingBundle", map[string]any{"reason": err.Error()})
-		extra = append(extra, windowFailure("", m))
-		c.appendMsgLocked(LogError, m)
-	case g.bundle != nil && saved == 0:
-		// core still packs an empty bundle when every chapter failed (as the
-		// CLI does), so the file it leaves behind is not a result
-		s.Err = uiErr("errors.noChapterDownloaded", nil, nil)
-		m := msg("log.bundleEmpty", nil)
-		extra = append(extra, windowFailure("", m))
-		c.appendMsgLocked(LogError, m)
-	default:
-		bundle = file
-	}
-	if g.bundle != nil {
-		switch {
-		case bundle != "":
-			g.bundle.State = JobDone
-			g.bundle.Done = g.bundle.Total
-		case errors.Is(err, core.ErrExists):
-			g.bundle.State = JobSkipped
-		default:
-			g.bundle.State = JobFailed
-		}
-		g.bundle.clearStatus()
-	}
-	return extra, bundle, existing
-}
-
 // Cancel stops every running group from starting new chapters. Chapters
 // already in flight finish. It's a no-op when nothing runs or every group was
 // cancelled already.
 func (c *Controller) Cancel() {
 	c.cancelGroups(func(*group) bool { return true })
-}
-
-// CancelGroup is Cancel for group id alone
-func (c *Controller) CancelGroup(id int) {
-	c.cancelGroups(func(g *group) bool { return g.id == id })
-}
-
-// cancelGroups cancels the running groups that pick selects and weren't
-// cancelled yet, logging once for them
-func (c *Controller) cancelGroups(pick func(*group) bool) {
-	c.mu.Lock()
-	var cancels []context.CancelFunc
-	for _, g := range c.groups {
-		if g.running && !g.cancelling && g.cancel != nil && pick(g) {
-			g.cancelling = true
-			cancels = append(cancels, g.cancel)
-		}
-	}
-	if len(cancels) > 0 {
-		c.appendMsgLocked(LogInfo, msg("log.cancelling", nil))
-	}
-	c.mu.Unlock()
-	if len(cancels) == 0 {
-		return
-	}
-	for _, cancel := range cancels {
-		cancel()
-	}
-	c.emit()
 }
 
 // mkdirAll is os.MkdirAll; tests slow it down
@@ -2313,37 +1689,6 @@ type events struct {
 }
 
 var _ core.Events = events{}
-
-// jobFor returns the row of a chapter, nil when it has none (bundle mode has
-// a single row, and a chapter whose fetch failed never got one).
-// Callers must hold mu.
-func (g *group) jobFor(ch *grabber.Chapter) *Job {
-	if g.bundle != nil {
-		return g.bundle
-	}
-	if j := g.chapVol[ch]; j != nil {
-		return j
-	}
-	return g.byChap[ch]
-}
-
-// releaseLabel names a release the way the chapter list does: the language and
-// group only when the loaded list has copies that need them. Callers hold mu.
-func (g *group) releaseLabel(f grabber.Filterable) string {
-	return core.ReleaseLabel(f, g.hasDuplicates, g.hasGroupDuplicates)
-}
-
-// releaseTags is the bracketed part of releaseLabel, which a job row shows
-// apart from its title. Callers hold mu.
-func (g *group) releaseTags(f grabber.Filterable) string {
-	return core.ReleaseTags(f, g.hasDuplicates, g.hasGroupDuplicates)
-}
-
-// live reports whether a chapter still accepts page progress: once it failed,
-// pages still in flight finish but must not move its bar. Callers hold mu.
-func (g *group) live(ch *grabber.Chapter) bool {
-	return !g.failedC[ch]
-}
 
 // advance moves a row into the archiving phase at its first archived step,
 // the point the CLI's bar switches its label: the downloads fill the bar up
@@ -2404,20 +1749,6 @@ func (e events) Fetched(listed grabber.Filterable, ch *grabber.Chapter) {
 	c.emit()
 }
 
-// endRow marks the row of a chapter that ended before it started, or adds one
-// when it never had any. Callers hold mu.
-func (g *group) endRow(ch *grabber.Chapter, state JobState, reason Message) {
-	if j := g.byChap[ch]; j != nil {
-		j.State = state
-		j.setReason(reason)
-		j.clearStatus()
-		return
-	}
-	j := &Job{Title: grabber.ChapterLabel(ch), Tags: g.releaseTags(ch), Number: ch.GetNumber(), State: state, Key: g.keyOf(ch)}
-	j.setReason(reason)
-	g.jobs = append(g.jobs, j)
-}
-
 func (e events) FetchFailed(listed grabber.Filterable, err error) {
 	c, g := e.c, e.g
 	c.mu.Lock()
@@ -2451,98 +1782,6 @@ func (e events) Skipped(ch *grabber.Chapter) {
 		g.endRow(ch, JobSkipped, msg("job.reason.skipped", nil))
 	}
 	c.appendMsgLocked(LogWarn, msg("log.skipping", map[string]any{"label": g.releaseLabel(ch)}))
-	c.mu.Unlock()
-	c.emit()
-}
-
-// Waiting is a chapter waiting for another copy of the program, which is
-// downloading the same file: only the log says so, the row stays as it is
-func (e events) Waiting(ch *grabber.Chapter, name string) {
-	c, g := e.c, e.g
-	c.mu.Lock()
-	c.appendMsgLocked(LogInfo, msg("log.waiting", map[string]any{"label": g.releaseLabel(ch), "name": name}))
-	c.mu.Unlock()
-	c.emit()
-}
-
-// Correlating is a step of the folder's correlation, as it goes: the
-// group's header says what it's doing, with its count, and the log gets the
-// folder's file count, the files read every core.CorrelateLogEvery, and each file
-// moved (or not) as its batch is done.
-func (e events) Correlating(p core.CorrelateProgress) {
-	c, g := e.c, e.g
-	c.mu.Lock()
-	var m Message
-	switch p.Step {
-	case core.CorrelateListed:
-		m = msg("activity.status.listed", map[string]any{"count": p.Total})
-		c.appendMsgLocked(LogInfo, msg("log.correlating", map[string]any{"count": p.Total}))
-	case core.CorrelateComparing:
-		m = msg("activity.status.comparing", map[string]any{"done": p.Done, "total": p.Total})
-		if p.Done%core.CorrelateLogEvery == 0 || p.Done == p.Total {
-			c.appendMsgLocked(LogInfo, msg("log.compared", map[string]any{"done": p.Done, "total": p.Total}))
-		}
-	case core.CorrelateMoving:
-		m = msg("activity.status.moving", map[string]any{"done": p.Done, "total": p.Total})
-		// deleted for good, the lines say so; kept ones are summed up once
-		for _, d := range p.Moved {
-			args := map[string]any{"name": d.Name, "kept": d.Kept}
-			switch {
-			case errors.Is(d.Err, trash.ErrNoRecycleBin):
-			case d.Err != nil:
-				c.appendMsgLocked(LogWarn, msg("log.removeFailed", map[string]any{"name": d.Name, "reason": d.Err.Error()}))
-			case d.SameBytes && g.forGood:
-				c.appendMsgLocked(LogInfo, msg("log.removedSameForGood", args))
-			case d.SameBytes:
-				c.appendMsgLocked(LogInfo, msg("log.removedSame", args))
-			case g.forGood:
-				args["number"] = d.Number
-				c.appendMsgLocked(LogInfo, msg("log.removedNumberForGood", args))
-			default:
-				args["number"] = d.Number
-				c.appendMsgLocked(LogInfo, msg("log.removedNumber", args))
-			}
-		}
-	}
-	g.status = &m
-	c.mu.Unlock()
-	c.emit()
-}
-
-// Correlated is what the correlation of the folder did before the download
-// started: the group's header says how many files went (a later pass of the
-// group adds to it), its status ends, and the log gets the total.
-func (e events) Correlated(r *core.Correlation) {
-	c, g := e.c, e.g
-	c.mu.Lock()
-	if g.cleanup == nil {
-		g.cleanup = &Cleanup{}
-	}
-	g.cleanup.Removed += len(r.Removed)
-	g.cleanup.Bytes += r.RemovedBytes
-	g.cleanup.Permanent = g.cleanup.Permanent || r.Permanent
-	kept := 0
-	for _, d := range r.Failed {
-		if errors.Is(d.Err, trash.ErrNoRecycleBin) {
-			kept++
-		}
-	}
-	g.cleanup.Kept += kept
-	g.cleanup.Failed += len(r.Failed) - kept
-	g.status = nil
-	removed := map[string]any{"count": len(r.Removed), "size": core.Bytes(r.RemovedBytes), "folder": r.Dir}
-	switch {
-	case len(r.Removed) == 0:
-	case r.Permanent:
-		c.appendMsgLocked(LogInfo, msg("log.removedForGood", removed))
-	default:
-		c.appendMsgLocked(LogInfo, msg("log.removed", removed))
-	}
-	if kept > 0 {
-		c.appendMsgLocked(LogWarn, msg("log.keptNoBin", map[string]any{"count": kept, "folder": r.Dir}))
-	}
-	// the marks look at the folder again
-	c.onDiskKey = ""
 	c.mu.Unlock()
 	c.emit()
 }
@@ -2744,19 +1983,6 @@ func (e events) BundleArchived(n int) {
 	}
 	c.mu.Unlock()
 	c.emit()
-}
-
-// volumeTitle is the row title of a volume: "Vol. 01 · chapters 1–7", or
-// "Chapter 19 · 2 parts" in a parts run. Callers hold mu.
-func (g *group) volumeTitle(v *core.Volume) Message {
-	if g.runinfo.Parts {
-		return msg("job.title.volumeParts", map[string]any{"volume": v.Label(), "count": len(v.Chapters)})
-	}
-	first, last := formatNumber(v.FirstNumber()), formatNumber(v.LastNumber())
-	if first == last {
-		return msg("job.title.volumeChapter", map[string]any{"volume": v.Label(), "first": first})
-	}
-	return msg("job.title.volume", map[string]any{"volume": v.Label(), "first": first, "last": last})
 }
 
 func (e events) VolumeStart(v *core.Volume) {
