@@ -8,7 +8,6 @@ import {
   hostOf,
   overallProgress,
   summaryTone,
-  sizeText,
   tally,
 } from './run';
 import type { Job, State, Summary } from './types';
@@ -306,13 +305,5 @@ describe('groupCounts', () => {
     expect(c).toEqual({ active: 3, queued: 3, saved: 1, had: 1, skipped: 1, failed: 1, todo: 0 });
     const ended = groupCounts({ jobs, running: false, run: { chapters: 10, bundle: false, volumes: false, rows: 10 } });
     expect(ended.queued).toBe(0);
-  });
-});
-
-describe('sizeText', () => {
-  it('writes sizes the way people read them', () => {
-    expect(sizeText(912)).toBe('912 B');
-    expect(sizeText(912_400)).toBe('912.4 kB');
-    expect(sizeText(1_400_000_000)).toBe('1.4 GB');
   });
 });

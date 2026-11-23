@@ -35,7 +35,7 @@ export namespace main {
 	    dir: string;
 	    whole: boolean;
 	    files: number;
-	    size: string;
+	    bytes: number;
 	    permanent: boolean;
 	
 	    static createFrom(source: any = {}) {
@@ -48,7 +48,7 @@ export namespace main {
 	        this.dir = source["dir"];
 	        this.whole = source["whole"];
 	        this.files = source["files"];
-	        this.size = source["size"];
+	        this.bytes = source["bytes"];
 	        this.permanent = source["permanent"];
 	    }
 	}

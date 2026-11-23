@@ -173,8 +173,8 @@ export interface DeleteInfo {
   /** The series' own folder, taken whole */
   whole: boolean;
   files: number;
-  /** The files' size, written to read (1.4 GB) */
-  size: string;
+  /** The files' size in bytes */
+  bytes: number;
   /** The drive has no Recycle Bin: the files would be deleted for good */
   permanent?: boolean;
 }

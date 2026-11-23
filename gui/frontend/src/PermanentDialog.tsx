@@ -6,7 +6,6 @@
 import { useEffect, useRef } from 'react';
 import { useI18n } from './i18n/react';
 import { AlertIcon } from './icons';
-import { sizeText } from './run';
 import type { PermanentAsk } from './types';
 
 interface Props {
@@ -40,7 +39,7 @@ export function PermanentDialog({ ask, onAnswer }: Props) {
           <AlertIcon size={18} /> {t('chapters.permanent.title')}
         </h2>
         <p id="permanent-text">
-          {t('chapters.permanent.body', { dir: ask.dir, count: ask.files, size: sizeText(ask.bytes) })}
+          {t('chapters.permanent.body', { dir: ask.dir, count: ask.files, size: ask.bytes })}
         </p>
         <div className="browser-alert-actions">
           <button type="button" className="btn primary" ref={keep} onClick={() => onAnswer(false)}>
