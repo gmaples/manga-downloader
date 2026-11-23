@@ -36,8 +36,24 @@ const (
 func (c *Controller) ChapterMarks() []string {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	marks, _ := c.chapterMarksLocked()
+	return marks
+}
+
+// ChapterMarksAndNotes returns ChapterMarks and ChapterNotes from one pass
+// over the list and the folder, for the window's pushes
+func (c *Controller) ChapterMarksAndNotes() (marks, notes []string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	marks, disk := c.chapterMarksLocked()
+	return marks, c.chapterNotesLocked(marks, disk)
+}
+
+// chapterMarksLocked is ChapterMarks, with which chapters have their file in
+// the folder (diskMarksLocked). The caller holds c.mu.
+func (c *Controller) chapterMarksLocked() ([]string, []bool) {
 	if c.series == nil || len(c.series.Chapters) == 0 {
-		return nil
+		return nil, nil
 	}
 	disk := c.diskMarksLocked()
 	marks := make([]string, len(c.series.Chapters))
@@ -59,7 +75,7 @@ func (c *Controller) ChapterMarks() []string {
 		marks[i] = mark
 	}
 
-	return marks
+	return marks, disk
 }
 
 // markOf is what became of chapter k of group g's run. A chapter that failed
@@ -82,6 +98,9 @@ func (g *group) markOf(k string) string {
 	}
 }
 
+// onDiskMarks runs at each diskMarksLocked; tests count the calls with it
+var onDiskMarks = func() {}
+
 // diskMarksLocked returns which chapters of the loaded list have their file
 // in the folder a run of the whole list saves into: the file Skip existing
 // looks for, or any file of the chapter's number (the name an earlier
@@ -92,6 +111,7 @@ func (g *group) markOf(k string) string {
 // ends, so the pushes while a run goes on cost no disk access. The caller
 // holds c.mu.
 func (c *Controller) diskMarksLocked() []bool {
+	onDiskMarks()
 	s := c.settings
 	dir := runDir(s, c.series, c.series.Chapters)
 	key := fmt.Sprintf("%p\x00%s\x00%s\x00%s\x00%d", c.series, dir, s.Format, s.FilenameTemplate, c.lastEnd)
@@ -184,13 +204,17 @@ func numbersIn(dir, title, template, format string) map[string]string {
 // list can say more: the file of a chapter that's in the folder, the reason
 // of one whose download failed, else "". It's nil when nothing is loaded.
 func (c *Controller) ChapterNotes() []string {
-	marks := c.ChapterMarks()
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	return c.chapterNotesLocked(c.chapterMarksLocked())
+}
+
+// chapterNotesLocked is ChapterNotes from the marks and disk
+// chapterMarksLocked gave. The caller holds c.mu.
+func (c *Controller) chapterNotesLocked(marks []string, disk []bool) []string {
 	if c.series == nil || len(marks) != len(c.series.Chapters) {
 		return nil
 	}
-	disk := c.diskMarksLocked()
 	reasons := map[string]string{}
 	for _, g := range c.groups {
 		if g.restored || g.deleted || g.url != c.url {

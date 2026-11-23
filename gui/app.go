@@ -155,11 +155,18 @@ func (a *App) pump() {
 			sentLog = g
 			a.sink.Emit("log", a.Log())
 		}
-		if m := a.Marks(); !slices.Equal(m, sentMarks) {
+		m, n := a.ctrl.ChapterMarksAndNotes()
+		if m == nil {
+			m = []string{}
+		}
+		if n == nil {
+			n = []string{}
+		}
+		if !slices.Equal(m, sentMarks) {
 			sentMarks = m
 			a.sink.Emit("marks", m)
 		}
-		if n := a.MarkNotes(); !slices.Equal(n, sentNotes) {
+		if !slices.Equal(n, sentNotes) {
 			sentNotes = n
 			a.sink.Emit("markNotes", n)
 		}
