@@ -25,9 +25,42 @@ const (
 
 var procSHFileOperationW = syscall.NewLazyDLL("shell32.dll").NewProc("SHFileOperationW")
 
+// osHasRecycleBin tells whether path's drive has a Recycle Bin: a fixed
+// drive whose bin SHQueryRecycleBinW can read. Checked on Greg's PC
+// (tools/probe-bin): C: is fixed (3) and the query gives S_OK; a removable
+// exFAT card is 2 and the query fails with E_FAIL. The query takes
+// SHQUERYRBINFO at its 64-bit size, 24 bytes: 20 is refused (E_INVALIDARG).
+func osHasRecycleBin(p string) bool {
+	root, err := syscall.UTF16PtrFromString(filepath.VolumeName(path(p)) + `\`)
+	if err != nil {
+		return false
+	}
+	if r, _, _ := procGetDriveTypeW.Call(uintptr(unsafe.Pointer(root))); r != driveFixed {
+		return false
+	}
+	var info struct {
+		cbSize      uint32
+		_           uint32
+		i64Size     int64
+		i64NumItems int64
+	}
+	info.cbSize = uint32(unsafe.Sizeof(info))
+	r, _, _ := procSHQueryRecycleBinW.Call(uintptr(unsafe.Pointer(root)), uintptr(unsafe.Pointer(&info)))
+	return r == 0
+}
+
+// driveFixed is GetDriveTypeW's DRIVE_FIXED
+const driveFixed = 3
+
+var (
+	procGetDriveTypeW      = syscall.NewLazyDLL("kernel32.dll").NewProc("GetDriveTypeW")
+	procSHQueryRecycleBinW = syscall.NewLazyDLL("shell32.dll").NewProc("SHQueryRecycleBinW")
+)
+
 // files sends the files to the Recycle Bin with one SHFileOperationW call
-// and FOF_ALLOWUNDO, then looks at which are still there: those failed. As in
-// Explorer, a file on a drive with no Recycle Bin is deleted outright.
+// and FOF_ALLOWUNDO, then looks at which are still there: those failed.
+// Files only passes files on a drive with a Recycle Bin, since on one
+// without it this call deletes them for good, as Explorer does.
 func files(paths []string, failed map[string]error) {
 	var from []uint16
 	var present []string

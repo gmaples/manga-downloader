@@ -10,6 +10,7 @@ import (
 
 	"github.com/elboletaire/manga-downloader/core"
 	"github.com/elboletaire/manga-downloader/elevated"
+	"github.com/fatih/color"
 )
 
 // --delete-series takes the series' chapter files out of the output folder:
@@ -53,8 +54,18 @@ func runDeleteSeries(out io.Writer, series *core.Series, root string, force bool
 		to = core.EmptyMeFolder(root, series.Title)
 		where = to
 	}
+	// with no Recycle Bin, the trash would delete them for good: asked first
+	allow := false
+	if force && plan.Permanent {
+		allow = askYes(color.RedString("- %s has no Recycle Bin: delete %s of %s (%s) for good?", root, files(len(plan.Names)), series.Title, Bytes(plan.Bytes)))
+		if !allow {
+			fmt.Fprintf(out, "- %s has no Recycle Bin: nothing was deleted (run at a terminal and answer y to delete for good)\n", root)
+			return 1
+		}
+		where = "nowhere (deleted for good)"
+	}
 	fmt.Fprintf(out, "- deleting %s: %s (%s) to %s\n", series.Title, files(len(plan.Names)), Bytes(plan.Bytes), where)
-	r := plan.Run(to, func(p core.DeleteProgress) {
+	r := plan.Run(to, allow, func(p core.DeleteProgress) {
 		fmt.Fprintf(out, "- moved %d of %d\n", p.Done, p.Total)
 	})
 	failed := make([]string, 0, len(r.Failed))

@@ -59,6 +59,10 @@ type Events interface {
 	// whose number is in r.Have, or that another release of its number in
 	// this download covers, then gets Exists without being fetched.
 	Correlated(r *Correlation)
+	// ConfirmPermanent asks whether to delete n duplicate files (bytes in
+	// all) in dir for good, as dir's drive has no Recycle Bin. It blocks
+	// until answered; false keeps them.
+	ConfirmPermanent(dir string, n int, bytes int64) bool
 	// FilenameFailed reports a chapter whose filename couldn't be built
 	FilenameFailed(c *grabber.Chapter, err error)
 	// Fetching reports a chapter whose page list is about to be fetched, then
@@ -129,6 +133,7 @@ func (NoEvents) Exists(grabber.Filterable, string)            {}
 func (NoEvents) Waiting(*grabber.Chapter, string)             {}
 func (NoEvents) Correlating(CorrelateProgress)                {}
 func (NoEvents) Correlated(*Correlation)                      {}
+func (NoEvents) ConfirmPermanent(string, int, int64) bool     { return false }
 func (NoEvents) FilenameFailed(*grabber.Chapter, error)       {}
 func (NoEvents) Fetching(grabber.Filterable)                  {}
 func (NoEvents) Fetched(grabber.Filterable, *grabber.Chapter) {}
@@ -396,7 +401,7 @@ func (s *Series) Download(ctx context.Context, chapters grabber.Filterables, ski
 		if dir == "" {
 			dir = "."
 		}
-		r, err := s.Correlate(dir, ev.Correlating)
+		r, err := s.Correlate(dir, ev)
 		if err != nil {
 			notice.Warn("looking for duplicates in %s: %s", dir, err)
 		}

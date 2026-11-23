@@ -29,7 +29,7 @@ func TestDeleteSeriesTakesOnlyItsFiles(t *testing.T) {
 		t.Fatalf("plan %v, %d bytes; want the 2 series files, 6 bytes", plan.Names, plan.Bytes)
 	}
 	var steps []DeleteProgress
-	r := plan.Run("", func(p DeleteProgress) { steps = append(steps, p) })
+	r := plan.Run("", false, func(p DeleteProgress) { steps = append(steps, p) })
 	if len(r.Moved) != 2 || len(r.Failed) != 0 || r.Bytes != 6 {
 		t.Fatalf("result %+v", r)
 	}
@@ -72,7 +72,7 @@ func TestDeleteSeriesWholeFolderAndMove(t *testing.T) {
 		t.Fatal(err)
 	}
 	writeAt(t, to, "cover.jpg", "older", time.Hour)
-	r := plan.Run(to, nil)
+	r := plan.Run(to, false, nil)
 	if len(r.Moved) != 3 || len(r.Failed) != 0 || !r.DirRemoved {
 		t.Fatalf("result %+v", r)
 	}

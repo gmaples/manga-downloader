@@ -62,6 +62,8 @@ func (r *recorder) Waiting(c *grabber.Chapter, name string) { r.add("waiting %g 
 
 func (r *recorder) Correlating(CorrelateProgress) {}
 
+func (r *recorder) ConfirmPermanent(string, int, int64) bool { return false }
+
 // Correlated is recorded only when it removed something, so the runs with
 // nothing to correlate read as before
 func (r *recorder) Correlated(c *Correlation) {

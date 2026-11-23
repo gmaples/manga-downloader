@@ -47,10 +47,14 @@ func progressLines(p core.CorrelateProgress) []line {
 }
 
 // correlationLines are the total the command prints once the output folder's
-// correlation is done (see core.Correlation), none when it moved nothing
+// correlation is done (see core.Correlation), none when it moved nothing (a
+// duplicate that couldn't go has its own line already)
 func correlationLines(r *core.Correlation) []line {
-	if r == nil || len(r.Removed)+len(r.Failed) == 0 {
+	if r == nil || len(r.Removed) == 0 {
 		return nil
+	}
+	if r.Permanent {
+		return []line{{text: fmt.Sprintf("- deleted %s (%s) for good: this drive has no Recycle Bin", duplicates(len(r.Removed)), Bytes(r.RemovedBytes))}}
 	}
 	return []line{{text: fmt.Sprintf("- moved %d duplicate %s (%s) to the trash", len(r.Removed), plural(len(r.Removed), "file", "files"), Bytes(r.RemovedBytes))}}
 }
