@@ -570,49 +570,6 @@ code,
   }
 }
 
-/* the gap between the panes is the splitter: a line shows on hover, focus and drag */
-.splitter {
-  position: relative;
-  cursor: col-resize;
-  touch-action: none;
-}
-
-.splitter::after {
-  content: '';
-  position: absolute;
-  top: 8px;
-  bottom: 8px;
-  left: 50%;
-  width: 2px;
-  margin-left: -1px;
-  border-radius: 1px;
-  background: transparent;
-  transition: background 0.15s var(--ease);
-}
-
-.splitter:hover::after,
-.splitter:focus-visible::after,
-.resizing-x .splitter::after {
-  background: var(--accent);
-}
-
-.splitter:focus-visible {
-  outline: none;
-}
-
-/* while a splitter is dragged, the cursor stays and nothing gets selected */
-.resizing-x,
-.resizing-x * {
-  cursor: col-resize !important;
-  user-select: none;
-}
-
-.resizing-y,
-.resizing-y * {
-  cursor: row-resize !important;
-  user-select: none;
-}
-
 .panel,
 .side {
   display: flex;
@@ -706,44 +663,6 @@ code,
   font-weight: 650;
 }
 
-/* the count is two lines: what's selected, then the missing and failed links */
-.count p {
-  margin: 0;
-}
-
-.count-states {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 12px;
-}
-
-.count-link {
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--accent-text);
-  font: inherit;
-  cursor: pointer;
-  text-decoration: underline dotted;
-  text-underline-offset: 2px;
-}
-
-.count-link.failed {
-  color: var(--warning);
-}
-
-.count-link.lit {
-  font-weight: 650;
-  text-decoration-style: solid;
-}
-
-.count-link:disabled {
-  color: var(--text-3);
-  cursor: default;
-  text-decoration: none;
-}
-
 .toolbar-buttons {
   display: flex;
   gap: 2px;
@@ -818,16 +737,6 @@ code,
 
 .row.on:hover {
   background: var(--accent-soft);
-}
-
-/* the chapters the missing or failed link picked */
-.row.lit {
-  box-shadow: inset 3px 0 0 var(--accent);
-}
-
-.row.lit .num {
-  color: var(--text);
-  font-weight: 650;
 }
 
 .list:focus-visible .row.active {
@@ -1042,37 +951,6 @@ code,
 .row.part-row {
   grid-template-columns: 16px 14px minmax(0, 1fr) auto;
   padding-left: 88px;
-}
-
-/* a chapter's mark, beside its checkbox: what became of it. Failed and
-   cancelled share the warning colour, with their own glyphs. */
-.mark {
-  display: grid;
-  place-items: center;
-  width: 14px;
-  height: 14px;
-  color: var(--text-3);
-}
-
-.mark-done {
-  color: var(--success);
-}
-
-.mark-downloading {
-  color: var(--accent);
-}
-
-.mark-queued::before {
-  content: '';
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--border-strong);
-}
-
-.mark-failed,
-.mark-cancelled {
-  color: var(--warning);
 }
 
 .field-stack {
@@ -1390,11 +1268,6 @@ code,
 /* 単一ファイル fills its pill at the minimum width; keep a little air around it */
 :lang(ja) .segmented label {
   padding-inline: 4px;
-}
-
-/* Ukrainian language names run long (en · Англійська): widen the filter selectors */
-:lang(uk) .field.inline-field .input {
-  width: 160px;
 }
 
 .advanced {
@@ -1735,65 +1608,6 @@ fieldset:disabled .check {
   min-height: 0;
 }
 
-.activity.multi {
-  overflow-y: auto;
-  overscroll-behavior: contain;
-}
-
-/* one press of Download; alone it fills the panel, as a single run always has */
-.run-group {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-}
-
-.activity.multi .run-group {
-  flex: none;
-  border-bottom: 1px solid var(--border);
-}
-
-.activity.multi .jobs-section {
-  flex: none;
-  min-height: 0;
-  padding-bottom: 8px;
-}
-
-.run-group-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 16px 0;
-}
-
-/* the header's counts and live status line up with its title */
-.run-group-counts {
-  padding: 2px 16px 0;
-}
-
-.run-group-counts p {
-  margin: 2px 0;
-}
-
-.run-group-status {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--text);
-}
-
-/* the buttons wrap under the title rather than squeeze it to a few letters */
-.run-group-title {
-  flex: 1 1 160px;
-  min-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  font-size: 13px;
-  font-weight: 650;
-}
-
 .empty-activity {
   justify-content: center;
   gap: 6px;
@@ -2077,20 +1891,6 @@ fieldset:disabled .check {
   background: var(--surface-2);
 }
 
-/* a row's restart: as small as the status beside it, so the line keeps its height */
-.job-restart {
-  align-self: center;
-  width: 22px;
-  height: 22px;
-  min-height: 0;
-  padding: 0;
-  margin: -4px 0;
-}
-
-.btn.restart-all {
-  color: var(--accent-text);
-}
-
 .bundle-card .job-line {
   align-items: center;
 }
@@ -2171,43 +1971,6 @@ fieldset:disabled .check {
   font-variant-numeric: tabular-nums;
   font-weight: 600;
   color: var(--accent-text);
-}
-
-.site-bars {
-  display: grid;
-  gap: 6px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.site-bar {
-  display: grid;
-  gap: 4px;
-  font-size: 12px;
-}
-
-.site-name {
-  min-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  color: var(--text);
-}
-
-.site-chapter {
-  color: var(--text-3);
-}
-
-.site-status {
-  flex: none;
-  margin-left: 8px;
-  font-variant-numeric: tabular-nums;
-  color: var(--text-3);
-}
-
-.site-bar.waiting .site-status {
-  color: var(--warning);
 }
 
 /* ---------- buttons ---------- */
@@ -2474,41 +2237,6 @@ a.version:hover {
   background: var(--surface);
   box-shadow: var(--shadow-lg);
   animation: slide-up 0.22s var(--ease);
-}
-
-/* the drawer's top edge drags its height */
-.log-resize {
-  position: absolute;
-  top: -4px;
-  left: 12px;
-  right: 12px;
-  height: 8px;
-  z-index: 1;
-  cursor: row-resize;
-  touch-action: none;
-}
-
-.log-resize::after {
-  content: '';
-  position: absolute;
-  top: 3px;
-  left: 50%;
-  width: 40px;
-  height: 2px;
-  margin-left: -20px;
-  border-radius: 1px;
-  background: transparent;
-  transition: background 0.15s var(--ease);
-}
-
-.log-resize:hover::after,
-.log-resize:focus-visible::after,
-.resizing-y .log-resize::after {
-  background: var(--accent);
-}
-
-.log-resize:focus-visible {
-  outline: none;
 }
 
 .log-head {
@@ -2827,210 +2555,3 @@ a.version:hover {
   color: var(--text-3);
 }
 
-/* ---------- adult titles, masked until clicked ---------- */
-.adult-mask {
-  padding: 0;
-  border: 0;
-  background: none;
-  color: inherit;
-  font: inherit;
-  font-style: italic;
-  text-decoration: underline dotted;
-  text-underline-offset: 3px;
-  cursor: pointer;
-}
-
-.adult-mask:hover {
-  color: var(--accent);
-}
-
-/* ---------- history pop-up ---------- */
-.history-dialog {
-  width: min(560px, 100vw - 48px);
-}
-
-.history-dialog .settings-body {
-  padding: 4px 16px 12px;
-}
-
-.history-list {
-  display: grid;
-  gap: 2px;
-  margin: 8px 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.history-item {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  column-gap: 12px;
-  row-gap: 2px;
-  padding: 8px 0;
-  border-bottom: 1px solid var(--border);
-}
-
-.history-item > :not(.history-load) {
-  grid-column: 1;
-}
-
-/* Load sits at the right of the title and its details */
-.history-load {
-  grid-column: 2;
-  grid-row: 1 / span 2;
-  align-self: center;
-}
-
-.history-item:last-child {
-  border-bottom: 0;
-}
-
-.history-title {
-  overflow: hidden;
-  font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.history-item a {
-  color: var(--text);
-  text-decoration: none;
-}
-
-.history-item a:hover {
-  color: var(--accent);
-  text-decoration: underline;
-}
-
-.history-meta a {
-  color: var(--text-2);
-}
-
-.history-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 12px;
-}
-
-.history-foot {
-  display: flex;
-  justify-content: flex-end;
-  flex: none;
-  padding: 10px 16px 12px;
-  border-top: 1px solid var(--border);
-}
-
-/* ---------- the URL box's history drop-down ---------- */
-.url-box {
-  position: relative;
-}
-
-.url-history-btn {
-  display: grid;
-  flex: none;
-  place-items: center;
-  width: 24px;
-  height: 24px;
-  border: 0;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--text-3);
-  cursor: pointer;
-}
-
-.url-history-btn svg {
-  transform: rotate(90deg);
-  transition: transform 0.15s;
-}
-
-.url-history-btn.open svg {
-  transform: rotate(-90deg);
-}
-
-.url-history-btn:hover {
-  background: var(--hover);
-  color: var(--text);
-}
-
-.url-history {
-  position: absolute;
-  z-index: 30;
-  top: calc(100% + 4px);
-  right: 0;
-  left: 0;
-  overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--surface);
-  box-shadow: var(--shadow-lg);
-}
-
-.url-history ul {
-  max-height: min(360px, 60vh);
-  margin: 0;
-  padding: 4px;
-  overflow-y: auto;
-  list-style: none;
-}
-
-.url-history-item {
-  display: grid;
-  gap: 1px;
-  padding: 6px 8px;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.url-history-item:hover,
-.url-history-item.active {
-  background: var(--hover);
-}
-
-.url-history-title,
-.url-history-url {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.url-history-title {
-  font-weight: 600;
-}
-
-.url-history-empty {
-  margin: 0;
-  padding: 10px 12px;
-}
-
-.url-history-foot {
-  display: flex;
-  justify-content: flex-end;
-  padding: 4px 6px;
-  border-top: 1px solid var(--border);
-}
-
-/* ---------- "VPN?" hint by a site's name ---------- */
-
-.vpn-hint {
-  display: inline-block;
-  flex: none;
-  margin-left: 6px;
-  padding: 0 5px;
-  border: 1px solid var(--warning);
-  border-radius: 4px;
-  color: var(--warning);
-  font-size: 10px;
-  font-weight: 600;
-  line-height: 15px;
-  vertical-align: 1px;
-  cursor: help;
-}
-
-/* Delete series, last on the count's second line */
-.count-link.danger {
-  color: var(--danger);
-}
-
-.delete-series .delete-progress {
-  font-variant-numeric: tabular-nums;
-}

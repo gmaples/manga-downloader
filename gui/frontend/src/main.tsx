@@ -5,6 +5,7 @@ import { Root } from './Root';
 import '@fontsource-variable/inter/wght.css';
 import '@fontsource-variable/murecho/wght.css';
 import './styles.css';
+import './fork.css';
 
 // Inside the Go app window.go is set and the real backend answers. In a plain
 // browser (pnpm dev) or with ?mock, the mock does. The mock (and its One Piece
