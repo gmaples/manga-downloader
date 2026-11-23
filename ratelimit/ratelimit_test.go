@@ -265,10 +265,11 @@ func TestWaitSitsOutTheCooldown(t *testing.T) {
 	}
 	start = time.Now()
 	s.Hit(s.gen, time.Hour)
+	hit := time.Since(start)
 	s.Wait(context.Background())
 	s.Done(0, false)
 	if elapsed := time.Since(start); elapsed < 140*time.Millisecond || elapsed > time.Second {
-		t.Errorf("waited %v after an hour's Retry-After, want MaxWait (150ms)", elapsed)
+		t.Errorf("waited %v after an hour's Retry-After (Hit took %v of it), want MaxWait (150ms)", elapsed, hit)
 	}
 }
 
