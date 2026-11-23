@@ -19,6 +19,22 @@ as they are.
 What the fork changes, and why, is described in the README's
 "About this fork" section. Android details are in [docs/android.md](docs/android.md).
 
+## v25.3.0-series-folders.41 (2026-11-23)
+
+Build 40 with the fixes from its independent Ukrainian review.
+
+- **App, log**: the messages the app writes itself (starting the browser,
+  Cloudflare checks and what to do about them, page retries and other
+  servers, rate limits and download levels, MangaPlus versions, the saved
+  options) now show in Ukrainian. Reasons that come from sites stay as they
+  are, and `log.txt` stays English. Spanish, Catalan and Japanese still show
+  these in English.
+- **Fit**: *Download N missing* is «Завантажити ще N» and the merged-parts
+  button «Завантажити N розділів цілими», and the toolbar above the chapter
+  list wraps instead of cutting off a button.
+- **Wording**: nine small fixes, «розділ» only for chapters, a shorter
+  per-site status.
+
 ## v25.3.0-series-folders.40 (2026-11-22)
 
 Build 38 plus a Ukrainian interface. (Build 39 is reserved for the
