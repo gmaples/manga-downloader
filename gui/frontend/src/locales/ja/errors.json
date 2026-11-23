@@ -23,6 +23,8 @@
   "deleteNothing": "{{folder}} にこのシリーズのファイルはありません",
   "deleteBusy": "アプリまたはコマンドラインの別のコピーが {{folder}} にダウンロード中です",
   "deleteFailed": "シリーズを削除できませんでした：{{reason}}",
+  "deletePermanentNotConfirmed": "このドライブにはごみ箱がなく、完全な削除が確認されなかったため、何も削除していません",
+  "noSuchQuestion": "その質問にはすでに回答済みか、期限が切れています",
   "deleteIncomplete_one": "{{count}} ファイルをごみ箱へ移動できませんでした（ログを参照）",
   "deleteIncomplete_other": "{{count}} ファイルをごみ箱へ移動できませんでした（ログを参照）",
   "filtersChanged": "言語または翻訳グループが変更されました。先に作品を読み込み直してください",

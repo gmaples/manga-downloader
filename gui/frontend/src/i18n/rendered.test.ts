@@ -8,6 +8,7 @@ import { BrowserAlert } from '../BrowserAlert';
 import { ChapterPanel } from '../ChapterPanel';
 import { DownloadDock } from '../DownloadDock';
 import { DeleteSeriesDialog } from '../DeleteSeriesDialog';
+import { PermanentDialog } from '../PermanentDialog';
 import { HistoryDialog, HistoryRow } from '../HistoryDialog';
 import { Check, SelectField, Segmented, Switch, TextField } from '../fields';
 import { LogDrawer, StatusBar } from '../LogPanel';
@@ -308,6 +309,14 @@ function components({ state, chapters, selected, log }: Snapshot): Screen[] {
       onDelete: later,
       onProgress: () => noop,
       onClose: noop,
+    }),
+  });
+  list.push({
+    file: 'PermanentDialog.tsx',
+    name: 'PermanentDialog',
+    element: createElement(PermanentDialog, {
+      ask: { id: 1, group: 1, dir: '/d', files: 2, bytes: 1000 },
+      onAnswer: noop,
     }),
   });
   if (state.update?.oneClick) {

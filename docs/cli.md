@@ -315,8 +315,12 @@ under another name:
 - The other copies go to the **Recycle Bin** on Windows, the Trash on macOS
   (`~/.Trash`) and the freedesktop.org trash elsewhere
   (`~/.local/share/Trash`), each printed with the file it duplicates. On a
-  Windows drive with no Recycle Bin they're deleted, as Explorer does; on
-  macOS and Linux a file on another drive than the trash stays and is reported.
+  Windows drive with no Recycle Bin (a memory card or USB stick, a network
+  share) they would be deleted for good, so the program asks first, once, with
+  the count and size: `[y/N]`, and only `y` or `yes` deletes them. With no
+  terminal to ask at, or under the progress bars (pipe the output, `| cat`, to
+  be asked), it keeps them and says so. On macOS and Linux a file on another
+  drive than the trash stays and is reported.
   A file another copy of the program is writing (with a `.downloading` file
   next to it) is left alone.
 - It prints what it's doing as it goes: how many files it's looking at, how
@@ -368,7 +372,7 @@ The level is shared by every download from the site that runs at once, and it's 
 manga-downloader https://mangadex.org/title/... --delete-series -o ~/Manga
 ```
 
-They're moved, 100 at a time with a count, into `[Empty Me]/<series>` inside the output directory, for you to look through and empty yourself; a name already there gets ` (2)`. With `--force` they go to the Recycle Bin (the Trash on macOS and Linux) instead, as the app's *Delete series* does, and `--force` is refused unless the program runs elevated (an administrator prompt on Windows, root elsewhere). It exits 1 when a file couldn't be moved.
+They're moved, 100 at a time with a count, into `[Empty Me]/<series>` inside the output directory, for you to look through and empty yourself; a name already there gets ` (2)`. With `--force` they go to the Recycle Bin (the Trash on macOS and Linux) instead, as the app's *Delete series* does, and `--force` is refused unless the program runs elevated (an administrator prompt on Windows, root elsewhere). On a drive with no Recycle Bin, `--force` would delete them for good, so it asks `[y/N]` first; with no terminal, or any answer but `y`, nothing is deleted and it exits 1. It exits 1 when a file couldn't be moved.
 
 ### Other servers for a page (`site-mirrors.txt`)
 

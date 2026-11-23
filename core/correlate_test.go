@@ -195,13 +195,13 @@ func TestCorrelateReportsProgress(t *testing.T) {
 	writeAt(t, dir, "Test Series 1 - A v2.cbz", "same", 2*time.Hour)
 	writeAt(t, dir, "Test Series 2 - B.cbz", "b", time.Hour)
 	var steps []string
-	_, err := series.Correlate(dir, func(p CorrelateProgress) {
+	_, err := series.Correlate(dir, progressEvents{f: func(p CorrelateProgress) {
 		s := fmt.Sprintf("%d %d/%d", p.Step, p.Done, p.Total)
 		for _, d := range p.Moved {
 			s += " " + d.Name
 		}
 		steps = append(steps, s)
-	})
+	}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -210,3 +210,11 @@ func TestCorrelateReportsProgress(t *testing.T) {
 		t.Errorf("steps:\n got %q\nwant %q", got, want)
 	}
 }
+
+// progressEvents are events that only pass Correlating to f
+type progressEvents struct {
+	NoEvents
+	f func(CorrelateProgress)
+}
+
+func (e progressEvents) Correlating(p CorrelateProgress) { e.f(p) }

@@ -42,6 +42,9 @@ type DeletePlan struct {
 	Names []string
 	// Bytes is their size
 	Bytes int64
+	// Permanent is a folder on a drive with no Recycle Bin: a delete to the
+	// trash would delete the files for good, so Run asks for leave
+	Permanent bool
 	// sizes are each name's size
 	sizes map[string]int64
 }
@@ -61,6 +64,8 @@ type DeleteResult struct {
 	Bytes int64
 	// To is where they went: "" for the trash, else the folder
 	To string
+	// Permanent is set when they were deleted for good (DeletePlan.Permanent)
+	Permanent bool
 	// DirRemoved is a whole series folder removed once empty
 	DirRemoved bool
 }
@@ -109,6 +114,7 @@ func (s *Series) DeletePlan(dir string, whole bool) (*DeletePlan, error) {
 	if len(p.Names) == 0 {
 		return p, ErrNothingToDelete
 	}
+	p.Permanent = !trash.HasRecycleBin(filepath.Join(dir, p.Names[0]))
 	return p, nil
 }
 
@@ -153,12 +159,25 @@ func EmptyMeFolder(root, title string) string {
 // system's trash when to is "", else into the folder to (made if needed), a
 // name already there getting a " (2)" and so on. progress, when not nil, is
 // told the count after each batch. A whole series folder left empty is then
-// removed.
-func (p *DeletePlan) Run(to string, progress func(DeleteProgress)) *DeleteResult {
+// removed. When the plan is Permanent, a delete to the trash deletes the
+// files for good if allowPermanent, and otherwise touches nothing and fails
+// every name with trash.ErrNoRecycleBin.
+func (p *DeletePlan) Run(to string, allowPermanent bool, progress func(DeleteProgress)) *DeleteResult {
 	if progress == nil {
 		progress = func(DeleteProgress) {}
 	}
 	r := &DeleteResult{To: to, Failed: map[string]error{}}
+	remove := trash.Files
+	if to == "" && p.Permanent {
+		if !allowPermanent {
+			for _, n := range p.Names {
+				r.Failed[n] = trash.ErrNoRecycleBin
+			}
+			progress(DeleteProgress{Done: len(p.Names), Total: len(p.Names), Failed: len(p.Names)})
+			return r
+		}
+		remove, r.Permanent = trash.Remove, true
+	}
 	if to != "" {
 		if err := os.MkdirAll(to, 0o755); err != nil {
 			for _, n := range p.Names {
@@ -176,7 +195,7 @@ func (p *DeletePlan) Run(to string, progress func(DeleteProgress)) *DeleteResult
 			for i, n := range batch {
 				paths[i] = filepath.Join(p.Dir, n)
 			}
-			failed := trash.Files(paths)
+			failed := remove(paths)
 			for i, n := range batch {
 				if err := failed[paths[i]]; err != nil {
 					r.Failed[n] = err

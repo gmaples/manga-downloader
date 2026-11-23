@@ -43,6 +43,10 @@
   "cleanup_other": "重複ファイル{{count}}個（{{size}}）をごみ箱に移動しました",
   "cleanupFailed_one": "重複ファイル{{count}}個を移動できませんでした: ログを参照してください",
   "cleanupFailed_other": "重複ファイル{{count}}個を移動できませんでした: ログを参照してください",
+  "cleanupPermanent_one": "重複ファイル{{count}}個（{{size}}）を完全に削除しました（このドライブにはごみ箱がありません）",
+  "cleanupPermanent_other": "重複ファイル{{count}}個（{{size}}）を完全に削除しました（このドライブにはごみ箱がありません）",
+  "cleanupKept_one": "重複ファイル{{count}}個を残しました（このドライブにはごみ箱がありません）",
+  "cleanupKept_other": "重複ファイル{{count}}個を残しました（このドライブにはごみ箱がありません）",
   "status": {
     "listed_one": "{{count}}個のファイルから重複を探しています",
     "listed_other": "{{count}}個のファイルから重複を探しています",

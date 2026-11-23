@@ -11,7 +11,7 @@ import type { DeleteInfo, DeleteProgress } from './types';
 
 interface Props {
   load: () => Promise<DeleteInfo>;
-  onDelete: () => Promise<void>;
+  onDelete: (permanentOK: boolean) => Promise<void>;
   onProgress: (cb: (p: DeleteProgress) => void) => Unsubscribe;
   onClose: () => void;
 }
@@ -48,7 +48,7 @@ export function DeleteSeriesDialog({ load, onDelete, onProgress, onClose }: Prop
   const run = () => {
     setBusy(true);
     setError('');
-    onDelete()
+    onDelete(info?.permanent === true)
       .then(() => onClose())
       .catch((e: unknown) => {
         setError(errorMessage(e, t));
@@ -87,6 +87,7 @@ export function DeleteSeriesDialog({ load, onDelete, onProgress, onClose }: Prop
               : t('chapters.delete.bodyFiles', { title: info.title, folder: info.dir, count: info.files, size: info.size })}
           </p>
         )}
+        {info?.permanent && <p className="error-text">{t('chapters.delete.permanentLine')}</p>}
         {busy && progress && (
           <p className="delete-progress" role="status">
             {t('chapters.delete.progress', { done: progress.done, total: progress.total })}
@@ -102,7 +103,11 @@ export function DeleteSeriesDialog({ load, onDelete, onProgress, onClose }: Prop
             {t('common.cancel')}
           </button>
           <button type="button" className="btn danger-outline" onClick={run} disabled={busy || info === null}>
-            {busy ? t('chapters.delete.deleting') : t('chapters.delete.confirm')}
+            {busy
+              ? t('chapters.delete.deleting')
+              : info?.permanent
+                ? t('chapters.delete.confirmPermanent')
+                : t('chapters.delete.confirm')}
           </button>
         </div>
       </section>

@@ -43,6 +43,10 @@
   "cleanup_other": "{{count}} fitxers duplicats ({{size}}) s'han mogut a la paperera de reciclatge",
   "cleanupFailed_one": "{{count}} duplicat no s'ha pogut moure: mira el registre",
   "cleanupFailed_other": "{{count}} duplicats no s'han pogut moure: mira el registre",
+  "cleanupPermanent_one": "{{count}} fitxer duplicat ({{size}}) suprimit definitivament: aquesta unitat no té Paperera de reciclatge",
+  "cleanupPermanent_other": "{{count}} fitxers duplicats ({{size}}) suprimits definitivament: aquesta unitat no té Paperera de reciclatge",
+  "cleanupKept_one": "Es conserva {{count}} fitxer duplicat: aquesta unitat no té Paperera de reciclatge",
+  "cleanupKept_other": "Es conserven {{count}} fitxers duplicats: aquesta unitat no té Paperera de reciclatge",
   "status": {
     "listed_one": "Es busquen duplicats entre {{count}} fitxer",
     "listed_other": "Es busquen duplicats entre {{count}} fitxers",

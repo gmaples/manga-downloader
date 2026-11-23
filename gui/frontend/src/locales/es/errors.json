@@ -23,6 +23,8 @@
   "deleteNothing": "no hay archivos de la serie en {{folder}}",
   "deleteBusy": "otra copia de la app o de la línea de comandos está descargando en {{folder}}",
   "deleteFailed": "no se pudo borrar la serie: {{reason}}",
+  "deletePermanentNotConfirmed": "esta unidad no tiene Papelera de reciclaje y no se confirmó la eliminación definitiva, así que no se ha eliminado nada",
+  "noSuchQuestion": "esa pregunta ya se respondió o ha caducado",
   "deleteIncomplete_one": "{{count}} archivo no se pudo mover a la Papelera de reciclaje (mira el registro)",
   "deleteIncomplete_other": "{{count}} archivos no se pudieron mover a la Papelera de reciclaje (mira el registro)",
   "filtersChanged": "has cambiado el idioma o el grupo: vuelve a cargar la serie primero",

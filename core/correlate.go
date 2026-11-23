@@ -29,12 +29,17 @@ import (
 type Correlation struct {
 	// Dir is the folder
 	Dir string
-	// Removed are the files moved to the trash, in name order
+	// Removed are the files moved to the trash, or deleted for good when
+	// Permanent, in name order
 	Removed []Duplicate
+	// Permanent is set when the folder's drive has no Recycle Bin and the
+	// duplicates were deleted for good, as Events.ConfirmPermanent allowed
+	Permanent bool
 	// RemovedBytes is their size
 	RemovedBytes int64
 	// Failed are the duplicates that couldn't be moved, with the error; they
-	// stay in the folder
+	// stay in the folder. On a drive with no Recycle Bin that wasn't allowed
+	// to delete for good, every duplicate is there with trash.ErrNoRecycleBin.
 	Failed []Duplicate
 	// Have are the chapter files in the folder by chapter number (as
 	// packer.NumberText writes it), after the duplicates went
@@ -108,12 +113,15 @@ func older(a, b *folderFile) bool {
 // chapter files are then grouped by the number in their
 // name (packer.NumberMatcher). A file another copy of the program is writing
 // (it has a claim, see ClaimSuffix) is left alone. A dir that doesn't exist
-// yet has nothing to correlate. progress, when not nil, is told each step as
-// it goes: the listing, each file read, each batch moved.
-func (s *Series) Correlate(dir string, progress func(CorrelateProgress)) (*Correlation, error) {
-	if progress == nil {
-		progress = func(CorrelateProgress) {}
+// yet has nothing to correlate. ev, when not nil, is told each step as it
+// goes (Correlating): the listing, each file read, each batch moved. On a
+// drive with no Recycle Bin, ev.ConfirmPermanent is asked once before any
+// file goes: yes deletes the duplicates for good, no keeps them all.
+func (s *Series) Correlate(dir string, ev Events) (*Correlation, error) {
+	if ev == nil {
+		ev = NoEvents{}
 	}
+	progress := ev.Correlating
 	r := &Correlation{Dir: dir, Have: map[string]string{}}
 	format := s.Site.GetFormat()
 	matcher, byNumber := packer.NewNumberMatcher(s.Title, s.Site.GetFilenameTemplate(), format)
@@ -214,13 +222,26 @@ func (s *Series) Correlate(dir string, progress func(CorrelateProgress)) (*Corre
 		kept[f.number] = f
 	}
 
+	// a drive with no Recycle Bin would lose the files for good: asked once
+	remove := trash.Files
+	if len(dups) > 0 && !trash.HasRecycleBin(filepath.Join(dir, dups[0].Name)) {
+		var bytes int64
+		for _, d := range dups {
+			bytes += d.Size
+		}
+		if ev.ConfirmPermanent(dir, len(dups), bytes) {
+			remove, r.Permanent = trash.Remove, true
+		} else {
+			remove = keepAll
+		}
+	}
 	for start := 0; start < len(dups); start += trashBatch {
 		batch := dups[start:min(start+trashBatch, len(dups))]
 		paths := make([]string, len(batch))
 		for i, d := range batch {
 			paths[i] = filepath.Join(dir, d.Name)
 		}
-		failed := trash.Files(paths)
+		failed := remove(paths)
 		moved := make([]Duplicate, len(batch))
 		for i, d := range batch {
 			if err := failed[paths[i]]; err != nil {
@@ -280,4 +301,13 @@ func extOf(format string) string {
 // Correlation.Have
 func numberOf(f grabber.Filterable) string {
 	return packer.NumberText(f.GetNumber())
+}
+
+// keepAll removes nothing: every path fails with trash.ErrNoRecycleBin
+func keepAll(paths []string) map[string]error {
+	failed := make(map[string]error, len(paths))
+	for _, p := range paths {
+		failed[p] = trash.ErrNoRecycleBin
+	}
+	return failed
 }

@@ -48,7 +48,7 @@ func TestDeleteSeries(t *testing.T) {
 		t.Fatalf("info = %+v, want the series folder in %s, whole, 2 files", info, root)
 	}
 	var steps []core.DeleteProgress
-	if err := c.DeleteSeries(func(p core.DeleteProgress) { steps = append(steps, p) }); err != nil {
+	if err := c.DeleteSeries(false, func(p core.DeleteProgress) { steps = append(steps, p) }); err != nil {
 		t.Fatal(err)
 	}
 	if len(steps) != 1 || steps[0].Done != 2 || steps[0].Total != 2 {

@@ -63,3 +63,7 @@ func trashDir() (string, error) {
 	}
 	return filepath.Join(home, ".local", "share", "Trash"), nil
 }
+
+// osHasRecycleBin is always true here: files never deletes, as a file the
+// trash can't take (on another filesystem) fails to move and stays
+func osHasRecycleBin(string) bool { return true }

@@ -36,6 +36,7 @@ export namespace main {
 	    whole: boolean;
 	    files: number;
 	    size: string;
+	    permanent: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new DeleteInfo(source);
@@ -48,6 +49,7 @@ export namespace main {
 	        this.whole = source["whole"];
 	        this.files = source["files"];
 	        this.size = source["size"];
+	        this.permanent = source["permanent"];
 	    }
 	}
 	export class Message {
@@ -442,6 +444,26 @@ export namespace main {
 		    return a;
 		}
 	}
+	export class PermanentDTO {
+	    id: number;
+	    group: number;
+	    dir: string;
+	    files: number;
+	    bytes: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new PermanentDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.group = source["group"];
+	        this.dir = source["dir"];
+	        this.files = source["files"];
+	        this.bytes = source["bytes"];
+	    }
+	}
 	export class SiteBarDTO {
 	    site: string;
 	    title: string;
@@ -506,6 +528,7 @@ export namespace main {
 	    filenameTemplateDefault: string;
 	    filenameTemplateWarning: string;
 	    destination: string;
+	    permanent?: PermanentDTO;
 	
 	    static createFrom(source: any = {}) {
 	        return new State(source);
@@ -550,6 +573,7 @@ export namespace main {
 	        this.filenameTemplateDefault = source["filenameTemplateDefault"];
 	        this.filenameTemplateWarning = source["filenameTemplateWarning"];
 	        this.destination = source["destination"];
+	        this.permanent = this.convertValues(source["permanent"], PermanentDTO);
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

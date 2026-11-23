@@ -23,6 +23,8 @@
   "deleteNothing": "no file of the series in {{folder}}",
   "deleteBusy": "another copy of the app or the command line is downloading into {{folder}}",
   "deleteFailed": "couldn't delete the series: {{reason}}",
+  "deletePermanentNotConfirmed": "this drive has no Recycle Bin and deleting for good wasn't confirmed, so nothing was deleted",
+  "noSuchQuestion": "that question was already answered or has expired",
   "deleteIncomplete_one": "{{count}} file couldn't be moved to the Recycle Bin (see the log)",
   "deleteIncomplete_other": "{{count}} files couldn't be moved to the Recycle Bin (see the log)",
   "filtersChanged": "the language or scanlator changed: reload the series first",

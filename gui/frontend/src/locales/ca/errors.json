@@ -23,6 +23,8 @@
   "deleteNothing": "no hi ha fitxers de la sèrie a {{folder}}",
   "deleteBusy": "una altra còpia de l'app o de la línia d'ordres està descarregant a {{folder}}",
   "deleteFailed": "no s'ha pogut esborrar la sèrie: {{reason}}",
+  "deletePermanentNotConfirmed": "aquesta unitat no té Paperera de reciclatge i no s'ha confirmat la supressió definitiva, així que no s'ha suprimit res",
+  "noSuchQuestion": "aquesta pregunta ja s'ha respost o ha caducat",
   "deleteIncomplete_one": "{{count}} fitxer no s'ha pogut moure a la Paperera de reciclatge (mira el registre)",
   "deleteIncomplete_other": "{{count}} fitxers no s'han pogut moure a la Paperera de reciclatge (mira el registre)",
   "filtersChanged": "has canviat l'idioma o el grup: torna a carregar la sèrie primer",

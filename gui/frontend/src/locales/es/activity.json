@@ -43,6 +43,10 @@
   "cleanup_other": "{{count}} archivos duplicados ({{size}}) movidos a la papelera de reciclaje",
   "cleanupFailed_one": "{{count}} duplicado no se pudo mover: mira el registro",
   "cleanupFailed_other": "{{count}} duplicados no se pudieron mover: mira el registro",
+  "cleanupPermanent_one": "{{count}} archivo duplicado ({{size}}) eliminado definitivamente: esta unidad no tiene Papelera de reciclaje",
+  "cleanupPermanent_other": "{{count}} archivos duplicados ({{size}}) eliminados definitivamente: esta unidad no tiene Papelera de reciclaje",
+  "cleanupKept_one": "Se conserva {{count}} archivo duplicado: esta unidad no tiene Papelera de reciclaje",
+  "cleanupKept_other": "Se conservan {{count}} archivos duplicados: esta unidad no tiene Papelera de reciclaje",
   "status": {
     "listed_one": "Buscando duplicados entre {{count}} archivo",
     "listed_other": "Buscando duplicados entre {{count}} archivos",

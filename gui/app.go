@@ -274,6 +274,8 @@ type State struct {
 	// Destination is the folder a run of the selection would save into, the
 	// series folder when that option is on; "" before a series is loaded
 	Destination string `json:"destination"`
+	// Permanent is the dedupe's open "delete for good?" question, null when none
+	Permanent *PermanentDTO `json:"permanent"`
 }
 
 // VolumesDTO is the Volumes box ("" for the site's own volumes), the site's
@@ -330,9 +332,11 @@ type GroupDTO struct {
 // CleanupDTO is the duplicate files a group's download moved to the Recycle
 // Bin when it started: how many, their size in bytes, and how many couldn't be
 type CleanupDTO struct {
-	Removed int   `json:"removed"`
-	Bytes   int64 `json:"bytes"`
-	Failed  int   `json:"failed"`
+	Removed   int   `json:"removed"`
+	Bytes     int64 `json:"bytes"`
+	Failed    int   `json:"failed"`
+	Permanent bool  `json:"permanent"`
+	Kept      int   `json:"kept"`
 }
 
 // RunDTO describes the run of a group
@@ -451,6 +455,7 @@ func (a *App) State() State {
 		Summary:            summaryDTO(c.LastSummary()),
 		Options:            optionsOf(c.Settings()),
 		Destination:        c.Destination(),
+		Permanent:          c.PendingPermanent(),
 		Prefs:              c.Prefs(),
 		Version:            a.version,
 		ReleaseURL:         releaseURL(a.tag),
@@ -913,11 +918,18 @@ func (a *App) DeleteInfo() (*DeleteInfo, error) {
 
 // DeleteSeries moves the loaded series' files to the Recycle Bin or trash,
 // pushing "deleteProgress" ({done, total, failed}) after each batch (see
-// Controller.DeleteSeries)
-func (a *App) DeleteSeries() error {
-	return a.ctrl.DeleteSeries(func(p core.DeleteProgress) {
+// Controller.DeleteSeries); permanentOK is the window's leave to delete for
+// good on a drive with no Recycle Bin (DeleteInfo.Permanent)
+func (a *App) DeleteSeries(permanentOK bool) error {
+	return a.ctrl.DeleteSeries(permanentOK, func(p core.DeleteProgress) {
 		a.sink.Emit("deleteProgress", map[string]int{"done": p.Done, "total": p.Total, "failed": p.Failed})
 	})
+}
+
+// AnswerPermanent answers the dedupe's question id, State.Permanent: yes
+// deletes the duplicates for good (see Controller.AnswerPermanent)
+func (a *App) AnswerPermanent(id int, yes bool) error {
+	return a.ctrl.AnswerPermanent(id, yes)
 }
 
 // Start downloads the selected chapters in the background, as a new group
@@ -1067,7 +1079,7 @@ func groupDTO(g GroupState) GroupDTO {
 	}
 	out.Status = g.Status
 	if g.Cleanup != nil {
-		out.Cleanup = &CleanupDTO{Removed: g.Cleanup.Removed, Bytes: g.Cleanup.Bytes, Failed: g.Cleanup.Failed}
+		out.Cleanup = &CleanupDTO{Removed: g.Cleanup.Removed, Bytes: g.Cleanup.Bytes, Failed: g.Cleanup.Failed, Permanent: g.Cleanup.Permanent, Kept: g.Cleanup.Kept}
 	}
 	for _, j := range g.Jobs {
 		out.Jobs = append(out.Jobs, JobDTO{

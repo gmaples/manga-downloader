@@ -34,7 +34,16 @@
     "bodyFiles_other": "Moure {{count}} fitxers de capítols de {{title}} ({{size}}) de {{folder}} a la Paperera de reciclatge. Els fitxers d'altres sèries s'hi queden.",
     "progress": "Movent a la Paperera de reciclatge: {{done}} de {{total}}",
     "confirm": "Esborra",
-    "deleting": "Esborrant…"
+    "deleting": "Esborrant…",
+    "permanentLine": "Aquesta unitat no té Paperera de reciclatge: els fitxers se suprimiran definitivament i no es podran recuperar.",
+    "confirmPermanent": "Suprimir definitivament"
+  },
+  "permanent": {
+    "title": "Aquesta unitat no té Paperera de reciclatge",
+    "body_one": "{{dir}} no té Paperera de reciclatge. Vols suprimir definitivament {{count}} fitxer duplicat ({{size}})? No es podrà recuperar.",
+    "body_other": "{{dir}} no té Paperera de reciclatge. Vols suprimir definitivament {{count}} fitxers duplicats ({{size}})? No es podran recuperar.",
+    "keep": "Conservar-los",
+    "confirm": "Suprimir definitivament"
   },
   "selectAll": "Selecciona-ho tot",
   "selectNone": "Desselecciona-ho tot",
