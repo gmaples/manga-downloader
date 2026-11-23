@@ -429,13 +429,23 @@ func (s *Site) Wait(ctx context.Context) (uint64, error) {
 // paced is Wait without the slot: it sits out the gap and the cooldown
 func (s *Site) paced(ctx context.Context) (uint64, error) {
 	for {
-		s.mu.Lock()
 		now := time.Now()
+		// another copy's pause is read with the site free, as the pace
+		// file's lock can take up to paceLockWait
+		s.mu.Lock()
+		calmOver := s.calmOverLocked(now)
+		s.mu.Unlock()
+		var pause time.Time
+		if calmOver {
+			pause = s.book.sharedPause(s.key)
+		}
+
+		s.mu.Lock()
 		slot := now
 		if s.until.After(slot) {
 			slot = s.until
 		}
-		lowered, cleared := s.calmDownLocked(now)
+		lowered, cleared := s.calmDownLocked(now, calmOver, pause)
 		listed := s.listed
 		if listed && s.next.After(slot) {
 			slot = s.next
@@ -496,20 +506,28 @@ func (s *Site) paced(ctx context.Context) (uint64, error) {
 	}
 }
 
+// calmOverLocked tells whether the site has gone CalmFor without a 429, so
+// calmDownLocked may lower its gap. s.mu is held.
+func (s *Site) calmOverLocked(now time.Time) bool {
+	return !s.calm.IsZero() && s.listed && s.gap > 0 && now.Sub(s.calm) >= CalmFor
+}
+
 // calmDownLocked divides the gap by Growth when the site has gone CalmFor
 // without a 429, and returns the new gap, or cleared when it would drop below
 // StartGap and the site is no longer listed. The calm starts at the site's
-// first request. s.mu is held.
-func (s *Site) calmDownLocked(now time.Time) (lowered time.Duration, cleared bool) {
+// first request. checked tells that pause, the other copies' latest 429
+// pause, was read for it (see paced); when not, it waits for the next
+// request. s.mu is held.
+func (s *Site) calmDownLocked(now time.Time, checked bool, pause time.Time) (lowered time.Duration, cleared bool) {
 	if s.calm.IsZero() {
 		s.calm = now
 		return 0, false
 	}
-	if !s.listed || s.gap <= 0 || now.Sub(s.calm) < CalmFor {
+	if !s.calmOverLocked(now) || !checked {
 		return 0, false
 	}
 	// another copy's 429 since then restarts the calm (see sharedSlot)
-	if pause := s.book.sharedPause(s.key); pause.After(s.calm) {
+	if pause.After(s.calm) {
 		s.calm = pause
 		return 0, false
 	}
@@ -555,10 +573,14 @@ func (s *Site) Hit(gen uint64, retryAfter time.Duration) (giveUp bool) {
 	now := time.Now()
 	s.until = now.Add(cool)
 	s.next = s.until
-	gap := s.gap
+	gap, until := s.gap, s.until
+	s.mu.Unlock()
+
 	// the other copies are told before this copy's waiters wake, or a waiter
-	// could read the shared pace from before the 429
-	s.book.sharedChange(s.key, gap, s.until)
+	// could read the shared pace from before the 429. The site is free
+	// meanwhile, as the pace file's lock can take up to paceLockWait.
+	s.book.sharedChange(s.key, gap, until)
+	s.mu.Lock()
 	close(s.changed)
 	s.changed = make(chan struct{})
 	s.mu.Unlock()

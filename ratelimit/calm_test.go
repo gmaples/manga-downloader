@@ -21,28 +21,28 @@ func TestCalmDownLowersThenClears(t *testing.T) {
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if got, cleared := s.calmDownLocked(t0); got != 0 || cleared {
+	if got, cleared := s.calmDownLocked(t0, true, time.Time{}); got != 0 || cleared {
 		t.Fatalf("first request: %v %v, want nothing (the calm starts)", got, cleared)
 	}
-	if got, cleared := s.calmDownLocked(t0.Add(CalmFor - time.Second)); got != 0 || cleared {
+	if got, cleared := s.calmDownLocked(t0.Add(CalmFor - time.Second), true, time.Time{}); got != 0 || cleared {
 		t.Fatalf("before CalmFor: %v %v, want nothing", got, cleared)
 	}
-	if got, _ := s.calmDownLocked(t0.Add(CalmFor)); got != 1500*time.Millisecond {
+	if got, _ := s.calmDownLocked(t0.Add(CalmFor), true, time.Time{}); got != 1500*time.Millisecond {
 		t.Fatalf("after CalmFor: %v, want 1.5s", got)
 	}
-	if got, _ := s.calmDownLocked(t0.Add(CalmFor + time.Minute)); got != 0 {
+	if got, _ := s.calmDownLocked(t0.Add(CalmFor + time.Minute), true, time.Time{}); got != 0 {
 		t.Fatalf("a minute later: %v, want nothing (the calm restarted)", got)
 	}
-	if got, _ := s.calmDownLocked(t0.Add(2 * CalmFor)); got != time.Second {
+	if got, _ := s.calmDownLocked(t0.Add(2 * CalmFor), true, time.Time{}); got != time.Second {
 		t.Fatalf("after 2 CalmFor: %v, want 1s", got)
 	}
-	if got, cleared := s.calmDownLocked(t0.Add(3 * CalmFor)); got != 0 || !cleared {
+	if got, cleared := s.calmDownLocked(t0.Add(3 * CalmFor), true, time.Time{}); got != 0 || !cleared {
 		t.Fatalf("after 3 CalmFor: %v %v, want cleared", got, cleared)
 	}
 	if s.listed || s.gap != 0 {
 		t.Errorf("listed %v gap %v, want unlisted with no gap", s.listed, s.gap)
 	}
-	if got, cleared := s.calmDownLocked(t0.Add(9 * CalmFor)); got != 0 || cleared {
+	if got, cleared := s.calmDownLocked(t0.Add(9 * CalmFor), true, time.Time{}); got != 0 || cleared {
 		t.Errorf("unlisted site: %v %v, want nothing", got, cleared)
 	}
 }
@@ -53,12 +53,12 @@ func TestHitRestartsTheCalm(t *testing.T) {
 	os.WriteFile(filepath.Join(dir, FileName), []byte("x.org: 4s\n"), 0o644)
 	s := Open(dir, nil, nil).Site("x.org")
 	s.mu.Lock()
-	s.calmDownLocked(time.Now().Add(-2 * CalmFor))
+	s.calmDownLocked(time.Now().Add(-2 * CalmFor), true, time.Time{})
 	s.mu.Unlock()
 	s.Hit(0, 0)
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if got, cleared := s.calmDownLocked(time.Now()); got != 0 || cleared {
+	if got, cleared := s.calmDownLocked(time.Now(), true, time.Time{}); got != 0 || cleared {
 		t.Errorf("right after a 429: %v %v, want nothing", got, cleared)
 	}
 }
