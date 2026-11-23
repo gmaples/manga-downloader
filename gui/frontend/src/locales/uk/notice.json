@@ -57,6 +57,7 @@
   },
   "pace": {
     "lineIgnored": "{{file}}, рядок {{line}}: {{reason}} (пропущено)",
+    "duplicate": "{{file}}, рядок {{line}}: {{site}} указано ще раз; використано перший рядок",
     "saveFailed": "збереження {{file}}: {{reason}}",
     "calmRemoved": "{{site}}: жодної 429 за {{calm}}, тож його час видалено з {{file}}",
     "calmLowered": "{{site}}: жодної 429 за {{calm}}, тепер один запит кожні {{gap}} (збережено в {{file}})",

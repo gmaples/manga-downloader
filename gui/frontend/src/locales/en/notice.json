@@ -57,6 +57,7 @@
   },
   "pace": {
     "lineIgnored": "{{file}} line {{line}}: {{reason}} (ignored)",
+    "duplicate": "{{file}} line {{line}}: {{site}} is listed again; the first line is used",
     "saveFailed": "saving {{file}}: {{reason}}",
     "calmRemoved": "{{site}}: no 429 for {{calm}}, so its time is taken out of {{file}}",
     "calmLowered": "{{site}}: no 429 for {{calm}}, now one request every {{gap}} (saved in {{file}})",

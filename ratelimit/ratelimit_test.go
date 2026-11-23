@@ -97,6 +97,27 @@ func TestOpenReadsTheFile(t *testing.T) {
 	}
 }
 
+// a site listed twice is read from its first line, the one a save
+// rewrites, so a time saved is the time read next; the second line is warned about
+func TestDuplicateSiteLineKeepsTheFirst(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, FileName), []byte("a.com: 1s\na.com: 5s\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	warn := &lines{}
+	b := Open(dir, warn.add, nil)
+	if got := b.Site("a.com").gap; got != time.Second {
+		t.Errorf("read %v, want the first line's 1s", got)
+	}
+	if len(warn.got) != 1 || !strings.Contains(warn.got[0], "line 2") || !strings.Contains(warn.got[0], "a.com is listed again") {
+		t.Errorf("warnings = %q, want one for line 2", warn.got)
+	}
+	b.save("a.com", 2*time.Second)
+	if got := Open(dir, nil, nil).Site("a.com").gap; got != 2*time.Second {
+		t.Errorf("after saving 2s, read %v", got)
+	}
+}
+
 // a missing file is empty, and isn't written until a 429
 func TestOpenMissingFile(t *testing.T) {
 	dir := t.TempDir()

@@ -68,6 +68,7 @@ var noticeFormats = []struct{ key, format string }{
 	{"notice.pack.convertFailed", "- warning: page %03d: converting %s to jpeg: %s (keeping the original)"},
 	// pacing (site-rate-limits.txt, site-parallel.txt, site-mirrors.txt, site-pace.txt)
 	{"notice.pace.lineIgnored", "%s line %d: %s (ignored)"},
+	{"notice.pace.duplicate", "%s line %d: %s is listed again; the first line is used"},
 	{"notice.pace.saveFailed", "saving %s: %s"},
 	{"notice.pace.calmRemoved", "%s: no 429 for %s, so its time is taken out of %s"},
 	{"notice.pace.calmLowered", "%s: no 429 for %s, now one request every %s (saved in %s)"},

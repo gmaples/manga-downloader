@@ -119,9 +119,15 @@ func Open(dir string, warn, info func(format string, a ...any)) *Book {
 			warn("%s line %d: %s (ignored)", FileName, i+1, err)
 			continue
 		}
-		if ok {
-			b.gaps[key] = gap
+		if !ok {
+			continue
 		}
+		// a save rewrites a site's first line, so that's the one read
+		if _, seen := b.gaps[key]; seen {
+			warn("%s line %d: %s is listed again; the first line is used", FileName, i+1, key)
+			continue
+		}
+		b.gaps[key] = gap
 	}
 	return b
 }
