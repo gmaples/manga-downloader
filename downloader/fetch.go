@@ -8,9 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net"
 	stdhttp "net/http"
-	"net/url"
 	"sort"
 	"strconv"
 	"strings"
@@ -40,84 +38,6 @@ type File struct {
 
 // ProgressCallback is a function type for progress updates with optional error
 type ProgressCallback func(page, progress int, err error)
-
-// Limiter paces a site's requests and slows them down on a 429
-// (ratelimit.Site). Wait blocks until a request may go out and returns its
-// generation; Hit records a 429 to a request of that generation and reports
-// whether to give up. Listed reports whether it has a pace of its own, which
-// replaces the site's PagePacer. Done ends a request Wait let out, with the
-// bytes it downloaded (negative for a request that isn't a page) and whether
-// it failed with Trouble, which is how the site's level of requests under way
-// at once is learned.
-type Limiter interface {
-	Wait(ctx context.Context) (uint64, error)
-	Hit(gen uint64, retryAfter time.Duration) (giveUp bool)
-	Listed() bool
-	Done(bytes int64, trouble bool)
-}
-
-// Trouble reports whether err says the site is overloaded rather than that
-// the request was wrong: a 429, a 502, 503 or 504, a Cloudflare 520-524, a
-// timeout or a connection cut short. A 404 or a 500 isn't.
-func Trouble(err error) bool {
-	if err == nil {
-		return false
-	}
-	var se *http.StatusError
-	if errors.As(err, &se) {
-		switch c := se.Code; {
-		case c == stdhttp.StatusTooManyRequests, c == stdhttp.StatusBadGateway, c == stdhttp.StatusServiceUnavailable, c == stdhttp.StatusGatewayTimeout:
-			return true
-		case c >= 520 && c <= 524:
-			return true
-		}
-		return false
-	}
-	var ne net.Error
-	if errors.As(err, &ne) && ne.Timeout() {
-		return true
-	}
-	// a reset reads as a failed read on every system (ECONNRESET, WSAECONNRESET)
-	var oe *net.OpError
-	if errors.As(err, &oe) && oe.Op == "read" {
-		return true
-	}
-	return errors.Is(err, io.ErrUnexpectedEOF)
-}
-
-// Mirrorer is a Limiter that also knows other servers for a page's host
-// (ratelimit.Site, from site-mirrors.txt)
-type Mirrorer interface {
-	Mirrors(host string) []string
-}
-
-// mirrorURLs returns rawURL on each other host lim names for its host, in
-// order, nil when lim names none
-func mirrorURLs(lim Limiter, rawURL string) []string {
-	m, ok := lim.(Mirrorer)
-	if !ok {
-		return nil
-	}
-	u, err := url.Parse(rawURL)
-	if err != nil || u.Host == "" {
-		return nil
-	}
-	var out []string
-	for _, h := range m.Mirrors(u.Host) {
-		v := *u
-		v.Host = h
-		out = append(out, v.String())
-	}
-	return out
-}
-
-// hostOf is rawURL's host, rawURL itself when it has none
-func hostOf(rawURL string) string {
-	if u, err := url.Parse(rawURL); err == nil && u.Host != "" {
-		return u.Host
-	}
-	return rawURL
-}
 
 // FetchChapter downloads all the pages of a chapter. Cancelling ctx cuts
 // short the waits between retries; requests already under way still finish.
@@ -242,7 +162,8 @@ func FetchFile(ctx context.Context, params http.RequestParams, page uint, retrie
 // counting as attempts.
 func fetchFile(ctx context.Context, params http.RequestParams, page uint, retries uint8, transform func([]byte) ([]byte, error), pace func(), retryFlaky bool, lim Limiter) (file *File, err error) {
 	orig := params.URL
-	for attempt := uint8(0); ; attempt++ {
+	// attempt counts the tries: a 429 waited out isn't one
+	for attempt := uint8(0); ; {
 		var gen uint64
 		if lim != nil {
 			if gen, err = lim.Wait(ctx); err != nil {
@@ -276,15 +197,14 @@ func fetchFile(ctx context.Context, params http.RequestParams, page uint, retrie
 		if errors.Is(err, errHTMLPage) {
 			return nil, err
 		}
-		var se *http.StatusError
-		if lim != nil && errors.As(err, &se) && se.Code == stdhttp.StatusTooManyRequests {
-			if lim.Hit(gen, se.RetryAfter) {
-				return nil, err
-			}
+		if TooManyRetry(lim, gen, err) {
 			notice.Info("page %d: %s answered 429 (too many requests), waiting to try again", page, hostOf(params.URL))
 			// lim.Wait sits out the cooldown; a 429 isn't one of the retries
-			attempt--
 			continue
+		}
+		if tooMany(err) && lim != nil {
+			// lim gave up on it
+			return nil, err
 		}
 
 		wait := retryWait(err, attempt)
@@ -307,6 +227,7 @@ func fetchFile(ctx context.Context, params http.RequestParams, page uint, retrie
 			return nil, fmt.Errorf("%w (while waiting to retry after: %w)", ctx.Err(), err)
 		case <-t.C:
 		}
+		attempt++
 	}
 }
 

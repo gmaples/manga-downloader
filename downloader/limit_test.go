@@ -15,6 +15,8 @@ import (
 	"time"
 
 	"github.com/elboletaire/manga-downloader/grabber"
+	ghttp "github.com/elboletaire/manga-downloader/http"
+	"github.com/elboletaire/manga-downloader/notice"
 	"github.com/elboletaire/manga-downloader/ratelimit"
 )
 
@@ -142,5 +144,61 @@ func TestFetchChapterLimited_FileWinsOverPagePacer(t *testing.T) {
 	}
 	if n := site.waits.Load(); n != 3 {
 		t.Errorf("WaitPage called %d times for an unlisted site, want 3", n)
+	}
+}
+
+// A 429 waited out doesn't count as a try: a page that gets a 429, then a
+// 500, then its bytes is retried once, and the log counts that as try 2 of 2
+func TestFetchFile_429DoesntCountAsATry(t *testing.T) {
+	fastLimits(t, time.Second)
+	retryDelay = time.Millisecond
+	t.Cleanup(func() { retryDelay = time.Second })
+	var mu sync.Mutex
+	n := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		n++
+		i := n
+		mu.Unlock()
+		switch i {
+		case 1:
+			w.Header().Set("Retry-After", "60")
+			http.Error(w, "slow down", http.StatusTooManyRequests)
+		case 2:
+			http.Error(w, "oops", http.StatusInternalServerError)
+		default:
+			_, _ = w.Write([]byte("page"))
+		}
+	}))
+	t.Cleanup(server.Close)
+	var logged []string
+	notice.SetHandler(func(_ notice.Level, msg string) {
+		mu.Lock()
+		logged = append(logged, msg)
+		mu.Unlock()
+	})
+	t.Cleanup(func() { notice.SetHandler(nil) })
+	lim := ratelimit.Open(t.TempDir(), nil, nil).Site("example.com")
+
+	f, err := fetchFile(context.Background(), ghttp.RequestParams{URL: server.URL + "/1"}, 1, 1, nil, nil, false, lim)
+	if err != nil || string(f.Data) != "page" {
+		t.Fatalf("got %v, %v", f, err)
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if n != 3 {
+		t.Errorf("%d requests, want 3", n)
+	}
+	tries := 0
+	for _, m := range logged {
+		if strings.Contains(m, "trying again in") {
+			tries++
+			if !strings.Contains(m, "(try 2 of 2)") {
+				t.Errorf("retry line %q, want try 2 of 2", m)
+			}
+		}
+	}
+	if tries != 1 {
+		t.Errorf("logged %q, want one retry line", logged)
 	}
 }

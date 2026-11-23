@@ -39,7 +39,7 @@ func TestFilesFreedesktop(t *testing.T) {
 		}
 	}
 	files := filepath.Join(data, "Trash", "files")
-	for name, from := range map[string]string{"a b.cbz": a, "a b 2.cbz": b} {
+	for name, from := range map[string]string{"a b.cbz": a, "a b (2).cbz": b} {
 		got, err := os.ReadFile(filepath.Join(files, name))
 		if err != nil || string(got) != from {
 			t.Errorf("%s: %q, %v", name, got, err)

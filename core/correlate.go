@@ -60,6 +60,11 @@ const (
 	CorrelateMoving
 )
 
+// CorrelateLogEvery is how many files read between two "compared" lines in
+// the command line's output and the app's log (each one counts in the app's
+// header)
+const CorrelateLogEvery = 50
+
 // trashBatch is how many files go to the trash in one call: few calls, and
 // still a count that moves
 const trashBatch = 100

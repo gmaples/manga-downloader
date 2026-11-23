@@ -10,7 +10,6 @@ import (
 
 	"github.com/elboletaire/manga-downloader/downloader"
 	"github.com/elboletaire/manga-downloader/grabber"
-	"github.com/elboletaire/manga-downloader/http"
 	"github.com/elboletaire/manga-downloader/notice"
 	"github.com/elboletaire/manga-downloader/packer"
 	"github.com/elboletaire/manga-downloader/ranges"
@@ -768,8 +767,7 @@ func (s *Series) fetchChapter(ctx context.Context, lim downloader.Limiter, chap 
 		if lim != nil {
 			lim.Done(-1, downloader.Trouble(err))
 		}
-		var se *http.StatusError
-		if lim != nil && errors.As(err, &se) && se.Code == 429 && !lim.Hit(gen, se.RetryAfter) {
+		if downloader.TooManyRetry(lim, gen, err) {
 			continue
 		}
 		return chapter, err

@@ -4,7 +4,6 @@ package ratelimit
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 )
@@ -66,25 +65,18 @@ func mirrorHost(s string) string {
 // readMirrors reads the mirrors file in the book's folder
 func (b *Book) readMirrors() {
 	path := filepath.Join(filepath.Dir(b.path), MirrorsFileName)
-	data, err := os.ReadFile(path)
-	if err != nil {
-		if !os.IsNotExist(err) {
-			b.warn("%s: %s", MirrorsFileName, err)
-		}
-		return
-	}
-	for i, line := range strings.Split(string(data), "\n") {
+	readLines(path, MirrorsFileName, b.warn, func(line string, n int) {
 		host, mirrors, ok, err := parseMirrorsLine(line)
 		if err != nil {
-			b.warn("%s line %d: %s (ignored)", MirrorsFileName, i+1, err)
-			continue
+			b.warn("%s line %d: %s (ignored)", MirrorsFileName, n, err)
+			return
 		}
 		if ok {
 			if _, seen := b.mirrors[host]; !seen {
 				b.mirrors[host] = mirrors
 			}
 		}
-	}
+	})
 }
 
 // Mirrors returns the other hosts site-mirrors.txt names for host (the

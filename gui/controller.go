@@ -2447,7 +2447,7 @@ func (e events) Waiting(ch *grabber.Chapter, name string) {
 
 // Correlating is a step of the folder's correlation, as it goes: the
 // group's header says what it's doing, with its count, and the log gets the
-// folder's file count, the files read every compareLogEvery, and each file
+// folder's file count, the files read every core.CorrelateLogEvery, and each file
 // moved (or not) as its batch is done.
 func (e events) Correlating(p core.CorrelateProgress) {
 	c, g := e.c, e.g
@@ -2459,7 +2459,7 @@ func (e events) Correlating(p core.CorrelateProgress) {
 		c.appendMsgLocked(LogInfo, msg("log.correlating", map[string]any{"count": p.Total}))
 	case core.CorrelateComparing:
 		m = msg("activity.status.comparing", map[string]any{"done": p.Done, "total": p.Total})
-		if p.Done%compareLogEvery == 0 || p.Done == p.Total {
+		if p.Done%core.CorrelateLogEvery == 0 || p.Done == p.Total {
 			c.appendMsgLocked(LogInfo, msg("log.compared", map[string]any{"done": p.Done, "total": p.Total}))
 		}
 	case core.CorrelateMoving:
@@ -2488,10 +2488,6 @@ func (e events) Correlating(p core.CorrelateProgress) {
 	c.mu.Unlock()
 	c.emit()
 }
-
-// compareLogEvery is how many files read between two log lines; the
-// header counts each one
-const compareLogEvery = 50
 
 // Correlated is what the correlation of the folder did before the download
 // started: the group's header says how many files went (a later pass of the
