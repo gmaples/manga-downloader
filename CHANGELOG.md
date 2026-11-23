@@ -65,6 +65,22 @@ senkuro.com grabber.)
   from sites and the downloader, file sizes, `log.txt`, and the command
   line.
 
+## v25.3.0-series-folders.39 (2026-11-23)
+
+Master (build 36) plus **senkuro.com**. Builds 37, 38 and 40 to 42 are not in
+it (their PRs merged to master after this build was made).
+
+- **senkuro.com has its own grabber.** The site's chapter page shows the newest
+  100 chapters only, so the generic reader stopped there: SPY×FAMILY loaded
+  chapters 59-142 and missed the rest. The grabber reads the site's own data
+  service (api.senkuro.com/graphql) and pages through every chapter, 100 at a
+  time.
+- The series folder gets the clean Russian title ("Семья шпиона"), not the
+  page's "Манга Семья шпиона". A series downloaded before through the generic
+  reader therefore gets a new folder.
+- The site's age rating feeds the age check (0+, 12+, 16+, 18+).
+- Chapter 64.5 of SPY×FAMILY is a one-page special illustration
+  (3262×2560); the site serves it normally.
 ## v25.3.0-series-folders.38 (2026-11-21)
 
 Build 37 plus *Delete series*, for a series downloaded twice under two

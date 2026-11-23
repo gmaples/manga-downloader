@@ -493,6 +493,7 @@ grabber: \
 	grabber/yurimoonsub \
 	grabber/yurionline \
 	grabber/yurionair \
+	grabber/senkuro \
 	grabber/zenko \
 	grabber/zinmanga \
 	grabber/html
@@ -1150,6 +1151,10 @@ grabber/turkcemanga:
 	go run . https://turkcemanga.com/manga/the-lady-with-a-mask/ 50
 grabber/yurionair:
 	go run . https://yurionair.top/manga/adachi-to-shimamura/ 46
+
+# chapters and pages from its GraphQL api, all chapters in pages of 100
+grabber/senkuro:
+	go run . https://senkuro.com/manga/spy-x-family 64.5
 
 grabber/zenko:
 	go run . https://zenko.online/titles/1225 1

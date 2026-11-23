@@ -100,7 +100,7 @@ work was planned from.
 
 ## Features
 
-- **[588 supported sites](#supported-sites)**, from big aggregators to small
+- **[589 supported sites](#supported-sites)**, from big aggregators to small
   scanlation groups.
 - In the app, **paste a URL and it loads**: the series, its chapters and the
   languages and scanlation groups it offers appear on their own.
@@ -394,7 +394,7 @@ environment variables.
 ## Supported sites
 
 <details>
-<summary><b>Show all 588 supported sites</b></summary>
+<summary><b>Show all 589 supported sites</b></summary>
 <br>
 
 | Site | Notes | Last verified |
@@ -864,6 +864,7 @@ environment variables.
 | [scanpinkrosa.blogspot.com](https://scanpinkrosa.blogspot.com) | Portuguese | 2026-11-09 |
 | [scythescans.com](https://scythescans.com) | English | 2026-11-09 |
 | [sektedoujin.cc](https://sektedoujin.cc) | Indonesian, mostly NSFW | 2026-11-09 |
+| [senkuro.com](https://senkuro.com) | Senkuro, Russian | 2026-11-23 |
 | [seraphic-deviltry.com](https://seraphic-deviltry.com) | multilingual | 2026-11-09 |
 | [sereinscan.com](https://sereinscan.com) | Turkish | 2026-11-09 |
 | [setsuscans.com](https://setsuscans.com) \* |  | 2026-10-15 |

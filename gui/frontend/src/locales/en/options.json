@@ -23,7 +23,7 @@
   "age": {
     "label": "Age check",
     "over": "I am over",
-    "hint": "Titles a site rates above your age aren't loaded. Off, every title loads. Sites that publish a rating are checked; for now that's zenko.online."
+    "hint": "Titles a site rates above your age aren't loaded. Off, every title loads. Sites that publish a rating are checked; for now that's zenko.online and senkuro.com."
   },
   "format": {
     "label": "Format",

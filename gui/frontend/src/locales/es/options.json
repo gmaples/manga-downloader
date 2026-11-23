@@ -23,7 +23,7 @@
   "age": {
     "label": "Control de edad",
     "over": "Soy mayor de",
-    "hint": "No se cargan los títulos que un sitio clasifica por encima de tu edad. Desactivado, se cargan todos. Se comprueban los sitios que publican una clasificación; por ahora, zenko.online."
+    "hint": "No se cargan los títulos que un sitio clasifica por encima de tu edad. Desactivado, se cargan todos. Se comprueban los sitios que publican una clasificación; por ahora, zenko.online y senkuro.com."
   },
   "format": {
     "label": "Formato",

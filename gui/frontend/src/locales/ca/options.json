@@ -23,7 +23,7 @@
   "age": {
     "label": "Control d'edat",
     "over": "Soc major de",
-    "hint": "No es carreguen els títols que un lloc classifica per sobre de la teva edat. Desactivat, es carreguen tots. Es comproven els llocs que publiquen una classificació; ara per ara, zenko.online."
+    "hint": "No es carreguen els títols que un lloc classifica per sobre de la teva edat. Desactivat, es carreguen tots. Es comproven els llocs que publiquen una classificació; ara per ara, zenko.online i senkuro.com."
   },
   "format": {
     "label": "Format",
