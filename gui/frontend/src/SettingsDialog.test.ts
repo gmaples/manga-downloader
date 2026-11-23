@@ -102,7 +102,7 @@ describe('SettingsDialog', () => {
   });
 
   it('links the author alias and the license, untranslated, in each language', () => {
-    const lines = { en: 'Made with love by', es: 'Hecho con amor por', ca: 'Fet amb amor per', ja: '作者:', uk: 'Зроблено з любов’ю:' };
+    const lines = { en: 'Made with love by', es: 'Hecho con amor por', ca: 'Fet amb amor per', ja: '作者:', uk: 'Зроблено з любов’ю —' };
     const author = '<a href="https://github.com/elboletaire">elboletaire</a>';
     const license = `<a href="${LICENSE_URL}">AGPL-3.0</a>`;
     for (const lang of LANGS) {

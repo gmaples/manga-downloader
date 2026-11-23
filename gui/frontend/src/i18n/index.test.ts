@@ -134,4 +134,13 @@ describe('Ukrainian', () => {
     const msg = { key: 'log.loaded', args: { title: 'Berserk', count: 3 }, text: 'Loaded Berserk: 3 chapters' };
     expect(say(uk, msg, msg.text)).toBe('Відкрито Berserk: 3 розділи');
   });
+
+  it('renders a library notice the Go side matched', () => {
+    const text = 'senkuro.com needs a real browser: starting it with a visible window (this can take a few seconds)...';
+    const msg = { key: 'notice.browser.startingVisible', args: { host: 'senkuro.com' }, text };
+    expect(say(uk, msg, text)).toBe(
+      'Для senkuro.com потрібен справжній браузер: він запускається з видимим вікном (це може тривати кілька секунд)…',
+    );
+    expect(say(createT('es'), msg, text)).toBe(text);
+  });
 });

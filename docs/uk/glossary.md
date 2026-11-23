@@ -32,6 +32,12 @@
 - queue: черга
 - browser: браузер
 - captcha: капча
+- headless browser: браузер без вікна
+- pop-up tab: спливна вкладка
+- device secret (MangaPlus): ключ пристрою
+- automatically: автоматично — не «саме», яке читається ще й як «саме так».
+- Parts merged (button): цілими — «Завантажити 5 розділів цілими».
+- section of the window: вкладка, група — «розділ» лише для chapter.
 
 ## Дії (кнопки)
 
@@ -90,7 +96,7 @@
 - Skip pages: Пропускати сторінки
 - Filename template: Шаблон назви файлу; default: типовий
 - Show the browser window: Показувати вікно браузера
-- Download N missing: Завантажити відсутні (N)
+- Download N missing: Завантажити ще N — коротко, щоб кнопка вміщалася; підказка пояснює, що це відсутні розділи.
 - Restart N unfinished: Перезапустити незавершені (N)
 - Delete series: Видалити серію
 - Adult title: [Для дорослих]
