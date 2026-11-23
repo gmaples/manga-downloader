@@ -108,3 +108,47 @@ describe('say', () => {
     expect(say(es, undefined, 'plain')).toBe('plain');
   });
 });
+
+describe('Ukrainian', () => {
+  const uk = createT('uk');
+
+  it('writes sizes the Ukrainian way, and English as the Go side does', () => {
+    const args = { count: 712, title: 'X', folder: '/m/X', size: '6.4 GB' };
+    expect(uk('log.deletedSeries', args)).toBe('Серію X видалено з /m/X (712 файлів, 6,4 ГБ)');
+    expect(createT('en')('log.deletedSeries', args)).toBe('Deleted series X from /m/X (712 files, 6.4 GB)');
+    const msg = { key: 'activity.cleanup', args: { count: 3, size: '912.4 kB' }, text: '' };
+    expect(say(uk, msg, '')).toBe('До Кошика переміщено 3 файли-дублікати (912,4 КБ)');
+  });
+
+  it('follows a Ukrainian system', () => {
+    expect(resolveLanguage('', ['uk-UA', 'en-US'])).toBe('uk');
+    expect(LANG_INFO.uk.name).toBe('Українська');
+  });
+
+  it('picks one, few and many by the count', () => {
+    const chapters = (count: number) => uk('count.chapter', { count });
+    expect(chapters(1)).toBe('1 розділ');
+    expect(chapters(21)).toBe('21 розділ');
+    expect(chapters(2)).toBe('2 розділи');
+    expect(chapters(24)).toBe('24 розділи');
+    expect(chapters(5)).toBe('5 розділів');
+    expect(chapters(11)).toBe('11 розділів');
+    expect(chapters(12)).toBe('12 розділів');
+    expect(chapters(0)).toBe('0 розділів');
+    expect(chapters(111)).toBe('111 розділів');
+  });
+
+  it('renders a message the Go side sent', () => {
+    const msg = { key: 'log.loaded', args: { title: 'Berserk', count: 3 }, text: 'Loaded Berserk: 3 chapters' };
+    expect(say(uk, msg, msg.text)).toBe('Відкрито Berserk: 3 розділи');
+  });
+
+  it('renders a library notice the Go side matched', () => {
+    const text = 'senkuro.com needs a real browser: starting it with a visible window (this can take a few seconds)...';
+    const msg = { key: 'notice.browser.startingVisible', args: { host: 'senkuro.com' }, text };
+    expect(say(uk, msg, text)).toBe(
+      'Для senkuro.com потрібен справжній браузер: він запускається з видимим вікном (це може тривати кілька секунд)…',
+    );
+    expect(say(createT('es'), msg, text)).toBe(text);
+  });
+});

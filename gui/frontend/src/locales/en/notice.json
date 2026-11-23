@@ -1,0 +1,76 @@
+{
+  "browser": {
+    "closedUnexpectedly": "The browser closed unexpectedly (its window was closed, or it crashed); starting a new one.",
+    "startingHidden": "{{host}} needs a real browser: starting it in a hidden window (this can take a few seconds)...",
+    "startingVisible": "{{host}} needs a real browser: starting it with a visible window (this can take a few seconds)...",
+    "startingBackground": "{{host}} needs a real browser: starting it in the background (this can take a few seconds)...",
+    "headlessFailed": "{{host}} didn't load in a headless browser (probably a Cloudflare check).",
+    "openingVisible": "Opening a visible browser window to pass the check: solve it there if asked...",
+    "closingAfterFailure": "Closing the browser after the failure, so the next try starts a fresh one.",
+    "httpNewBrowser": "{{host}} answered HTTP {{code}}: waiting {{wait}}, then trying again in a new browser",
+    "httpRetry": "{{host}} answered HTTP {{code}}: waiting {{wait}} before trying again",
+    "waitingWindow": "Waiting for {{host}} to load in the browser window ({{waited}}); solve the check there if one is showing...",
+    "waitingHidden": "Waiting for {{host}} to load in the browser ({{waited}}); a Cloudflare check may be showing...",
+    "popupClosed": "Closed a pop-up tab."
+  },
+  "download": {
+    "duplicatesFailed": "looking for duplicates in {{folder}}: {{reason}}",
+    "mirrorTrying": "page {{page}}: {{host}} failed ({{reason}}), trying {{mirror}}",
+    "mirrorGot": "page {{page}}: got it from {{mirror}}",
+    "mirrorFailed": "page {{page}}: {{mirror}} failed too ({{reason}})",
+    "tooMany": "page {{page}}: {{host}} answered 429 (too many requests), waiting to try again",
+    "retry": "page {{page}}: {{reason}}, trying again in {{wait}} (try {{try}} of {{tries}})"
+  },
+  "site": {
+    "groupsFetch": "could not fetch the series page to name the scanlation groups: {{reason}}",
+    "groupsRead": "could not read the series page to name the scanlation groups: {{reason}}",
+    "groupsFind": "could not find the scanlation groups in the series page: {{reason}}",
+    "groupsParse": "could not parse the scanlation groups from the series page: {{reason}}",
+    "noPageURL": "page {{page}} of {{label}} has no URL to fetch from 😕 (will be ignored)",
+    "genericPlainPage": "{{host}} has no built-in support: the generic reader found {{chapters}} chapters in the plain page. Its chapter numbers and pages are guesses, so check them.",
+    "genericChaptersPage": "{{host}} has no built-in support: the generic reader found {{chapters}} chapters in the plain chapters page. Its chapter numbers and pages are guesses, so check them.",
+    "genericBrowser": "{{host}} has no built-in support: the generic reader found {{chapters}} chapters in a hidden browser. Its chapter numbers and pages are guesses, so check them.",
+    "listIncomplete": "found {{found}} chapters but the site declares {{declared}}: the list may be incomplete",
+    "listEmbedded": "could not fetch the full chapter list from the api, using the list embedded in the page: {{reason}}",
+    "protectedPages": "could not decode the protected pages: {{reason}}",
+    "protectedPagesOf": "could not decode the protected pages of {{label}}: {{reason}}",
+    "pageFetch": "error fetching page {{page}}: {{reason}}",
+    "pageParse": "error parsing page {{page}}: {{reason}}",
+    "imageNoURL": "page {{page}} of {{label}} has an image with no URL to fetch from"
+  },
+  "mangaplus": {
+    "locked": "{{locked}} of {{total}} chapters need a Manga Plus MAX subscription and can't be downloaded",
+    "fewUse": "This MangaPlus version lists only {{chapters}} chapters (each language is a separate version: {{languages}}): use --language to pick another",
+    "fewPick": "This MangaPlus version lists only {{chapters}} chapters (each language is a separate version: {{languages}}): pick another one with --language",
+    "noVersion": "MangaPlus has no {{language}} version of {{title}} (available: {{available}}); downloading the {{linked}} version the link points at",
+    "noOthers": "MangaPlus listed no other versions of {{title}}, so {{language}} isn't available; downloading the {{linked}} version the link points at",
+    "switched": "The provided MangaPlus link is for the {{linked}} version of {{title}}; --language selected {{language}}, so that's the version being downloaded",
+    "mismatch": "MangaPlus's listing for the {{language}} version of {{title}} doesn't match the title it returns: downloading the {{returned}} version",
+    "secretRejected": "the cached MangaPlus device secret was rejected, registering a new device",
+    "secretNotStored": "registered a new MangaPlus device, but could not store its secret in {{path}} (it will be registered again on the next run): {{reason}}",
+    "secretStored": "registered a new MangaPlus device, whose secret is stored in {{path}}"
+  },
+  "pack": {
+    "epubPageLeftOut": "- warning: page {{page}}: {{reason}}, leaving it out",
+    "epubNoPages": "- warning: {{label}} has no pages EPUB readers can show, leaving it out",
+    "convertFailed": "- warning: page {{page}}: converting {{format}} to jpeg: {{reason}} (keeping the original)"
+  },
+  "pace": {
+    "lineIgnored": "{{file}} line {{line}}: {{reason}} (ignored)",
+    "saveFailed": "saving {{file}}: {{reason}}",
+    "calmRemoved": "{{site}}: no 429 for {{calm}}, so its time is taken out of {{file}}",
+    "calmLowered": "{{site}}: no 429 for {{calm}}, now one request every {{gap}} (saved in {{file}})",
+    "tooMany": "{{site}} answered 429 Too Many Requests: waiting {{wait}}, then one request every {{gap}} (saved in {{file}})",
+    "struggling": "{{site}} is struggling: down from {{from}} to {{to}} downloads at once (saved in {{file}})",
+    "settled": "{{site}} settled at {{level}} downloads at once"
+  },
+  "options": {
+    "unreadable": "ignoring the saved options: {{reason}}",
+    "packAs": "ignoring the saved pack-as {{value}}, using {{fallback}}",
+    "format": "ignoring the saved format {{value}}, using {{fallback}}",
+    "readingDirection": "ignoring the saved reading-direction {{value}}, using {{fallback}}",
+    "convertImages": "ignoring the saved convert-images {{value}}, using {{fallback}}: {{reason}}",
+    "jpegQuality": "ignoring the saved jpeg-quality {{value}}, using {{fallback}}",
+    "uiLanguage": "ignoring the saved ui-language {{value}}, following the system"
+  }
+}

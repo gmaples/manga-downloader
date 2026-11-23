@@ -572,6 +572,10 @@ func NewController(settings *grabber.Settings, notifyFn func()) *Controller {
 		if level == notice.LevelWarn {
 			lvl = LogWarn
 		}
+		if m, ok := noticeMessage(msg); ok {
+			c.addMsg(lvl, m)
+			return
+		}
 		c.addLog(lvl, msg)
 	})
 	browser.SetAttentionHandler(c.onAttention)

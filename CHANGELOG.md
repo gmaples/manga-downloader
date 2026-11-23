@@ -19,6 +19,52 @@ as they are.
 What the fork changes, and why, is described in the README's
 "About this fork" section. Android details are in [docs/android.md](docs/android.md).
 
+## v25.3.0-series-folders.42 (2026-11-23)
+
+Build 41 with the points from its Ukrainian re-review.
+
+- **App, Ukrainian**: file sizes show the Ukrainian way, with a decimal comma
+  and Ukrainian units («6,4 ГБ», «912,4 КБ», «5 Б»), in the Delete series
+  dialog, the duplicate cleanup note and the log. English and the other
+  languages are unchanged, and `log.txt` stays English.
+- **App, Ukrainian**: three of the app's own messages reworded: the generic
+  reader's and MangaPlus's chapter counts, the retry on another server, and
+  the settled download level.
+
+## v25.3.0-series-folders.41 (2026-11-23)
+
+Build 40 with the fixes from its independent Ukrainian review.
+
+- **App, log**: the messages the app writes itself (starting the browser,
+  Cloudflare checks and what to do about them, page retries and other
+  servers, rate limits and download levels, MangaPlus versions, the saved
+  options) now show in Ukrainian. Reasons that come from sites stay as they
+  are, and `log.txt` stays English. Spanish, Catalan and Japanese still show
+  these in English.
+- **Fit**: *Download N missing* is «Завантажити ще N» and the merged-parts
+  button «Завантажити N розділів цілими», and the toolbar above the chapter
+  list wraps instead of cutting off a button.
+- **Wording**: nine small fixes, «розділ» only for chapters, a shorter
+  per-site status.
+
+## v25.3.0-series-folders.40 (2026-11-22)
+
+Build 38 plus a Ukrainian interface. (Build 39 is reserved for the
+senkuro.com grabber.)
+
+- **App**: *Settings → Language* offers Українська, and a Ukrainian system
+  picks it by itself. Every label, button, tooltip, dialog, status, log and
+  error message the window words itself is translated, the newer features
+  included (series folders, download groups, history, chapter marks,
+  Download N missing, Delete series, duplicate cleanup, the VPN? tag), with
+  Ukrainian's four plural forms.
+- **Guide**: [docs/uk/app.md](docs/uk/app.md), the app guide in Ukrainian,
+  and [docs/uk/glossary.md](docs/uk/glossary.md), the terms and rules the
+  translation follows.
+- **Still English** by design: chapter and file names, reasons that come
+  from sites and the downloader, file sizes, `log.txt`, and the command
+  line.
+
 ## v25.3.0-series-folders.38 (2026-11-21)
 
 Build 37 plus *Delete series*, for a series downloaded twice under two

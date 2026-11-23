@@ -1,0 +1,47 @@
+{
+  "status": {
+    "fetching": "Отримання сторінок…",
+    "downloading": "завантаження",
+    "archiving": "пакування",
+    "done": "готово",
+    "failed": "помилка: {{reason}}",
+    "skipped": "пропущено: {{reason}}",
+    "todo": "чекає: {{reason}}"
+  },
+  "short": {
+    "fetching": "Отримання сторінок…",
+    "phase": "{{phase}} · {{percent}}",
+    "packing": "Пакування",
+    "downloading": "Завантаження",
+    "done": "Збережено",
+    "failed": "Помилка",
+    "skipped": "Пропущено",
+    "todo": "Чекає"
+  },
+  "title": {
+    "bundle": "Пакет: розділи {{range}}",
+    "volume": "{{volume}} · розділи {{first}}–{{last}}",
+    "volumeChapter": "{{volume}} · розділ {{first}}",
+    "volumeParts": "{{volume}} · частин: {{count}}"
+  },
+  "phase": {
+    "gathering": "Збирання відомостей…",
+    "downloading": "Завантаження…",
+    "downloadingLabel": "Завантаження: {{label}}",
+    "creatingBundle": "Створення пакета з розділів {{range}}",
+    "waiting": "Очікування…",
+    "packing": "Пакування…"
+  },
+  "reason": {
+    "cancelled": "скасовано, перш ніж почалися всі його розділи",
+    "skipped": "параметр «Пропускати сторінки» (--skip-pages) вилучив усі сторінки",
+    "download": "завантаження: {{reason}}",
+    "packing": "пакування: {{reason}}",
+    "filename": "назва файлу: {{reason}}",
+    "locked": "заблокований розділ",
+    "emptyVolume": "не вдалося завантажити жодного з його розділів",
+    "exists": "{{name}} уже існує",
+    "noPages": "сторінок не знайдено",
+    "todo": "ще не завантажено"
+  }
+}

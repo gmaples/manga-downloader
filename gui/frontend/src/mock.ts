@@ -33,7 +33,7 @@
 // uses production release versions and a macOS output path (for screenshots),
 // &nosimple turns the simpleStart pref off (an empty window opens on the full view),
 // and VITE_MOCK=1 at build time includes the mock in production builds (e.g.
-// for the screenshot capture build; set via Wails frontend env). ?lang=en|es|ca|ja
+// for the screenshot capture build; set via Wails frontend env). ?lang=en|es|ca|ja|uk
 // starts the window in that language, ?lang=system follows the browser's, and
 // without it the window is English, so screenshots and dev stay English. Under
 // multi the language filter shows that language and the list is in it, titled
@@ -244,7 +244,7 @@ function scenarioFrom(search: string): Scenario {
   return (SCENARIOS as readonly string[]).includes(value ?? '') ? (value as Scenario) : 'empty';
 }
 
-/** ?lang=system is the preference that follows the system; anything else but en, es, ca or ja is English */
+/** ?lang=system is the preference that follows the system; anything else but en, es, ca, ja or uk is English */
 function uiLanguageFrom(search: string): LangPref {
   const value = new URLSearchParams(search).get('lang');
   if (value === 'system') {

@@ -1,7 +1,9 @@
 // The desktop app's languages and translator. Catalogs are the JSON files in
 // locales/<lang>/<namespace>.json, flattened to `namespace.key` keys.
 
-export const LANGS = ['en', 'es', 'ca', 'ja'] as const;
+import { size } from './format';
+
+export const LANGS = ['en', 'es', 'ca', 'ja', 'uk'] as const;
 export type Lang = (typeof LANGS)[number];
 
 /** The saved preference: '' follows the system. */
@@ -13,6 +15,7 @@ export const LANG_INFO: Record<Lang, { name: string }> = {
   es: { name: 'Español' },
   ca: { name: 'Català' },
   ja: { name: '日本語' },
+  uk: { name: 'Українська' },
 };
 
 export type Vars = Record<string, string | number>;
@@ -59,10 +62,16 @@ export function createTemplate(lang: Lang, catalog: Catalog = CATALOG): Template
   };
 }
 
-/** A translator for `lang`: the template with its placeholders filled. */
+/**
+ * A translator for `lang`: the template with its placeholders filled. A `size`
+ * var (sizeText's 6.4 GB, from either side) is written the language's way.
+ */
 export function createT(lang: Lang, catalog: Catalog = CATALOG): T {
   const template = createTemplate(lang, catalog);
-  return (key, vars = {}) => fill(template(key, vars), vars);
+  return (key, vars = {}) => {
+    const filled = typeof vars.size === 'string' ? { ...vars, size: size(vars.size, lang) } : vars;
+    return fill(template(key, filled), filled);
+  };
 }
 
 /**
