@@ -350,7 +350,7 @@ func (c *Controller) restoreLocked() {
 		c.lastID++
 		g.id = c.lastID
 		g.title, g.url, g.adult, g.restored = e.Title, e.URL, e.Adult, true
-		g.todoIDs = map[string]string{}
+		g.todoIDs = map[*Job]string{}
 		if e.Adult {
 			c.addAdultTitleLocked(e.Title)
 		}
@@ -362,7 +362,7 @@ func (c *Controller) restoreLocked() {
 			} else {
 				j.setReason(msg("job.reason.todo", nil))
 				if ch.ID != "" {
-					g.todoIDs[ch.Label] = ch.ID
+					g.todoIDs[j] = ch.ID
 				}
 			}
 			g.jobs = append(g.jobs, j)
@@ -540,13 +540,15 @@ func (c *Controller) Resume(id int) (url string, load bool, err error) {
 		return "", false, errBusy
 	}
 	c.resumeURL = g.url
-	c.resumeTodo, c.resumeIDs = map[string]bool{}, map[string]bool{}
+	c.resumeTodo, c.resumeIDs = map[string]bool{}, map[string]string{}
 	c.resumeKeys, c.resumeStart = nil, false
 	for _, j := range g.jobs {
 		if j.State == JobTodo {
-			c.resumeTodo[j.Title] = true
-			if id := g.todoIDs[j.Title]; id != "" {
-				c.resumeIDs[id] = true
+			// by its id when history.txt kept it, else by its label
+			if id := g.todoIDs[j]; id != "" {
+				c.resumeIDs[id] = j.Title
+			} else {
+				c.resumeTodo[j.Title] = true
 			}
 		}
 	}
@@ -586,9 +588,24 @@ func (c *Controller) applyResumeLocked(url string) {
 	if c.resumeStart {
 		clear(c.selected)
 	}
+	// a to-do chapter is found by its id; one whose id the listing no longer
+	// has, by its label
+	listed := map[string]bool{}
+	for _, chap := range c.series.Chapters {
+		listed[historyID(chap)] = true
+	}
+	if c.resumeTodo == nil {
+		c.resumeTodo = map[string]bool{}
+	}
+	for id, label := range c.resumeIDs {
+		if !listed[id] {
+			c.resumeTodo[label] = true
+		}
+	}
 	for i, chap := range c.series.Chapters {
 		label := grabber.ChapterLabel(chap) + core.ReleaseTags(chap, c.hasDuplicates, c.hasGroupDuplicates)
-		if (c.resumeTodo[label] || c.resumeKeys[chapKey(chap)] || c.resumeIDs[historyID(chap)]) && c.selectable(i) {
+		_, byID := c.resumeIDs[historyID(chap)]
+		if (c.resumeTodo[label] || c.resumeKeys[chapKey(chap)] || byID) && c.selectable(i) {
 			c.selected[i] = true
 		}
 	}

@@ -26,7 +26,7 @@ func (c *Controller) Restart(id int, key string) (url string, load bool, err err
 		return "", false, errBusy
 	}
 	keys, labels, ids := c.restartTargetsLocked(g, key)
-	if len(keys)+len(labels) == 0 {
+	if len(keys)+len(labels)+len(ids) == 0 {
 		c.mu.Unlock()
 		return "", false, uiErr("errors.nothingToRestart", nil, nil)
 	}
@@ -65,18 +65,19 @@ func (c *Controller) startRestart() {
 
 // restartTargetsLocked returns what Restart downloads again of group g, its
 // row key's chapter or with key "" all: a restored group's chapters to do,
-// by label and by historyID when history.txt kept it, or another group's
+// by historyID when history.txt kept it, else by label, or another group's
 // failed and cancelled chapters, by chapKey,
 // leaving out those a newer download of the series took since. The caller
 // holds c.mu.
-func (c *Controller) restartTargetsLocked(g *group, key string) (keys, labels, ids map[string]bool) {
-	keys, labels, ids = map[string]bool{}, map[string]bool{}, map[string]bool{}
+func (c *Controller) restartTargetsLocked(g *group, key string) (keys, labels map[string]bool, ids map[string]string) {
+	keys, labels, ids = map[string]bool{}, map[string]bool{}, map[string]string{}
 	if g.restored {
 		for _, j := range g.jobs {
 			if j.State == JobTodo && (key == "" || j.Key == key) {
-				labels[j.Title] = true
-				if id := g.todoIDs[j.Title]; id != "" {
-					ids[id] = true
+				if id := g.todoIDs[j]; id != "" {
+					ids[id] = j.Title
+				} else {
+					labels[j.Title] = true
 				}
 			}
 		}
@@ -122,8 +123,8 @@ func (c *Controller) newerGroupsLocked(g *group) []*group {
 // restartInfoLocked fills st, group g's state, with what Restart would
 // download again: Unfinished, and Restart on the rows. The caller holds c.mu.
 func (c *Controller) restartInfoLocked(g *group, st *GroupState) {
-	keys, labels, _ := c.restartTargetsLocked(g, "")
-	st.Unfinished = len(keys) + len(labels)
+	keys, labels, ids := c.restartTargetsLocked(g, "")
+	st.Unfinished = len(keys) + len(labels) + len(ids)
 	for i := range st.Jobs {
 		j := &st.Jobs[i]
 		switch {
