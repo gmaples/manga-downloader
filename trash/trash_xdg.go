@@ -35,7 +35,7 @@ func files(paths []string, failed map[string]error) {
 		if _, err := os.Lstat(p); os.IsNotExist(err) {
 			continue
 		}
-		dest := freeName(filepath.Join(dir, "files"), filepath.Base(p))
+		dest := FreeName(filepath.Join(dir, "files"), filepath.Base(p))
 		name := filepath.Base(dest)
 		info := filepath.Join(dir, "info", name+".trashinfo")
 		abs, _ := filepath.Abs(p)

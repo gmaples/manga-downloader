@@ -14,9 +14,6 @@ type line struct {
 	warn bool
 }
 
-// compareEvery is how many files read between two "compared" lines
-const compareEvery = 50
-
 // progressLines are what the command prints as the output folder's
 // correlation goes (see core.CorrelateProgress): the files it looks at, the
 // files read now and then, and each file moved to the trash (or not) as its
@@ -29,7 +26,7 @@ func progressLines(p core.CorrelateProgress) []line {
 		}
 		return []line{{text: fmt.Sprintf("- looking for duplicates among %d %s", p.Total, plural(p.Total, "file", "files"))}}
 	case core.CorrelateComparing:
-		if p.Done%compareEvery != 0 && p.Done != p.Total {
+		if p.Done%core.CorrelateLogEvery != 0 && p.Done != p.Total {
 			return nil
 		}
 		return []line{{text: fmt.Sprintf("- compared %d of %d files that share a size", p.Done, p.Total)}}

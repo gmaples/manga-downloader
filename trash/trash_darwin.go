@@ -22,7 +22,7 @@ func files(paths []string, failed map[string]error) {
 		if _, err := os.Lstat(p); os.IsNotExist(err) {
 			continue
 		}
-		if err := os.Rename(p, freeName(dir, filepath.Base(p))); err != nil {
+		if err := os.Rename(p, FreeName(dir, filepath.Base(p))); err != nil {
 			failed[p] = err
 		}
 	}

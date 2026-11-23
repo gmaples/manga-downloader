@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/elboletaire/manga-downloader/packer"
@@ -187,7 +186,7 @@ func (p *DeletePlan) Run(to string, progress func(DeleteProgress)) *DeleteResult
 			}
 		} else {
 			for _, n := range batch {
-				dest := freeDest(to, n)
+				dest := trash.FreeName(to, n)
 				if err := os.Rename(filepath.Join(p.Dir, n), dest); err != nil {
 					r.Failed[n] = err
 				} else {
@@ -205,20 +204,4 @@ func (p *DeletePlan) Run(to string, progress func(DeleteProgress)) *DeleteResult
 		}
 	}
 	return r
-}
-
-// freeDest is name in dir, or "name (2).ext" and so on when that's taken
-func freeDest(dir, name string) string {
-	dest := filepath.Join(dir, name)
-	if _, err := os.Lstat(dest); os.IsNotExist(err) {
-		return dest
-	}
-	ext := filepath.Ext(name)
-	stem := strings.TrimSuffix(name, ext)
-	for i := 2; ; i++ {
-		dest = filepath.Join(dir, stem+" ("+strconv.Itoa(i)+")"+ext)
-		if _, err := os.Lstat(dest); os.IsNotExist(err) {
-			return dest
-		}
-	}
 }
