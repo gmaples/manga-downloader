@@ -19,10 +19,56 @@ as they are.
 What the fork changes, and why, is described in the README's
 "About this fork" section. Android details are in [docs/android.md](docs/android.md).
 
+## v25.3.0-series-folders.42 (2026-11-23)
+
+Build 41 with the points from its Ukrainian re-review.
+
+- **App, Ukrainian**: file sizes show the Ukrainian way, with a decimal comma
+  and Ukrainian units («6,4 ГБ», «912,4 КБ», «5 Б»), in the Delete series
+  dialog, the duplicate cleanup note and the log. English and the other
+  languages are unchanged, and `log.txt` stays English.
+- **App, Ukrainian**: three of the app's own messages reworded: the generic
+  reader's and MangaPlus's chapter counts, the retry on another server, and
+  the settled download level.
+
+## v25.3.0-series-folders.41 (2026-11-23)
+
+Build 40 with the fixes from its independent Ukrainian review.
+
+- **App, log**: the messages the app writes itself (starting the browser,
+  Cloudflare checks and what to do about them, page retries and other
+  servers, rate limits and download levels, MangaPlus versions, the saved
+  options) now show in Ukrainian. Reasons that come from sites stay as they
+  are, and `log.txt` stays English. Spanish, Catalan and Japanese still show
+  these in English.
+- **Fit**: *Download N missing* is «Завантажити ще N» and the merged-parts
+  button «Завантажити N розділів цілими», and the toolbar above the chapter
+  list wraps instead of cutting off a button.
+- **Wording**: nine small fixes, «розділ» only for chapters, a shorter
+  per-site status.
+
+## v25.3.0-series-folders.40 (2026-11-22)
+
+Build 38 plus a Ukrainian interface. (Build 39 is reserved for the
+senkuro.com grabber.)
+
+- **App**: *Settings → Language* offers Українська, and a Ukrainian system
+  picks it by itself. Every label, button, tooltip, dialog, status, log and
+  error message the window words itself is translated, the newer features
+  included (series folders, download groups, history, chapter marks,
+  Download N missing, Delete series, duplicate cleanup, the VPN? tag), with
+  Ukrainian's four plural forms.
+- **Guide**: [docs/uk/app.md](docs/uk/app.md), the app guide in Ukrainian,
+  and [docs/uk/glossary.md](docs/uk/glossary.md), the terms and rules the
+  translation follows.
+- **Still English** by design: chapter and file names, reasons that come
+  from sites and the downloader, file sizes, `log.txt`, and the command
+  line.
+
 ## v25.3.0-series-folders.39 (2026-11-23)
 
-Master (build 36) plus **senkuro.com**. Builds 37 and 38 (PRs #21 and #22)
-are not in it.
+Master (build 36) plus **senkuro.com**. Builds 37, 38 and 40 to 42 are not in
+it (their PRs merged to master after this build was made).
 
 - **senkuro.com has its own grabber.** The site's chapter page shows the newest
   100 chapters only, so the generic reader stopped there: SPY×FAMILY loaded
@@ -35,6 +81,29 @@ are not in it.
 - The site's age rating feeds the age check (0+, 12+, 16+, 18+).
 - Chapter 64.5 of SPY×FAMILY is a one-page special illustration
   (3262×2560); the site serves it normally.
+## v25.3.0-series-folders.38 (2026-11-21)
+
+Build 37 plus *Delete series*, for a series downloaded twice under two
+folder names.
+
+- **App**: *Delete series*, last on the count's second line, asks first with
+  the folder, file count and size, then moves the loaded series' files to the
+  Recycle Bin 100 at a time, counting in the dialog and the log, and logs
+  "Deleted series *name* from *folder*". With *Series folders* on, the folder
+  goes whole; otherwise only the series' chapter files. The series leaves the
+  history; its Activity rows stay but no longer mark the list. Refused while
+  the series downloads or another copy writes into the folder.
+- **Command line**: `--delete-series` moves the series' chapter files into
+  `[Empty Me]/<series>` in the output directory; `--force` sends them to the
+  Recycle Bin instead, and only runs elevated (administrator or root).
+
+## v25.3.0-series-folders.37 (2026-11-21)
+
+- **Missing and failed counts under the selection**: the "N of M selected"
+  box above the chapter list is two lines; the second reads "N missing ·
+  N failed". Missing is a chapter with no file and no mark; failed includes
+  cancelled. Clicking either count selects exactly those chapters,
+  highlights them in the list and scrolls to the first.
 
 ## v25.3.0-series-folders.36 (2026-11-21)
 

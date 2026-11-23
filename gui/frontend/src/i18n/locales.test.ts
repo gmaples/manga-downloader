@@ -37,20 +37,41 @@ const tags = (s: string) => [...s.matchAll(/<\/?[a-z][a-z0-9]*/gi)].map((m) => m
 
 const en = messages('en');
 
+// Namespaces a language may leave out, falling back to English: the library's
+// notices (notice.json) are translated in Ukrainian only so far.
+const ENGLISH_FALLBACK: Record<string, string[]> = { es: ['notice'], ca: ['notice'], ja: ['notice'] };
+const covered = (lang: string, key: string) => !(ENGLISH_FALLBACK[lang] ?? []).includes(key.split('.')[0]);
+
 describe('locales', () => {
   for (const lang of LANGS.filter((l) => l !== 'en')) {
     const tr = messages(lang);
 
     it(`${lang} has the namespace files of en`, () => {
-      expect(namespaces(lang)).toEqual(namespaces('en'));
+      expect(namespaces(lang)).toEqual(namespaces('en').filter((ns) => covered(lang, `${ns}.`)));
     });
 
-    it(`${lang} has exactly the keys of en`, () => {
-      expect(Object.keys(tr).sort()).toEqual(Object.keys(en).sort());
+    // a plural of en (key_one and key_other) takes every other form the language's
+    // rules pick for a whole count up to 1000, as Ukrainian's few and many; a form
+    // only larger counts reach (Spanish many, for a million) falls back to _other
+    const rules = new Intl.PluralRules(lang);
+    const forms = [...new Set(Array.from({ length: 1001 }, (_, n) => rules.select(n)))].filter(
+      (f) => f !== 'one' && f !== 'other',
+    );
+    const pluralForms = Object.keys(en)
+      .filter((k) => k.endsWith('_one'))
+      .flatMap((k) => forms.map((f) => [`${k.slice(0, -'_one'.length)}_${f}`, k.slice(0, -'_one'.length) + '_other']));
+    const expected = Object.fromEntries(
+      Object.entries({ ...en, ...Object.fromEntries(pluralForms.map(([key, other]) => [key, en[other]])) }).filter(
+        ([key]) => covered(lang, key),
+      ),
+    );
+
+    it(`${lang} has exactly the keys of en, plus its own plural forms`, () => {
+      expect(Object.keys(tr).sort()).toEqual(Object.keys(expected).sort());
     });
 
     it(`${lang} keeps every placeholder and tag, and fills every value`, () => {
-      for (const [key, value] of Object.entries(en)) {
+      for (const [key, value] of Object.entries(expected)) {
         expect(placeholders(tr[key] ?? ''), key).toEqual(placeholders(value));
         expect(tags(tr[key] ?? ''), key).toEqual(tags(value));
         expect((tr[key] ?? '').trim(), key).not.toBe('');

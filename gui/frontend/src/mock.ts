@@ -33,7 +33,7 @@
 // uses production release versions and a macOS output path (for screenshots),
 // &nosimple turns the simpleStart pref off (an empty window opens on the full view),
 // and VITE_MOCK=1 at build time includes the mock in production builds (e.g.
-// for the screenshot capture build; set via Wails frontend env). ?lang=en|es|ca|ja
+// for the screenshot capture build; set via Wails frontend env). ?lang=en|es|ca|ja|uk
 // starts the window in that language, ?lang=system follows the browser's, and
 // without it the window is English, so screenshots and dev stay English. Under
 // multi the language filter shows that language and the list is in it, titled
@@ -57,6 +57,7 @@ import { createT, LANGS, resolveLanguage, type Lang, type LangPref, type Vars } 
 import type {
   Chapter,
   ChapterMark,
+  DeleteProgress,
   FilterChoice,
   HistoryItem,
   Job,
@@ -243,7 +244,7 @@ function scenarioFrom(search: string): Scenario {
   return (SCENARIOS as readonly string[]).includes(value ?? '') ? (value as Scenario) : 'empty';
 }
 
-/** ?lang=system is the preference that follows the system; anything else but en, es, ca or ja is English */
+/** ?lang=system is the preference that follows the system; anything else but en, es, ca, ja or uk is English */
 function uiLanguageFrom(search: string): LangPref {
   const value = new URLSearchParams(search).get('lang');
   if (value === 'system') {
@@ -543,6 +544,7 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
   const selectionBus = new Bus<number[]>();
   const marksBus = new Bus<ChapterMark[]>();
   const logBus = new Bus<LogLine[]>();
+  const deleteBus = new Bus<DeleteProgress>();
 
   const selectionOf = () => [...selected].sort((a, b) => a - b);
   const pushLog = (level: LogLine['level'], line: string | Message) => {
@@ -1669,6 +1671,30 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
       await api.start();
     },
 
+    async deleteInfo() {
+      if (!loaded) {
+        throw reject('errors.loadFirst');
+      }
+      if (runs.some((g) => g.running && g.url === url)) {
+        throw reject('errors.deleteRunning');
+      }
+      const title = snapshot().title;
+      return { title, dir: `${options.outputDir}/${title}`, whole: true, files: 712, size: '6.4 GB' };
+    },
+
+    async deleteSeries() {
+      const info = await api.deleteInfo!();
+      pushLog('info', msgOf('log.deleting', { title: info.title, count: info.files, size: info.size, folder: info.dir }));
+      // a batch of 100 every 150ms, as the backend's count moves
+      for (let done = 0; done < info.files; ) {
+        done = Math.min(info.files, done + 100);
+        await new Promise((r) => setTimeout(r, 150));
+        deleteBus.emit({ done, total: info.files, failed: 0 });
+        pushLog('info', msgOf('log.deleteMoved', { done, total: info.files }));
+      }
+      pushLog('info', msgOf('log.deletedSeries', { title: info.title, folder: info.dir, count: info.files, size: info.size }));
+    },
+
     async restart(id, key) {
       const g = runs.find((r) => r.id === id);
       if (!g) {
@@ -1700,6 +1726,7 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
     onSelection: (cb) => selectionBus.subscribe(cb),
     onMarks: (cb) => marksBus.subscribe(cb),
     onLog: (cb) => logBus.subscribe(cb),
+    onDeleteProgress: (cb) => deleteBus.subscribe(cb),
   };
 
   return api;

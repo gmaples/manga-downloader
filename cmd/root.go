@@ -109,8 +109,16 @@ func Run(cmd *cobra.Command, args []string) {
 	if err != nil {
 		exitSettingError(err)
 	}
+	if err := checkForce(); err != nil {
+		red("Error: %s", err)
+		exit(1)
+	}
 
 	series := openSeries(getUrlArg(args))
+	if deleteSeries {
+		exit(runDeleteSeries(color.Output, series, settings.OutputDir, forceDelete))
+		return // unreachable; exit calls os.Exit
+	}
 	chapters := series.Chapters
 
 	var rngs []ranges.Range
@@ -426,6 +434,8 @@ func init() {
 	rootCmd.Flags().StringVar(&settings.SkipPages, "skip-pages", "", `pages to exclude from every chapter, as a range ("2", "2,5-7"); negative positions count from the end of each chapter, so "-1" is its last page`)
 	rootCmd.Flags().IntVar(&settings.Age, "age", 0, "age check: refuse titles a site rates above this age, 16 or 18 (0, the default, loads every title)")
 	rootCmd.Flags().BoolVar(&settings.SkipExisting, "skip-existing", false, "skip the chapters, volumes and bundles whose file is already in the output directory, without fetching them; packing one file per chapter, it also moves duplicate chapter files (same bytes, or same chapter number under another title or group) to the Recycle Bin or trash, keeping the oldest, and skips the chapter numbers already there; nothing is overwritten, so to download a broken file again, delete it first")
+	rootCmd.Flags().BoolVar(&deleteSeries, "delete-series", false, "delete the series' chapter files from the output directory instead of downloading: they're moved into \"[Empty Me]/<series>\" there, for you to empty (any range argument is ignored)")
+	rootCmd.Flags().BoolVar(&forceDelete, "force", false, "with --delete-series, move the files to the Recycle Bin or trash instead; needs administrator rights (an elevated prompt on Windows, root elsewhere)")
 	rootCmd.Flags().BoolP("version", "v", false, "show version information (alias of the version command)")
 	// set as persistent, so version command does not complain about the -o flag set via docker
 	rootCmd.PersistentFlags().StringVarP(&settings.OutputDir, "output-dir", "o", "./", "output directory for the downloaded files")

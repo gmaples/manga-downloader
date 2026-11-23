@@ -30,6 +30,26 @@ export namespace main {
 	        this.unnumbered = source["unnumbered"];
 	    }
 	}
+	export class DeleteInfo {
+	    title: string;
+	    dir: string;
+	    whole: boolean;
+	    files: number;
+	    size: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new DeleteInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.title = source["title"];
+	        this.dir = source["dir"];
+	        this.whole = source["whole"];
+	        this.files = source["files"];
+	        this.size = source["size"];
+	    }
+	}
 	export class Message {
 	    key: string;
 	    args?: Record<string, any>;

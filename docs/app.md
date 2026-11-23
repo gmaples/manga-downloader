@@ -33,7 +33,19 @@ button, *Load* and *Settings*. (To open on the full window instead, turn off
    grey dot while it waits its turn, and an amber mark when it failed (!) or a
    cancel left it unsaved (a circled dash; hovering over a failed mark says
    why). No mark means no file and no
-   download. Once anything of the series was saved or tried, **Download N
+   download. Under "N of M selected", a second line counts them: **N
+   missing** (no mark) and **N failed** (failed or cancelled). Clicking
+   either selects exactly those chapters, highlights them with a bar at the
+   left of their row and scrolls to the first one, so Download takes just
+   them. Last on that line, **Delete series** takes the loaded series'
+   files away, for when one series was downloaded twice under two folder
+   names: it asks first, saying the folder, the file count and the size,
+   then moves them to the Recycle Bin (the Trash on macOS and Linux) a batch
+   of 100 at a time, counting in the dialog and the log, and logs "Deleted
+   series *name* from *folder*". With *Series folders* on, the series' folder
+   goes whole; otherwise only the series' chapter files in the output folder
+   go, and other series' files stay. The series leaves the history; its rows
+   in the Activity tab stay. It's refused while the series downloads. Once anything of the series was saved or tried, **Download N
    missing** above the list downloads every chapter that isn't saved yet,
    the failed and cancelled ones included, in one click (chapters already on
    their way are left to their download). In the Activity tab, each download's
@@ -300,7 +312,7 @@ Ordinary failures (a 400, a plain 403, a 404, a 429, a 5xx, a timeout) never sho
 
 The gear icon (below the URL box on the start screen, in the header of the full
 app) or Ctrl+, / ⌘, opens Settings: the app's language (English, Español,
-Català or 日本語), whether it opens with the simple start screen, and whether it
+Català, 日本語 or Українська; the Ukrainian guide is [uk/app.md](uk/app.md)), whether it opens with the simple start screen, and whether it
 checks for new versions at startup.
 
 <picture>

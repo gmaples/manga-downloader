@@ -48,6 +48,8 @@ interface Props {
   onRange: (text: string) => Promise<number>;
   /** Selects and downloads every chapter not saved yet, the failed and cancelled ones included */
   onDownloadMissing: () => Promise<void>;
+  /** Asks to confirm, then deletes the loaded series' files; absent, the line has no Delete series */
+  onDeleteSeries?: () => void;
   /** Sets the Volumes box; rejects a value that doesn't parse */
   onVolumes: (text: string) => Promise<void>;
   onReload: () => void;
@@ -149,6 +151,7 @@ function ChapterList({
   onRange,
   onVolumes,
   onDownloadMissing,
+  onDeleteSeries,
   onError,
 }: Props) {
   const { t } = useI18n();
@@ -158,6 +161,8 @@ function ChapterList({
   const [active, setActive] = useState(-1);
   // the groups folded away, by key (LOOSE for "Not in a volume")
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
+  // the chapters the "N missing" or "N failed" link under the count picked, lit in the list
+  const [lit, setLit] = useState<'missing' | 'failed' | null>(null);
   // where Shift+click and Shift+Space extend from
   const anchor = useRef(-1);
   const chosen = useMemo(() => new Set(selected), [selected]);
@@ -195,6 +200,7 @@ function ChapterList({
     list.reset();
     setActive(-1);
     setCollapsed(new Set());
+    setLit(null);
     anchor.current = -1;
   }, [chapters, list.reset]);
 
@@ -366,6 +372,26 @@ function ChapterList({
   // something of the series was saved or tried, as before that Download says it
   const missing = useMemo(() => missingOf(chapters, marks), [chapters, marks]);
   const tried = useMemo(() => marks.some((m) => m !== ''), [marks]);
+  // the second line of the count: chapters with no file and chapters that failed
+  const absent = useMemo(() => absentOf(chapters, marks), [chapters, marks]);
+  const failed = useMemo(() => failedOf(chapters, marks), [chapters, marks]);
+  const litSet = useMemo(
+    () => new Set(lit === 'missing' ? absent : lit === 'failed' ? failed : []),
+    [lit, absent, failed],
+  );
+  // a link lights its chapters, selects exactly them and shows the first
+  const pick = (kind: 'missing' | 'failed', indices: number[]) => {
+    setLit(kind);
+    onSetAll(false)
+      .then(() => onToggleMany(indices, true))
+      .catch(fail);
+    const first = new Set(indices);
+    const pos = rows.findIndex((r) => r.kind === 'chapter' && first.has(r.chapter.index));
+    if (pos >= 0) {
+      setActive(pos);
+      list.reveal(pos);
+    }
+  };
   const all = selectable > 0 && state.selectedCount === selectable;
   const some = state.selectedCount > 0 && !all;
   const { first, last } = list.span;
@@ -417,9 +443,52 @@ function ChapterList({
             onChange={() => onSetAll(!all).catch(fail)}
           />
         </label>
-        <p className="count" aria-live="polite">
-          <T k="chapters.selected" values={{ selected: state.selectedCount, total: selectable }} />
-        </p>
+        <div className="count">
+          <p aria-live="polite">
+            <T k="chapters.selected" values={{ selected: state.selectedCount, total: selectable }} />
+          </p>
+          {marks.length === chapters.length && chapters.length > 0 && (
+            <p className="count-states">
+              <button
+                type="button"
+                className={`count-link${lit === 'missing' ? ' lit' : ''}`}
+                disabled={disabled || absent.length === 0}
+                title={t('chapters.pickMissingHint')}
+                onClick={() => pick('missing', absent)}
+              >
+                {t('chapters.missingCount', { count: absent.length })}
+              </button>
+              <span className="dot" aria-hidden="true">
+                ·
+              </span>
+              <button
+                type="button"
+                className={`count-link failed${lit === 'failed' ? ' lit' : ''}`}
+                disabled={disabled || failed.length === 0}
+                title={t('chapters.pickFailedHint')}
+                onClick={() => pick('failed', failed)}
+              >
+                {t('chapters.failedCount', { count: failed.length })}
+              </button>
+              {onDeleteSeries && (
+                <>
+                  <span className="dot" aria-hidden="true">
+                    ·
+                  </span>
+                  <button
+                    type="button"
+                    className="count-link danger"
+                    disabled={disabled || tried === false}
+                    title={t('chapters.delete.hint')}
+                    onClick={onDeleteSeries}
+                  >
+                    {t('chapters.delete.button')}
+                  </button>
+                </>
+              )}
+            </p>
+          )}
+        </div>
         <div className="toolbar-buttons">
           <button
             type="button"
@@ -578,7 +647,7 @@ function ChapterList({
                 aria-posinset={pos + 1}
                 aria-selected={on}
                 aria-disabled={ch.locked || undefined}
-                className={`row${row.inGroup ? ' in-group' : ''}${row.part ? ' part-row' : ''}${on ? ' on' : ''}${ch.locked ? ' locked' : ''}${pos === active ? ' active' : ''}`}
+                className={`row${row.inGroup ? ' in-group' : ''}${row.part ? ' part-row' : ''}${on ? ' on' : ''}${ch.locked ? ' locked' : ''}${pos === active ? ' active' : ''}${litSet.has(ch.index) ? ' lit' : ''}`}
                 style={style}
                 onMouseDown={keepFocus}
                 onClick={(e) => toggleRow(pos, e.shiftKey)}
@@ -678,6 +747,24 @@ export function missingOf(chapters: Chapter[], marks: ChapterMark[]): number[] {
       const m = marks[c.index];
       return !c.locked && (m === '' || m === 'failed' || m === 'cancelled');
     })
+    .map((c) => c.index);
+}
+
+/** The indices of the chapters with no file and no other mark: not in the folder, not saved, not tried */
+export function absentOf(chapters: Chapter[], marks: ChapterMark[]): number[] {
+  if (marks.length !== chapters.length) {
+    return [];
+  }
+  return chapters.filter((c) => !c.locked && marks[c.index] === '').map((c) => c.index);
+}
+
+/** The indices of the chapters whose download failed or was cancelled */
+export function failedOf(chapters: Chapter[], marks: ChapterMark[]): number[] {
+  if (marks.length !== chapters.length) {
+    return [];
+  }
+  return chapters
+    .filter((c) => !c.locked && (marks[c.index] === 'failed' || marks[c.index] === 'cancelled'))
     .map((c) => c.index);
 }
 

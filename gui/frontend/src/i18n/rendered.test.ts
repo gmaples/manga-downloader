@@ -7,6 +7,7 @@ import { App } from '../App';
 import { BrowserAlert } from '../BrowserAlert';
 import { ChapterPanel } from '../ChapterPanel';
 import { DownloadDock } from '../DownloadDock';
+import { DeleteSeriesDialog } from '../DeleteSeriesDialog';
 import { HistoryDialog, HistoryRow } from '../HistoryDialog';
 import { Check, SelectField, Segmented, Switch, TextField } from '../fields';
 import { LogDrawer, StatusBar } from '../LogPanel';
@@ -299,6 +300,16 @@ function components({ state, chapters, selected, log }: Snapshot): Screen[] {
       element: createElement(MaskedTitle, { title: 'Night Garden', adult: true }),
     },
   );
+  list.push({
+    file: 'DeleteSeriesDialog.tsx',
+    name: 'DeleteSeriesDialog',
+    element: createElement(DeleteSeriesDialog, {
+      load: async () => ({ title: 'T', dir: '/d', whole: true, files: 2, size: '1 kB' }),
+      onDelete: later,
+      onProgress: () => noop,
+      onClose: noop,
+    }),
+  });
   if (state.update?.oneClick) {
     list.push({
       file: 'UpdateDialog.tsx',

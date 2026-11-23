@@ -1,0 +1,39 @@
+{
+  "label": "Томи",
+  "placeholder": "{{example}} (якщо порожньо — томи сайту)",
+  "title": "Діапазони розділів, по одній групі на том, через «{{separator}}». Щоб задати номер тому, почніть групу з «{{prefix}}», напр. «{{example}}».",
+  "useSite": "Взяти томи сайту",
+  "summary": {
+    "own_one": "{{count}} том{{outside}}",
+    "own_few": "{{count}} томи{{outside}}",
+    "own_many": "{{count}} томів{{outside}}",
+    "own_other": "{{count}} тому{{outside}}",
+    "none": "Жоден розділ не входить у ці томи.",
+    "site": "Томи сайту: {{volumes}}{{outside}}",
+    "listed_one": "{{count}} том, як їх розкладає сайт (їх не можна записати діапазонами розділів){{outside}}",
+    "listed_few": "{{count}} томи, як їх розкладає сайт (їх не можна записати діапазонами розділів){{outside}}",
+    "listed_many": "{{count}} томів, як їх розкладає сайт (їх не можна записати діапазонами розділів){{outside}}",
+    "listed_other": "{{count}} тому, як їх розкладає сайт (їх не можна записати діапазонами розділів){{outside}}",
+    "unlisted": "Сайт не вказує томів: введіть їх як діапазони розділів.",
+    "outside_one": ", {{count}} розділ поза ними",
+    "outside_few": ", {{count}} розділи поза ними",
+    "outside_many": ", {{count}} розділів поза ними",
+    "outside_other": ", {{count}} розділу поза ними"
+  },
+  "group": {
+    "volume": "Том {{number}}",
+    "loose": "Поза томами"
+  },
+  "span": {
+    "none": "немає розділів",
+    "one": "розділ {{number}}",
+    "range": "розділи {{first}}–{{last}}"
+  },
+  "parts": {
+    "chapter": "Розділ {{number}}",
+    "count_one": "{{count}} частина",
+    "count_few": "{{count}} частини",
+    "count_many": "{{count}} частин",
+    "count_other": "{{count}} частини"
+  }
+}

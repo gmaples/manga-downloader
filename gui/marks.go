@@ -47,7 +47,7 @@ func (c *Controller) ChapterMarks() []string {
 		// the newest group of this series that took the chapter says
 		for j := len(c.groups) - 1; j >= 0; j-- {
 			g := c.groups[j]
-			if g.restored || g.url != c.url || !g.keys[k] {
+			if g.restored || g.deleted || g.url != c.url || !g.keys[k] {
 				continue
 			}
 			mark = g.markOf(k)
@@ -193,7 +193,7 @@ func (c *Controller) ChapterNotes() []string {
 	disk := c.diskMarksLocked()
 	reasons := map[string]string{}
 	for _, g := range c.groups {
-		if g.restored || g.url != c.url {
+		if g.restored || g.deleted || g.url != c.url {
 			continue
 		}
 		for _, j := range g.jobs {

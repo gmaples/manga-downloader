@@ -52,7 +52,7 @@ for (const [path, raw] of app) {
   for (const m of text.matchAll(MESSAGE_KEY)) literalUses.push({ path, key: m[1] });
 }
 
-// The keys the Go side sends (msg, uiErr, the shared errors and job.* literals),
+// The keys the Go side sends (msg, uiErr, the shared errors, job.* literals and notices),
 // read from the non-test sources in gui/.
 const goSources = import.meta.glob(['../../../*.go', '!../../../*_test.go'], {
   query: '?raw',
@@ -63,10 +63,12 @@ const goSources = import.meta.glob(['../../../*.go', '!../../../*_test.go'], {
 const GO_MESSAGE = /\b(?:msg|uiErr)\("([^"]+)"/g;
 const GO_SHARED = /\{core\.Err\w+, "([^"]+)"\}/g;
 const GO_JOB = /"(job\.[^"]+)"/g;
+// the library notices the window translates (notices.go's noticeFormats)
+const GO_NOTICE = /\{"(notice\.[^"]+)", "/g;
 
 const goKeys: string[] = [];
 for (const raw of Object.values(goSources)) {
-  for (const re of [GO_MESSAGE, GO_SHARED, GO_JOB]) {
+  for (const re of [GO_MESSAGE, GO_SHARED, GO_JOB, GO_NOTICE]) {
     for (const m of raw.matchAll(re)) goKeys.push(m[1]);
   }
 }
