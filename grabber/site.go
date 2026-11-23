@@ -287,7 +287,8 @@ func (g *Grabber) IdentifySite() (Site, []error) {
 	// are WordPress posts too, and the fallback resolves those to their series.
 	// Their errors surface only when nothing matches.
 	var markupErrs []error
-	for _, s := range []Site{NewWordPressCategory(g), NewBlogger(g)} {
+	markupSites := []Site{NewWordPressCategory(g), NewBlogger(g)}
+	for _, s := range markupSites {
 		ok, err := s.Test()
 		if err != nil {
 			markupErrs = append(markupErrs, err)
@@ -316,7 +317,7 @@ func (g *Grabber) IdentifySite() (Site, []error) {
 	// last, so the reasons above stay first: what was tried, for the user
 	errs = append(errs, &NotRecognisedError{
 		Host:     hostOf(g.URL),
-		Handlers: len(sites) + 2,
+		Handlers: len(sites) + len(markupSites),
 		Tried:    generic.Report(),
 	})
 	return nil, errs
