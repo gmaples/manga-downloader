@@ -396,7 +396,7 @@ func (s *Series) Download(ctx context.Context, chapters grabber.Filterables, ski
 	// downloaded again (see Correlate); taking are the numbers this download
 	// takes, by the name of the release that takes them
 	var have, taking map[string]string
-	if skipExisting && !bundle && volumeOf == nil && format != packer.FormatRaw {
+	if s.settings.Dedupe && skipExisting && !bundle && volumeOf == nil && format != packer.FormatRaw {
 		dir := outDir
 		if dir == "" {
 			dir = "."
