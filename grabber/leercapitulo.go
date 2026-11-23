@@ -25,11 +25,6 @@ type LeerCapitulo struct {
 // and decimal chapters like /leer/0cj9hhn6di/kingdom/733.5/
 var leerCapituloChapterRe = regexp.MustCompile(`^(https?://[^/]*leercapitulo\.co)/leer/([^/]+)/([^/]+)/([\d.]+)/?(?:[?#].*)?$`)
 
-// leerCapituloChapterURL checks if the URL is a chapter URL.
-func leerCapituloChapterURL(url string) bool {
-	return leerCapituloChapterRe.MatchString(url)
-}
-
 // leerCapituloSeriesURL extracts the series URL from a chapter URL by regex.
 func leerCapituloSeriesURL(chapterURL string) (string, bool) {
 	matches := leerCapituloChapterRe.FindStringSubmatch(chapterURL)

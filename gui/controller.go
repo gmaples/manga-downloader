@@ -171,8 +171,6 @@ type runStats struct {
 	skipped  int
 	existing int
 	failures []Failure
-	bundle   string
-	err      error
 }
 
 // Controller holds the state of the app and runs the core flow. It knows

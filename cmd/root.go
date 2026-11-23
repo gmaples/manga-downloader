@@ -498,12 +498,6 @@ func truncateString(input string, maxLength int) string {
 	return truncated[:truncationPoint] + "..."
 }
 
-func toMetaFunc(c *color.Color) func(string) string {
-	return func(s string) string {
-		return c.Sprint(s)
-	}
-}
-
 // allChaptersLabel is the prompt for downloading every listed chapter, which
 // says how many of them the listing marks as locked
 // allChaptersRanges returns the range of every listed chapter and its text, which

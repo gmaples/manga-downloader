@@ -20,8 +20,7 @@ const pizzaReaderMarker = "API_BASE_URL = BASE_URL + 'api'"
 // SPA reads series and chapters from an open JSON api under /api
 type PizzaReader struct {
 	*Grabber
-	title string
-	feed  *pizzaReaderFeed
+	feed *pizzaReaderFeed
 }
 
 // NewPizzaReaderByMarkup creates a PizzaReader grabber matching any host whose
