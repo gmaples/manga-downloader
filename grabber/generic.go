@@ -6,8 +6,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"net/url"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -698,10 +700,10 @@ func genericJSONStrings(v any, fn func(string)) {
 			genericJSONStrings(e, fn)
 		}
 	case map[string]any:
-		// map order is random: the page order lives in arrays, whose order
-		// is kept, and a page object's own keys hold one image each
-		for _, e := range t {
-			genericJSONStrings(e, fn)
+		// map order is random, so walk the keys sorted: the same page list
+		// comes out in the same order every time
+		for _, k := range slices.Sorted(maps.Keys(t)) {
+			genericJSONStrings(t[k], fn)
 		}
 	}
 }
