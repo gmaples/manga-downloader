@@ -50,12 +50,14 @@ func (c *Controller) ChapterMarksAndNotes() (marks, notes []string) {
 }
 
 // chapterMarksLocked is ChapterMarks, with which chapters have their file in
-// the folder (diskMarksLocked). The caller holds c.mu.
+// the folder (diskMarksLocked). The caller holds c.mu, which diskMarksLocked
+// lets go of meanwhile.
 func (c *Controller) chapterMarksLocked() ([]string, []bool) {
-	if c.series == nil || len(c.series.Chapters) == 0 {
+	// first, as it lets go of c.mu while it looks at the folder
+	disk := c.diskMarksLocked()
+	if c.series == nil || len(c.series.Chapters) == 0 || len(disk) != len(c.series.Chapters) {
 		return nil, nil
 	}
-	disk := c.diskMarksLocked()
 	marks := make([]string, len(c.series.Chapters))
 	for i, chap := range c.series.Chapters {
 		k := chapKey(chap)
@@ -101,6 +103,9 @@ func (g *group) markOf(k string) string {
 // onDiskMarks runs at each diskMarksLocked; tests count the calls with it
 var onDiskMarks = func() {}
 
+// onDiskScan runs as a look at the folder starts; tests slow it down with it
+var onDiskScan = func() {}
+
 // diskMarksLocked returns which chapters of the loaded list have their file
 // in the folder a run of the whole list saves into: the file Skip existing
 // looks for, or any file of the chapter's number (the name an earlier
@@ -109,31 +114,76 @@ var onDiskMarks = func() {}
 // out. c.onDiskName gets the file of each. It looks again only when
 // the series, the folder, the format or the file names change, or a download
 // ends, so the pushes while a run goes on cost no disk access. The caller
-// holds c.mu.
+// holds c.mu, which is let go of while the folder is looked at: read the
+// controller's state after this returns, not before. It's nil when no
+// series is loaded.
 func (c *Controller) diskMarksLocked() []bool {
 	onDiskMarks()
-	s := c.settings
-	dir := runDir(s, c.series, c.series.Chapters)
-	key := fmt.Sprintf("%p\x00%s\x00%s\x00%s\x00%d", c.series, dir, s.Format, s.FilenameTemplate, c.lastEnd)
-	if key == c.onDiskKey && len(c.onDisk) == len(c.series.Chapters) {
+	if c.series == nil {
+		return nil
+	}
+	scan := c.diskScanLocked()
+	if scan.key == c.onDiskKey && len(c.onDisk) == len(scan.chapters) {
 		return c.onDisk
 	}
-	disk := make([]bool, len(c.series.Chapters))
-	names := make([]string, len(c.series.Chapters))
-	if dir != "" {
-		numbers := numbersIn(dir, c.series.Title, s.FilenameTemplate, s.Format)
-		for i, chap := range c.series.Chapters {
-			name, err := packer.ChapterName(c.series.Title, s.FilenameTemplate, s.Format, grabber.ChapterOf(chap))
-			if err == nil && packer.Exists(dir, name) {
-				disk[i], names[i] = true, name
-			} else if file, ok := numbers[packer.NumberText(chap.GetNumber())]; ok {
-				disk[i], names[i] = true, file
-			}
-		}
+	// the folder can be slow (a card, a network drive), so it's looked at
+	// with the controller free
+	c.mu.Unlock()
+	disk, names := scanDisk(scan)
+	c.mu.Lock()
+	if c.series == nil {
+		return nil
 	}
-	c.onDisk, c.onDiskName, c.onDiskKey = disk, names, key
+	if c.diskScanLocked().key != scan.key {
+		// the list or the settings changed meanwhile: nothing is known of
+		// the new ones yet, and the next push looks again
+		return make([]bool, len(c.series.Chapters))
+	}
+	c.onDisk, c.onDiskName, c.onDiskKey = disk, names, scan.key
 
 	return disk
+}
+
+// diskScan is what a look at the folder needs, copied under c.mu
+type diskScan struct {
+	key, dir, title, template, format string
+	chapters                          grabber.Filterables
+}
+
+// diskScanLocked is the look at the folder the loaded list needs now; key
+// tells it apart from another. c.series isn't nil. The caller holds c.mu.
+func (c *Controller) diskScanLocked() diskScan {
+	s := c.settings
+	dir := runDir(s, c.series, c.series.Chapters)
+	return diskScan{
+		key:      fmt.Sprintf("%p\x00%s\x00%s\x00%s\x00%d", c.series, dir, s.Format, s.FilenameTemplate, c.lastEnd),
+		dir:      dir,
+		title:    c.series.Title,
+		template: s.FilenameTemplate,
+		format:   s.Format,
+		chapters: c.series.Chapters,
+	}
+}
+
+// scanDisk looks at the folder: which chapters have their file there, and
+// its name. It holds no lock.
+func scanDisk(scan diskScan) (disk []bool, names []string) {
+	disk = make([]bool, len(scan.chapters))
+	names = make([]string, len(scan.chapters))
+	onDiskScan()
+	if scan.dir == "" {
+		return disk, names
+	}
+	numbers := numbersIn(scan.dir, scan.title, scan.template, scan.format)
+	for i, chap := range scan.chapters {
+		name, err := packer.ChapterName(scan.title, scan.template, scan.format, grabber.ChapterOf(chap))
+		if err == nil && packer.Exists(scan.dir, name) {
+			disk[i], names[i] = true, name
+		} else if file, ok := numbers[packer.NumberText(chap.GetNumber())]; ok {
+			disk[i], names[i] = true, file
+		}
+	}
+	return disk, names
 }
 
 // DownloadMissing downloads every chapter of the loaded series that isn't

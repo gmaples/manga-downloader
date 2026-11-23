@@ -273,3 +273,67 @@ func TestMarksAndNotesLookAtTheFolderOnce(t *testing.T) {
 		t.Errorf("ChapterNotes looked %d times, want 1", calls)
 	}
 }
+
+// The look at the folder runs with the controller free: a slow folder (a
+// card, a network drive) doesn't stall the rest of the window
+func TestMarksLookAtTheFolderWithTheControllerFree(t *testing.T) {
+	c, _, _ := newTestController(t, false, nil, chapters(3, 1)...)
+	if err := c.Load(testURL); err != nil {
+		t.Fatal(err)
+	}
+	scanning := make(chan struct{}, 1)
+	saved := onDiskScan
+	onDiskScan = func() {
+		scanning <- struct{}{}
+		time.Sleep(200 * time.Millisecond)
+	}
+	t.Cleanup(func() { onDiskScan = saved })
+
+	done := make(chan []string)
+	go func() { done <- c.ChapterMarks() }()
+	<-scanning
+	start := time.Now()
+	c.Title()
+	if d := time.Since(start); d > 20*time.Millisecond {
+		t.Errorf("Title took %v while the folder was being looked at, want under 20ms", d)
+	}
+	if got := <-done; len(got) != 3 {
+		t.Errorf("marks = %q, want 3", got)
+	}
+}
+
+// A change made while the folder is looked at isn't given the old look's
+// result: the chapters show no file until the next look
+func TestMarksIgnoreALookTheSettingsChangedUnder(t *testing.T) {
+	c, _, dir := newTestController(t, false, nil, chapters(3, 1)...)
+	name, err := packer.ChapterName("Test Series", "{{.Series}} {{.Number}} - {{.Title}}", "cbz", &grabber.Chapter{Number: 2, Title: "Chapter 2"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, name), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Load(testURL); err != nil {
+		t.Fatal(err)
+	}
+	saved := onDiskScan
+	once := true
+	onDiskScan = func() {
+		if once {
+			once = false
+			if err := c.Configure(func(s *grabber.Settings) { s.Format = "epub" }); err != nil {
+				t.Error(err)
+			}
+		}
+	}
+	t.Cleanup(func() { onDiskScan = saved })
+
+	wantMarks(t, c, "", "", "")
+	// the next look is for epub, which has no file
+	wantMarks(t, c, "", "", "")
+	onDiskScan = saved
+	if err := c.Configure(func(s *grabber.Settings) { s.Format = "cbz" }); err != nil {
+		t.Fatal(err)
+	}
+	wantMarks(t, c, "", "done", "")
+}

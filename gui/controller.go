@@ -1937,9 +1937,19 @@ func (c *Controller) Start() error {
 	// series' folder inside it, made now, as the archivers make no folders
 	outDir := runDir(c.settings, c.series, chapters)
 	if outDir != c.settings.OutputDir {
-		if err := os.MkdirAll(outDir, 0o755); err != nil {
+		// made with the controller free, as a card can be slow to answer;
+		// a load or another Start of the series meanwhile wins
+		series := c.series
+		c.mu.Unlock()
+		err := mkdirAll(outDir, 0o755)
+		c.mu.Lock()
+		if err != nil {
 			c.mu.Unlock()
 			return uiErr("errors.seriesFolder", map[string]any{"path": outDir}, err)
+		}
+		if c.loading || c.series != series || c.seriesGroupLocked() != nil {
+			c.mu.Unlock()
+			return errBusy
 		}
 	}
 	rows := len(chapters)
@@ -2253,6 +2263,9 @@ func (c *Controller) cancelGroups(pick func(*group) bool) {
 	}
 	c.emit()
 }
+
+// mkdirAll is os.MkdirAll; tests slow it down
+var mkdirAll = os.MkdirAll
 
 // shutdownWait bounds how long quitting waits for a run to wind down and for
 // the browser to close, so a stuck render can't hang the window's exit
