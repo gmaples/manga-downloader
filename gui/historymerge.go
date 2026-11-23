@@ -5,6 +5,7 @@ package main
 import (
 	"reflect"
 	"sort"
+	"time"
 )
 
 // Two copies of the app running at once both keep history.txt. A save used to
@@ -53,7 +54,7 @@ func mergeHistory(base, ours, disk []HistoryEntry) []HistoryEntry {
 		}
 		seen[e.URL] = true
 		was, inBase := b[e.URL]
-		if !inBase || !reflect.DeepEqual(was, e) {
+		if !inBase || !sameAsSaved(was, e) {
 			out = append(out, e)
 			continue
 		}
@@ -67,7 +68,7 @@ func mergeHistory(base, ours, disk []HistoryEntry) []HistoryEntry {
 		}
 		seen[f.URL] = true
 		was, inBase := b[f.URL]
-		if _, kept := o[f.URL]; inBase && !kept && reflect.DeepEqual(was, f) {
+		if _, kept := o[f.URL]; inBase && !kept && sameAsSaved(was, f) {
 			continue
 		}
 		out = append(out, f)
@@ -77,4 +78,17 @@ func mergeHistory(base, ours, disk []HistoryEntry) []HistoryEntry {
 		out = out[:historyMax]
 	}
 	return copyHistory(out)
+}
+
+// sameAsSaved reports whether entries a and b are the same as history.txt
+// writes them: When to the minute, as historyTime keeps it, and the rest
+// alike. Base keeps the full time of what this copy saved, the file only the
+// minute, so comparing the whole time took every series as changed by
+// another copy, and a cleared one came back at the next save.
+func sameAsSaved(a, b HistoryEntry) bool {
+	if a.When.Local().Format(historyTime) != b.When.Local().Format(historyTime) {
+		return false
+	}
+	a.When, b.When = time.Time{}, time.Time{}
+	return reflect.DeepEqual(a, b)
 }

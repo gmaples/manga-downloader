@@ -320,3 +320,31 @@ func TestResumeFindsARenamedChapterByID(t *testing.T) {
 		t.Errorf("Restart didn't download the renamed chapter: history %+v", h)
 	}
 }
+
+// Clear history sticks after a download: the saved series isn't written back
+// by the next save, though the file keeps its time only to the minute
+func TestClearHistoryAfterADownloadSticks(t *testing.T) {
+	c, _, _ := newTestController(t, false, nil, fakeChapter{number: 1, pages: 1}, fakeChapter{number: 2, pages: 2, fail: map[int]bool{1: true}})
+	path := filepath.Join(t.TempDir(), "history.txt")
+	c.SetHistory(path, nil)
+	if err := c.Load("https://example.com/manga/test"); err != nil {
+		t.Fatal(err)
+	}
+	c.SetAll(true)
+	if err := c.Start(); err != nil {
+		t.Fatal(err)
+	}
+	waitFinished(t, c)
+	c.saveHistoryNow()
+	if n := len(loadHistory(path)); n != 1 {
+		t.Fatalf("history.txt has %d series before the clear, want 1", n)
+	}
+	c.ClearHistory()
+	c.saveHistoryNow()
+	if h := c.History(); len(h) != 0 {
+		t.Errorf("after the clear and a save, history = %+v", h)
+	}
+	if h := loadHistory(path); len(h) != 0 {
+		t.Errorf("after the clear and a save, history.txt has %+v", h)
+	}
+}
