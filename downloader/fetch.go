@@ -45,6 +45,10 @@ func FetchChapter(ctx context.Context, site grabber.Site, chapter *grabber.Chapt
 	return FetchChapterLimited(ctx, site, chapter, nil, onprogress)
 }
 
+// beforeResult runs as FetchChapterLimited starts waiting for its pages;
+// tests use it to have every page finish first
+var beforeResult = func(done <-chan bool) {}
+
 // FetchChapterLimited is FetchChapter with lim pacing every page request,
 // in place of the site's own PagePacer once lim has a pace (Limiter). A page
 // that gets a 429 waits as lim says and is fetched again, as often as lim
@@ -129,12 +133,21 @@ func FetchChapterLimited(ctx context.Context, site grabber.Site, chapter *grabbe
 		close(done)
 	}()
 
+	beforeResult(done)
 	select {
 	case err := <-errChan:
 		close(guard)
 		return nil, err
 	case <-done:
 		close(guard)
+		// a page that failed as the others finished has its error waiting
+		// too: select picks at random when both are ready, and the pages
+		// after a failed one are left out, so the files have gaps
+		select {
+		case err := <-errChan:
+			return nil, err
+		default:
+		}
 	}
 
 	// sort files by page number
