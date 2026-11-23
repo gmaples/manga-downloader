@@ -34,7 +34,16 @@
     "bodyFiles_other": "{{folder}} にある {{title}} の話ファイル {{count}} 件（{{size}}）をごみ箱へ移動します。ほかのシリーズのファイルはそのままです。",
     "progress": "ごみ箱へ移動中：{{done}} / {{total}}",
     "confirm": "削除",
-    "deleting": "削除中…"
+    "deleting": "削除中…",
+    "permanentLine": "このドライブにはごみ箱がありません。ファイルは完全に削除され、元に戻せません。",
+    "confirmPermanent": "完全に削除"
+  },
+  "permanent": {
+    "title": "このドライブにはごみ箱がありません",
+    "body_one": "{{dir}} にはごみ箱がありません。重複ファイル{{count}}個（{{size}}）を完全に削除しますか？元に戻せません。",
+    "body_other": "{{dir}} にはごみ箱がありません。重複ファイル{{count}}個（{{size}}）を完全に削除しますか？元に戻せません。",
+    "keep": "残す",
+    "confirm": "完全に削除"
   },
   "selectAll": "すべて選択",
   "selectNone": "選択を解除",

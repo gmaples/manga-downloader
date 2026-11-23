@@ -34,7 +34,16 @@
     "bodyFiles_other": "Move {{count}} chapter files of {{title}} ({{size}}) from {{folder}} to the Recycle Bin. Other series' files there stay.",
     "progress": "Moving to the Recycle Bin: {{done}} of {{total}}",
     "confirm": "Delete",
-    "deleting": "Deleting…"
+    "deleting": "Deleting…",
+    "permanentLine": "This drive has no Recycle Bin: the files will be deleted for good and can't be restored.",
+    "confirmPermanent": "Delete for good"
+  },
+  "permanent": {
+    "title": "No Recycle Bin on this drive",
+    "body_one": "{{dir}} has no Recycle Bin. Delete {{count}} duplicate file ({{size}}) for good? It can't be restored.",
+    "body_other": "{{dir}} has no Recycle Bin. Delete {{count}} duplicate files ({{size}}) for good? They can't be restored.",
+    "keep": "Keep them",
+    "confirm": "Delete for good"
   },
   "selectAll": "Select all",
   "selectNone": "Select none",

@@ -12,9 +12,9 @@ import (
 // noBin makes every drive one with no Recycle Bin for the test
 func noBin(t *testing.T) {
 	t.Helper()
-	was := hasRecycleBin
-	hasRecycleBin = func(string) bool { return false }
-	t.Cleanup(func() { hasRecycleBin = was })
+	was := HasRecycleBin
+	HasRecycleBin = func(string) bool { return false }
+	t.Cleanup(func() { HasRecycleBin = was })
 }
 
 // on a drive with no Recycle Bin, Files refuses the file and leaves it where
@@ -37,9 +37,6 @@ func TestFilesRefusesWithoutRecycleBin(t *testing.T) {
 	}
 	if _, err := os.Stat(p); err != nil {
 		t.Errorf("the file isn't there any more: %v", err)
-	}
-	if HasRecycleBin(p) {
-		t.Error("HasRecycleBin is true with the check stubbed to false")
 	}
 }
 

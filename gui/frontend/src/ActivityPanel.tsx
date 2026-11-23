@@ -169,7 +169,7 @@ function GroupCountsLine({ group }: { group: Group }) {
   }
   const cleanup = group.cleanup;
   const status = group.status;
-  if (parts.length === 0 && status == null && (cleanup == null || cleanup.removed + cleanup.failed === 0)) {
+  if (parts.length === 0 && status == null && (cleanup == null || cleanup.removed + cleanup.failed + (cleanup.kept ?? 0) === 0)) {
     return null;
   }
   return (
@@ -181,7 +181,14 @@ function GroupCountsLine({ group }: { group: Group }) {
       )}
       {parts.length > 0 && <p className="muted">{parts.join(' · ')}</p>}
       {cleanup != null && cleanup.removed > 0 && (
-        <p className="muted">{t('activity.cleanup', { count: cleanup.removed, size: sizeText(cleanup.bytes) })}</p>
+        <p className="muted">
+          {cleanup.permanent
+            ? t('activity.cleanupPermanent', { count: cleanup.removed, size: sizeText(cleanup.bytes) })
+            : t('activity.cleanup', { count: cleanup.removed, size: sizeText(cleanup.bytes) })}
+        </p>
+      )}
+      {cleanup != null && (cleanup.kept ?? 0) > 0 && (
+        <p className="muted">{t('activity.cleanupKept', { count: cleanup.kept ?? 0 })}</p>
       )}
       {cleanup != null && cleanup.failed > 0 && (
         <p className="error-text">{t('activity.cleanupFailed', { count: cleanup.failed })}</p>

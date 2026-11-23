@@ -224,7 +224,7 @@ func (s *Series) Correlate(dir string, ev Events) (*Correlation, error) {
 
 	// a drive with no Recycle Bin would lose the files for good: asked once
 	remove := trash.Files
-	if len(dups) > 0 && !hasRecycleBin(filepath.Join(dir, dups[0].Name)) {
+	if len(dups) > 0 && !trash.HasRecycleBin(filepath.Join(dir, dups[0].Name)) {
 		var bytes int64
 		for _, d := range dups {
 			bytes += d.Size
@@ -302,9 +302,6 @@ func extOf(format string) string {
 func numberOf(f grabber.Filterable) string {
 	return packer.NumberText(f.GetNumber())
 }
-
-// hasRecycleBin is trash.HasRecycleBin, a variable so tests can stub it
-var hasRecycleBin = trash.HasRecycleBin
 
 // keepAll removes nothing: every path fails with trash.ErrNoRecycleBin
 func keepAll(paths []string) map[string]error {

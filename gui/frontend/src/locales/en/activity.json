@@ -43,6 +43,10 @@
   "cleanup_other": "Moved {{count}} duplicate files ({{size}}) to the Recycle Bin",
   "cleanupFailed_one": "{{count}} duplicate couldn't be moved: see the log",
   "cleanupFailed_other": "{{count}} duplicates couldn't be moved: see the log",
+  "cleanupPermanent_one": "Deleted {{count}} duplicate file ({{size}}) for good: no Recycle Bin on this drive",
+  "cleanupPermanent_other": "Deleted {{count}} duplicate files ({{size}}) for good: no Recycle Bin on this drive",
+  "cleanupKept_one": "Kept {{count}} duplicate file: no Recycle Bin on this drive",
+  "cleanupKept_other": "Kept {{count}} duplicate files: no Recycle Bin on this drive",
   "status": {
     "listed_one": "Looking for duplicates among {{count}} file",
     "listed_other": "Looking for duplicates among {{count}} files",

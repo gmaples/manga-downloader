@@ -26,6 +26,9 @@ type DeleteInfo struct {
 	Files int  `json:"files"`
 	// Size is the files' size, written to read (1.4 GB)
 	Size string `json:"size"`
+	// Permanent is a folder on a drive with no Recycle Bin: the files would
+	// be deleted for good, so the window warns and DeleteSeries needs leave
+	Permanent bool `json:"permanent"`
 }
 
 // deletePlanLocked plans the delete of the loaded series: with series
@@ -62,28 +65,44 @@ func (c *Controller) DeleteInfo() (*DeleteInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &DeleteInfo{Title: c.series.Title, Dir: plan.Dir, Whole: plan.Whole, Files: len(plan.Names), Size: sizeText(plan.Bytes)}, nil
+	return &DeleteInfo{Title: c.series.Title, Dir: plan.Dir, Whole: plan.Whole, Files: len(plan.Names), Size: sizeText(plan.Bytes), Permanent: plan.Permanent}, nil
 }
 
 // DeleteSeries moves the loaded series' files to the trash, planned again
 // now so it takes what's there, and logs each batch's count, each file it
 // couldn't move, and "Deleted series <title> from <folder>". progress, when
 // not nil, is told the count after each batch. The series leaves the
-// history.
-func (c *Controller) DeleteSeries(progress func(core.DeleteProgress)) error {
+// history. On a drive with no Recycle Bin the files are deleted for good,
+// only with permanentOK (the window warned), and otherwise nothing is.
+func (c *Controller) DeleteSeries(permanentOK bool, progress func(core.DeleteProgress)) error {
 	c.mu.Lock()
 	plan, err := c.deletePlanLocked()
 	if err != nil {
 		c.mu.Unlock()
 		return err
 	}
+	// planned again: the window's warning may not have been about this drive
+	if plan.Permanent && !permanentOK {
+		c.mu.Unlock()
+		return uiErr("errors.deletePermanentNotConfirmed", nil, nil)
+	}
 	title, url := c.series.Title, c.url
-	c.appendMsgLocked(LogInfo, msg("log.deleting", map[string]any{"title": title, "count": len(plan.Names), "size": sizeText(plan.Bytes), "folder": plan.Dir}))
+	deleting := map[string]any{"title": title, "count": len(plan.Names), "size": sizeText(plan.Bytes), "folder": plan.Dir}
+	if plan.Permanent {
+		c.appendMsgLocked(LogInfo, msg("log.deletingForGood", deleting))
+	} else {
+		c.appendMsgLocked(LogInfo, msg("log.deleting", deleting))
+	}
 	c.mu.Unlock()
 	c.emit()
 
-	r := plan.Run("", func(p core.DeleteProgress) {
-		c.addMsg(LogInfo, msg("log.deleteMoved", map[string]any{"done": p.Done, "total": p.Total}))
+	r := plan.Run("", permanentOK, func(p core.DeleteProgress) {
+		count := map[string]any{"done": p.Done, "total": p.Total}
+		if plan.Permanent {
+			c.addMsg(LogInfo, msg("log.deleteMovedForGood", count))
+		} else {
+			c.addMsg(LogInfo, msg("log.deleteMoved", count))
+		}
 		if progress != nil {
 			progress(p)
 		}

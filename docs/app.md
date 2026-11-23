@@ -42,7 +42,9 @@ button, *Load* and *Settings*. (To open on the full window instead, turn off
    names: it asks first, saying the folder, the file count and the size,
    then moves them to the Recycle Bin (the Trash on macOS and Linux) a batch
    of 100 at a time, counting in the dialog and the log, and logs "Deleted
-   series *name* from *folder*". With *Series folders* on, the series' folder
+   series *name* from *folder*". On a drive with no Recycle Bin (a memory
+   card, a network share) the dialog says in red that the files will be
+   deleted for good, and its button reads *Delete for good*. With *Series folders* on, the series' folder
    goes whole; otherwise only the series' chapter files in the output folder
    go, and other series' files stay. The series leaves the history; its rows
    in the Activity tab stay. It's refused while the series downloads. Once anything of the series was saved or tried, **Download N
@@ -175,7 +177,11 @@ button, *Load* and *Settings*. (To open on the full window instead, turn off
    the folder: two files with the same bytes, or two files of one chapter
    number whatever their title or group, are one chapter, and the older file is
    kept while the others go to the Recycle Bin (the Trash on macOS and Linux).
-   A chapter whose number is in the folder isn't downloaded again, and of
+   On a drive with no Recycle Bin (a memory card, a network share) they would
+   be deleted for good, so the window asks first, once per download: *Keep
+   them* (the default) leaves every file where it is, *Delete for good*
+   deletes the duplicates. The download goes on either way, and cancelling it
+   answers *Keep them*. A chapter whose number is in the folder isn't downloaded again, and of
    several releases of one missing number only the first is. The log names
    each file moved and the file it duplicates. The command line guide's
    "Skipping existing files" section has the details.

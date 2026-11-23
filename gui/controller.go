@@ -19,6 +19,7 @@ import (
 	"github.com/elboletaire/manga-downloader/notice"
 	"github.com/elboletaire/manga-downloader/ranges"
 	"github.com/elboletaire/manga-downloader/ratelimit"
+	"github.com/elboletaire/manga-downloader/trash"
 )
 
 // maxLogLines caps the log so a long download can't grow it without bound
@@ -322,6 +323,8 @@ type Controller struct {
 	onDisk     []bool
 	onDiskName []string
 	onDiskKey  string
+	// permanent is the open "delete for good?" question (see permanent.go)
+	permanent permanentState
 }
 
 // group is one press of Download: its chapters' rows, its cancel and its
@@ -346,6 +349,10 @@ type group struct {
 	// cancels log once
 	cancelling bool
 	cancel     context.CancelFunc
+	// stop is closed when the group is cancelled, and forGood is set once
+	// the user let its dedupe delete for good (see permanent.go)
+	stop    <-chan struct{}
+	forGood bool
 	// ended orders the groups that finished (see Controller.lastEnd)
 	ended   uint64
 	runinfo RunInfo
@@ -415,6 +422,11 @@ type Cleanup struct {
 	Removed int
 	Bytes   int64
 	Failed  int
+	// Permanent is set when the removed files were deleted for good, and
+	// Kept are the duplicates left as the drive has no Recycle Bin and the
+	// user said no
+	Permanent bool
+	Kept      int
 }
 
 // flight is the progress of one chapter of a group from its fetch to its end,
@@ -1954,6 +1966,7 @@ func (c *Controller) Start() error {
 	g.url = c.url
 	g.site = c.series.Site
 	g.cancel = cancel
+	g.stop = ctx.Done()
 	g.running = true
 	g.hasDuplicates, g.hasGroupDuplicates = c.hasDuplicates, c.hasGroupDuplicates
 	g.rng = bundleRange(numbers, selected)
@@ -2451,14 +2464,23 @@ func (e events) Correlating(p core.CorrelateProgress) {
 		}
 	case core.CorrelateMoving:
 		m = msg("activity.status.moving", map[string]any{"done": p.Done, "total": p.Total})
+		// deleted for good, the lines say so; kept ones are summed up once
 		for _, d := range p.Moved {
+			args := map[string]any{"name": d.Name, "kept": d.Kept}
 			switch {
+			case errors.Is(d.Err, trash.ErrNoRecycleBin):
 			case d.Err != nil:
 				c.appendMsgLocked(LogWarn, msg("log.removeFailed", map[string]any{"name": d.Name, "reason": d.Err.Error()}))
+			case d.SameBytes && g.forGood:
+				c.appendMsgLocked(LogInfo, msg("log.removedSameForGood", args))
 			case d.SameBytes:
-				c.appendMsgLocked(LogInfo, msg("log.removedSame", map[string]any{"name": d.Name, "kept": d.Kept}))
+				c.appendMsgLocked(LogInfo, msg("log.removedSame", args))
+			case g.forGood:
+				args["number"] = d.Number
+				c.appendMsgLocked(LogInfo, msg("log.removedNumberForGood", args))
 			default:
-				c.appendMsgLocked(LogInfo, msg("log.removedNumber", map[string]any{"name": d.Name, "kept": d.Kept, "number": d.Number}))
+				args["number"] = d.Number
+				c.appendMsgLocked(LogInfo, msg("log.removedNumber", args))
 			}
 		}
 	}
@@ -2482,10 +2504,26 @@ func (e events) Correlated(r *core.Correlation) {
 	}
 	g.cleanup.Removed += len(r.Removed)
 	g.cleanup.Bytes += r.RemovedBytes
-	g.cleanup.Failed += len(r.Failed)
+	g.cleanup.Permanent = g.cleanup.Permanent || r.Permanent
+	kept := 0
+	for _, d := range r.Failed {
+		if errors.Is(d.Err, trash.ErrNoRecycleBin) {
+			kept++
+		}
+	}
+	g.cleanup.Kept += kept
+	g.cleanup.Failed += len(r.Failed) - kept
 	g.status = nil
-	if len(r.Removed) > 0 {
-		c.appendMsgLocked(LogInfo, msg("log.removed", map[string]any{"count": len(r.Removed), "size": sizeText(r.RemovedBytes), "folder": r.Dir}))
+	removed := map[string]any{"count": len(r.Removed), "size": sizeText(r.RemovedBytes), "folder": r.Dir}
+	switch {
+	case len(r.Removed) == 0:
+	case r.Permanent:
+		c.appendMsgLocked(LogInfo, msg("log.removedForGood", removed))
+	default:
+		c.appendMsgLocked(LogInfo, msg("log.removed", removed))
+	}
+	if kept > 0 {
+		c.appendMsgLocked(LogWarn, msg("log.keptNoBin", map[string]any{"count": kept, "folder": r.Dir}))
 	}
 	// the marks look at the folder again
 	c.onDiskKey = ""

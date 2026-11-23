@@ -114,7 +114,7 @@ func (s *Series) DeletePlan(dir string, whole bool) (*DeletePlan, error) {
 	if len(p.Names) == 0 {
 		return p, ErrNothingToDelete
 	}
-	p.Permanent = !hasRecycleBin(filepath.Join(dir, p.Names[0]))
+	p.Permanent = !trash.HasRecycleBin(filepath.Join(dir, p.Names[0]))
 	return p, nil
 }
 

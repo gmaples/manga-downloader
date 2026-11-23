@@ -175,6 +175,17 @@ export interface DeleteInfo {
   files: number;
   /** The files' size, written to read (1.4 GB) */
   size: string;
+  /** The drive has no Recycle Bin: the files would be deleted for good */
+  permanent?: boolean;
+}
+
+/** The dedupe's question: delete files duplicate files (bytes) in dir for good, as its drive has no Recycle Bin */
+export interface PermanentAsk {
+  id: number;
+  group: number;
+  dir: string;
+  files: number;
+  bytes: number;
 }
 
 /** A Delete series' count, after each batch */
@@ -191,6 +202,10 @@ export interface Cleanup {
   bytes: number;
   /** Duplicates that couldn't be moved */
   failed: number;
+  /** The removed ones were deleted for good: the drive has no Recycle Bin */
+  permanent?: boolean;
+  /** Duplicates kept, as the drive has no Recycle Bin and the user said no */
+  kept?: number;
 }
 
 /** One series of the history pop-up, newest first */
@@ -273,6 +288,8 @@ export interface State {
   filenameTemplateWarning: string;
   /** The folder a run of the selection would save into (the series folder when that's on); "" before a load */
   destination: string;
+  /** The dedupe's open "delete for good?" question, null when none */
+  permanent?: PermanentAsk | null;
   prefs: Prefs;
 }
 

@@ -1679,11 +1679,14 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
         throw reject('errors.deleteRunning');
       }
       const title = snapshot().title;
-      return { title, dir: `${options.outputDir}/${title}`, whole: true, files: 712, size: '6.4 GB' };
+      return { title, dir: `${options.outputDir}/${title}`, whole: true, files: 712, size: '6.4 GB', permanent: false };
     },
 
-    async deleteSeries() {
+    async deleteSeries(permanentOK) {
       const info = await api.deleteInfo!();
+      if (info.permanent && !permanentOK) {
+        throw reject('errors.deletePermanentNotConfirmed');
+      }
       pushLog('info', msgOf('log.deleting', { title: info.title, count: info.files, size: info.size, folder: info.dir }));
       // a batch of 100 every 150ms, as the backend's count moves
       for (let done = 0; done < info.files; ) {
@@ -1693,6 +1696,11 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
         pushLog('info', msgOf('log.deleteMoved', { done, total: info.files }));
       }
       pushLog('info', msgOf('log.deletedSeries', { title: info.title, folder: info.dir, count: info.files, size: info.size }));
+    },
+
+    // the mock's folders all have a Recycle Bin, so the dedupe never asks
+    async answerPermanent() {
+      throw reject('errors.noSuchQuestion');
     },
 
     async restart(id, key) {

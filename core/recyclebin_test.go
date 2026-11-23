@@ -15,9 +15,9 @@ import (
 // noBin makes the test's folders sit on a drive with no Recycle Bin
 func noBin(t *testing.T) {
 	t.Helper()
-	was := hasRecycleBin
-	hasRecycleBin = func(string) bool { return false }
-	t.Cleanup(func() { hasRecycleBin = was })
+	was := trash.HasRecycleBin
+	trash.HasRecycleBin = func(string) bool { return false }
+	t.Cleanup(func() { trash.HasRecycleBin = was })
 }
 
 // asker answers ConfirmPermanent with yes, and records what it was asked

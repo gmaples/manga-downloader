@@ -22,6 +22,7 @@ import { createOptionsWriter } from './optionsWriter';
 import { OptionsPanel } from './OptionsPanel';
 import { CHAPTERS_MIN, forwardWheel, LOG_MIN, LOG_ROOM, SIDE_MIN, Splitter } from './panes';
 import { DeleteSeriesDialog } from './DeleteSeriesDialog';
+import { PermanentDialog } from './PermanentDialog';
 import { HistoryDialog } from './HistoryDialog';
 import { SettingsDialog } from './SettingsDialog';
 import { SourceBar } from './SourceBar';
@@ -408,6 +409,14 @@ export function App({ api, initial }: { api: Api; initial?: State }) {
           onCommit={(px) => savePanes(sideWidth, px)}
           onClear={() => {
             api.clearLog().catch(() => undefined);
+          }}
+        />
+      )}
+      {state.permanent && api.answerPermanent && (
+        <PermanentDialog
+          ask={state.permanent}
+          onAnswer={(yes) => {
+            api.answerPermanent!(state.permanent!.id, yes).catch((e: unknown) => setOptionError(errorMessage(e, t)));
           }}
         />
       )}

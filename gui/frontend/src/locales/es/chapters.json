@@ -34,7 +34,16 @@
     "bodyFiles_other": "Mover {{count}} archivos de capítulos de {{title}} ({{size}}) de {{folder}} a la Papelera de reciclaje. Los archivos de otras series se quedan.",
     "progress": "Moviendo a la Papelera de reciclaje: {{done}} de {{total}}",
     "confirm": "Borrar",
-    "deleting": "Borrando…"
+    "deleting": "Borrando…",
+    "permanentLine": "Esta unidad no tiene Papelera de reciclaje: los archivos se eliminarán definitivamente y no se podrán recuperar.",
+    "confirmPermanent": "Eliminar definitivamente"
+  },
+  "permanent": {
+    "title": "Esta unidad no tiene Papelera de reciclaje",
+    "body_one": "{{dir}} no tiene Papelera de reciclaje. ¿Eliminar definitivamente {{count}} archivo duplicado ({{size}})? No se podrá recuperar.",
+    "body_other": "{{dir}} no tiene Papelera de reciclaje. ¿Eliminar definitivamente {{count}} archivos duplicados ({{size}})? No se podrán recuperar.",
+    "keep": "Conservarlos",
+    "confirm": "Eliminar definitivamente"
   },
   "selectAll": "Seleccionar todo",
   "selectNone": "Deseleccionar todo",

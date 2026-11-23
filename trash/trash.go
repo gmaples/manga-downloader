@@ -15,12 +15,10 @@ import (
 // Recycle Bin or trash: the file is left where it is
 var ErrNoRecycleBin = errors.New("this drive has no Recycle Bin")
 
-// hasRecycleBin is the system's check, a variable so tests can stub it
-var hasRecycleBin = osHasRecycleBin
-
 // HasRecycleBin reports whether a file at path would go to a Recycle Bin or
-// trash it can be restored from, rather than being deleted for good
-func HasRecycleBin(path string) bool { return hasRecycleBin(path) }
+// trash it can be restored from, rather than being deleted for good. It's a
+// variable only so tests, in any package, can stand in a drive without one.
+var HasRecycleBin = osHasRecycleBin
 
 // Files moves each file at paths (absolute paths) to the system's trash and
 // returns the paths it couldn't move, with the error. A file that's already
@@ -38,7 +36,7 @@ func Files(paths []string) (failed map[string]error) {
 		vol := filepath.VolumeName(p)
 		ok, seen := bin[vol]
 		if !seen {
-			ok = hasRecycleBin(p)
+			ok = HasRecycleBin(p)
 			bin[vol] = ok
 		}
 		if ok {

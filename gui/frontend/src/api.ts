@@ -81,8 +81,13 @@ export interface Api {
   downloadMissing(): Promise<void>;
   /** What Delete series would take from the loaded series' folder; rejects when there's nothing, or it's downloading */
   deleteInfo?(): Promise<DeleteInfo>;
-  /** Moves the loaded series' files to the Recycle Bin, a batch at a time (onDeleteProgress) */
-  deleteSeries?(): Promise<void>;
+  /**
+   * Moves the loaded series' files to the Recycle Bin, a batch at a time (onDeleteProgress);
+   * permanentOK lets it delete them for good on a drive with no Recycle Bin (DeleteInfo.permanent)
+   */
+  deleteSeries?(permanentOK: boolean): Promise<void>;
+  /** Answers the dedupe's question (State.permanent): yes deletes the duplicates for good */
+  answerPermanent?(id: number, yes: boolean): Promise<void>;
 
   // Pushes. Each returns a function that stops the callback.
   onState(cb: (s: State) => void): Unsubscribe;
@@ -170,7 +175,8 @@ export function createWailsApi(): Api {
     restart: (id, key) => app.Restart(id, key),
     downloadMissing: () => app.DownloadMissing(),
     deleteInfo: () => app.DeleteInfo(),
-    deleteSeries: () => app.DeleteSeries(),
+    deleteSeries: (permanentOK) => app.DeleteSeries(permanentOK),
+    answerPermanent: (id, yes) => app.AnswerPermanent(id, yes),
 
     onState: (cb) => state.subscribe(cb),
     onChapters: (cb) => chapters.subscribe(cb),
