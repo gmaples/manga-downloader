@@ -94,18 +94,14 @@ func TestPaceFile(t *testing.T) {
 		t.Errorf("read back %+v", got)
 	}
 
+	// a lock file a stopped copy left behind isn't held, so it's taken
 	lock := filepath.Join(dir, PaceLockName)
 	os.WriteFile(lock, nil, 0o644)
-	old := time.Now().Add(-2 * paceLockStale)
-	os.Chtimes(lock, old, old)
 	unlock, err := lockPace(dir)
 	if err != nil {
-		t.Fatalf("stale lock: %v", err)
+		t.Fatalf("left-behind lock file: %v", err)
 	}
 	unlock()
-	if _, err := os.Stat(lock); !os.IsNotExist(err) {
-		t.Errorf("lock left: %v", err)
-	}
 }
 
 // another copy's 429 restarts this copy's calm
@@ -126,5 +122,78 @@ func TestAnotherCopysPauseRestartsTheCalm(t *testing.T) {
 	}
 	if sb.gap != 20*time.Millisecond {
 		t.Errorf("gap %v, want the 20ms it had (not lowered)", sb.gap)
+	}
+}
+
+// holdPaceLock takes the shared pace's lock for the test, as another copy
+// would, and shrinks paceLockWait so the copy under test gives up soon
+func holdPaceLock(t *testing.T, dir string) (release func()) {
+	t.Helper()
+	w := paceLockWait
+	paceLockWait = 300 * time.Millisecond
+	t.Cleanup(func() { paceLockWait = w })
+	release, err := lockPace(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return release
+}
+
+// answersSoon fails when the site's lock isn't free within 50ms
+func answersSoon(t *testing.T, s *Site) {
+	t.Helper()
+	got := make(chan struct{})
+	go func() { s.Parallel(); close(got) }()
+	select {
+	case <-got:
+	case <-time.After(50 * time.Millisecond):
+		t.Error("the site stayed locked while the pace file was locked")
+		<-got
+	}
+}
+
+// a 429 doesn't hold the site while it waits for the pace file
+func TestHitDoesNotHoldTheSiteWhileThePaceFileIsLocked(t *testing.T) {
+	a, _, dir := twoCopies(t, "x.org: 20ms\n")
+	sa := a.Site("x.org")
+	wait(t, sa)
+	release := holdPaceLock(t, dir)
+
+	sa.mu.Lock()
+	gen := sa.gen
+	sa.mu.Unlock()
+	done := make(chan struct{})
+	go func() { sa.Hit(gen, 0); close(done) }()
+	time.Sleep(10 * time.Millisecond) // Hit is waiting for the pace file now
+	answersSoon(t, sa)
+
+	release()
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("Hit didn't return")
+	}
+}
+
+// the calm check doesn't hold the site while it reads the pace file
+func TestCalmCheckDoesNotHoldTheSiteWhileThePaceFileIsLocked(t *testing.T) {
+	a, _, dir := twoCopies(t, "x.org: 20ms\n")
+	sa := a.Site("x.org")
+	wait(t, sa) // starts the calm and writes the pace file
+	sa.mu.Lock()
+	sa.calm = time.Now().Add(-2 * CalmFor)
+	sa.mu.Unlock()
+	release := holdPaceLock(t, dir)
+
+	done := make(chan struct{})
+	go func() { wait(t, sa); close(done) }()
+	time.Sleep(10 * time.Millisecond) // the calm check is waiting for the pace file now
+	answersSoon(t, sa)
+
+	release()
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("Wait didn't return")
 	}
 }
