@@ -19,6 +19,18 @@ as they are.
 What the fork changes, and why, is described in the README's
 "About this fork" section. Android details are in [docs/android.md](docs/android.md).
 
+## v25.3.0-series-folders.42 (2026-11-23)
+
+Build 41 with the points from its Ukrainian re-review.
+
+- **App, Ukrainian**: file sizes show the Ukrainian way, with a decimal comma
+  and Ukrainian units («6,4 ГБ», «912,4 КБ», «5 Б»), in the Delete series
+  dialog, the duplicate cleanup note and the log. English and the other
+  languages are unchanged, and `log.txt` stays English.
+- **App, Ukrainian**: three of the app's own messages reworded: the generic
+  reader's and MangaPlus's chapter counts, the retry on another server, and
+  the settled download level.
+
 ## v25.3.0-series-folders.41 (2026-11-23)
 
 Build 40 with the fixes from its independent Ukrainian review.

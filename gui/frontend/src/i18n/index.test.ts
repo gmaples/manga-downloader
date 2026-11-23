@@ -112,6 +112,14 @@ describe('say', () => {
 describe('Ukrainian', () => {
   const uk = createT('uk');
 
+  it('writes sizes the Ukrainian way, and English as the Go side does', () => {
+    const args = { count: 712, title: 'X', folder: '/m/X', size: '6.4 GB' };
+    expect(uk('log.deletedSeries', args)).toBe('Серію X видалено з /m/X (712 файлів, 6,4 ГБ)');
+    expect(createT('en')('log.deletedSeries', args)).toBe('Deleted series X from /m/X (712 files, 6.4 GB)');
+    const msg = { key: 'activity.cleanup', args: { count: 3, size: '912.4 kB' }, text: '' };
+    expect(say(uk, msg, '')).toBe('До Кошика переміщено 3 файли-дублікати (912,4 КБ)');
+  });
+
   it('follows a Ukrainian system', () => {
     expect(resolveLanguage('', ['uk-UA', 'en-US'])).toBe('uk');
     expect(LANG_INFO.uk.name).toBe('Українська');
