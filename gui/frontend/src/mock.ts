@@ -57,6 +57,7 @@ import { createT, LANGS, resolveLanguage, type Lang, type LangPref, type Vars } 
 import type {
   Chapter,
   ChapterMark,
+  DeleteProgress,
   FilterChoice,
   HistoryItem,
   Job,
@@ -543,6 +544,7 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
   const selectionBus = new Bus<number[]>();
   const marksBus = new Bus<ChapterMark[]>();
   const logBus = new Bus<LogLine[]>();
+  const deleteBus = new Bus<DeleteProgress>();
 
   const selectionOf = () => [...selected].sort((a, b) => a - b);
   const pushLog = (level: LogLine['level'], line: string | Message) => {
@@ -1669,6 +1671,30 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
       await api.start();
     },
 
+    async deleteInfo() {
+      if (!loaded) {
+        throw reject('errors.loadFirst');
+      }
+      if (runs.some((g) => g.running && g.url === url)) {
+        throw reject('errors.deleteRunning');
+      }
+      const title = snapshot().title;
+      return { title, dir: `${options.outputDir}/${title}`, whole: true, files: 712, size: '6.4 GB' };
+    },
+
+    async deleteSeries() {
+      const info = await api.deleteInfo!();
+      pushLog('info', msgOf('log.deleting', { title: info.title, count: info.files, size: info.size, folder: info.dir }));
+      // a batch of 100 every 150ms, as the backend's count moves
+      for (let done = 0; done < info.files; ) {
+        done = Math.min(info.files, done + 100);
+        await new Promise((r) => setTimeout(r, 150));
+        deleteBus.emit({ done, total: info.files, failed: 0 });
+        pushLog('info', msgOf('log.deleteMoved', { done, total: info.files }));
+      }
+      pushLog('info', msgOf('log.deletedSeries', { title: info.title, folder: info.dir, count: info.files, size: info.size }));
+    },
+
     async restart(id, key) {
       const g = runs.find((r) => r.id === id);
       if (!g) {
@@ -1700,6 +1726,7 @@ export function createMockApi(setup: Scenario | Partial<MockSetup> = 'empty'): A
     onSelection: (cb) => selectionBus.subscribe(cb),
     onMarks: (cb) => marksBus.subscribe(cb),
     onLog: (cb) => logBus.subscribe(cb),
+    onDeleteProgress: (cb) => deleteBus.subscribe(cb),
   };
 
   return api;

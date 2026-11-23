@@ -19,6 +19,22 @@ as they are.
 What the fork changes, and why, is described in the README's
 "About this fork" section. Android details are in [docs/android.md](docs/android.md).
 
+## v25.3.0-series-folders.38 (2026-11-21)
+
+Build 37 plus *Delete series*, for a series downloaded twice under two
+folder names.
+
+- **App**: *Delete series*, last on the count's second line, asks first with
+  the folder, file count and size, then moves the loaded series' files to the
+  Recycle Bin 100 at a time, counting in the dialog and the log, and logs
+  "Deleted series *name* from *folder*". With *Series folders* on, the folder
+  goes whole; otherwise only the series' chapter files. The series leaves the
+  history; its Activity rows stay but no longer mark the list. Refused while
+  the series downloads or another copy writes into the folder.
+- **Command line**: `--delete-series` moves the series' chapter files into
+  `[Empty Me]/<series>` in the output directory; `--force` sends them to the
+  Recycle Bin instead, and only runs elevated (administrator or root).
+
 ## v25.3.0-series-folders.37 (2026-11-21)
 
 - **Missing and failed counts under the selection**: the "N of M selected"

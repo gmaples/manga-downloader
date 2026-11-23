@@ -3019,3 +3019,12 @@ a.version:hover {
   vertical-align: 1px;
   cursor: help;
 }
+
+/* Delete series, last on the count's second line */
+.count-link.danger {
+  color: var(--danger);
+}
+
+.delete-series .delete-progress {
+  font-variant-numeric: tabular-nums;
+}

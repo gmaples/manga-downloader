@@ -332,6 +332,9 @@ type group struct {
 	title string
 	// url is the URL the group's series was loaded from
 	url string
+	// deleted is set once Delete series took the series' files: what the
+	// group saved is gone, so its rows stay but it no longer marks the list
+	deleted bool
 	// settings are the pointer the group's series and site read. The window
 	// stops writing it when the group starts (see Start).
 	settings *grabber.Settings

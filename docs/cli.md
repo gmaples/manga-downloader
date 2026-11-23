@@ -360,6 +360,16 @@ When a site struggles (a 429, a 502, 503 or 504, a Cloudflare 520-524, a timeout
 
 The level is shared by every download from the site that runs at once, and it's saved in `site-parallel.txt`, next to `site-rate-limits.txt`, as one `site: number` line per site (for example `mangadex.org: 8`). It's written when the downloads end and right after a cut, and only for a site whose level moved. The next run starts from it. The file is plain text: change a number to make that site start there, or remove its line to have it learned again.
 
+### Deleting a series (`--delete-series`)
+
+`--delete-series` takes the series' chapter files out of the output directory instead of downloading: the files whose names give a chapter number of this series, whatever their title or group (as `--skip-existing` reads them). Other series' files stay. Any range argument is ignored.
+
+```bash
+manga-downloader https://mangadex.org/title/... --delete-series -o ~/Manga
+```
+
+They're moved, 100 at a time with a count, into `[Empty Me]/<series>` inside the output directory, for you to look through and empty yourself; a name already there gets ` (2)`. With `--force` they go to the Recycle Bin (the Trash on macOS and Linux) instead, as the app's *Delete series* does, and `--force` is refused unless the program runs elevated (an administrator prompt on Windows, root elsewhere). It exits 1 when a file couldn't be moved.
+
 ### Other servers for a page (`site-mirrors.txt`)
 
 Some sites serve their pages from more than one server, and a page can be missing from one of them (mangalib's main image server answers 400 for some old pages that its second server has). `site-mirrors.txt`, next to `site-rate-limits.txt`, names the servers to try when a page fails, one line per server:

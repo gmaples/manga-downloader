@@ -37,7 +37,15 @@ button, *Load* and *Settings*. (To open on the full window instead, turn off
    missing** (no mark) and **N failed** (failed or cancelled). Clicking
    either selects exactly those chapters, highlights them with a bar at the
    left of their row and scrolls to the first one, so Download takes just
-   them. Once anything of the series was saved or tried, **Download N
+   them. Last on that line, **Delete series** takes the loaded series'
+   files away, for when one series was downloaded twice under two folder
+   names: it asks first, saying the folder, the file count and the size,
+   then moves them to the Recycle Bin (the Trash on macOS and Linux) a batch
+   of 100 at a time, counting in the dialog and the log, and logs "Deleted
+   series *name* from *folder*". With *Series folders* on, the series' folder
+   goes whole; otherwise only the series' chapter files in the output folder
+   go, and other series' files stay. The series leaves the history; its rows
+   in the Activity tab stay. It's refused while the series downloads. Once anything of the series was saved or tried, **Download N
    missing** above the list downloads every chapter that isn't saved yet,
    the failed and cancelled ones included, in one click (chapters already on
    their way are left to their download). In the Activity tab, each download's

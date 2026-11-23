@@ -48,6 +48,8 @@ interface Props {
   onRange: (text: string) => Promise<number>;
   /** Selects and downloads every chapter not saved yet, the failed and cancelled ones included */
   onDownloadMissing: () => Promise<void>;
+  /** Asks to confirm, then deletes the loaded series' files; absent, the line has no Delete series */
+  onDeleteSeries?: () => void;
   /** Sets the Volumes box; rejects a value that doesn't parse */
   onVolumes: (text: string) => Promise<void>;
   onReload: () => void;
@@ -149,6 +151,7 @@ function ChapterList({
   onRange,
   onVolumes,
   onDownloadMissing,
+  onDeleteSeries,
   onError,
 }: Props) {
   const { t } = useI18n();
@@ -467,6 +470,22 @@ function ChapterList({
               >
                 {t('chapters.failedCount', { count: failed.length })}
               </button>
+              {onDeleteSeries && (
+                <>
+                  <span className="dot" aria-hidden="true">
+                    ·
+                  </span>
+                  <button
+                    type="button"
+                    className="count-link danger"
+                    disabled={disabled || tried === false}
+                    title={t('chapters.delete.hint')}
+                    onClick={onDeleteSeries}
+                  >
+                    {t('chapters.delete.button')}
+                  </button>
+                </>
+              )}
             </p>
           )}
         </div>
