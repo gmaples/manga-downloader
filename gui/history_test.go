@@ -348,3 +348,61 @@ func TestClearHistoryAfterADownloadSticks(t *testing.T) {
 		t.Errorf("after the clear and a save, history.txt has %+v", h)
 	}
 }
+
+// chapters sharing a title are told apart by their ids: Resume and Restart
+// take the to-do ones, each by its own id, and leave the done one alone
+func TestResumeTellsSameTitlesApartByID(t *testing.T) {
+	url := "https://example.com/manga/test"
+	history := []HistoryEntry{{Title: "Test Series", URL: url, Open: true, Chapters: []HistoryChapter{
+		{Label: "Special", Done: true},
+		{Label: "Special", ID: "id:two"},
+		{Label: "Special", ID: "id:three"},
+	}}}
+	listed := []fakeChapter{
+		{number: 1, pages: 1, id: "one", title: "Special"},
+		{number: 2, pages: 1, id: "two", title: "Special"},
+		{number: 3, pages: 1, id: "three", title: "Special"},
+	}
+
+	c, _, _ := newTestController(t, false, nil, listed...)
+	c.SetHistory("", history)
+	if _, _, err := c.Resume(c.ResumeCandidate()); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Load(url); err != nil {
+		t.Fatal(err)
+	}
+	if sel := c.SelectedIndices(); !slices.Equal(sel, []int{1, 2}) {
+		t.Errorf("Resume selected %v, want the two to-do chapters [1 2]", sel)
+	}
+
+	c2, _, _ := newTestController(t, false, nil, listed...)
+	c2.SetHistory("", history)
+	c2.mu.Lock()
+	_, labels, ids := c2.restartTargetsLocked(c2.groups[0], "")
+	c2.mu.Unlock()
+	if len(labels) != 0 || ids["id:two"] != "Special" || ids["id:three"] != "Special" || len(ids) != 2 {
+		t.Errorf("Restart targets labels %v, ids %v; want no labels and both ids", labels, ids)
+	}
+}
+
+// a to-do chapter whose id the listing no longer has is still found by its
+// label, as before history.txt kept ids
+func TestResumeFallsBackToTheLabelOfAVanishedID(t *testing.T) {
+	url := "https://example.com/manga/test"
+	history := []HistoryEntry{{Title: "Test Series", URL: url, Open: true, Chapters: []HistoryChapter{
+		{Label: "Chapter 1", Done: true},
+		{Label: "Chapter 2", ID: "id:gone"},
+	}}}
+	c, _, _ := newTestController(t, false, nil, fakeChapter{number: 1, pages: 1}, fakeChapter{number: 2, pages: 1})
+	c.SetHistory("", history)
+	if _, _, err := c.Resume(c.ResumeCandidate()); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Load(url); err != nil {
+		t.Fatal(err)
+	}
+	if sel := c.SelectedIndices(); !slices.Equal(sel, []int{1}) {
+		t.Errorf("Resume selected %v, want chapter 2 by its label [1]", sel)
+	}
+}

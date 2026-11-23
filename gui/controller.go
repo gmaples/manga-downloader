@@ -312,8 +312,9 @@ type Controller struct {
 	// too (startPending, until FinishLoad starts it); see Restart
 	resumeKeys map[string]bool
 	// resumeIDs are chapters by historyID that Resume or Restart readied
-	// with resumeURL, next to resumeTodo's labels
-	resumeIDs    map[string]bool
+	// with resumeURL, each with its label, used when the listing no longer
+	// has the id
+	resumeIDs    map[string]string
 	resumeStart  bool
 	startPending bool
 	// adult is set when the site rates the loaded series 18+, and
@@ -397,8 +398,8 @@ type group struct {
 	// downloads nothing
 	restored bool
 	// todoIDs are a restored group's to-do chapters' ids (historyID), by
-	// label, from the todo-id lines of history.txt
-	todoIDs map[string]string
+	// row, from the todo-id lines of history.txt
+	todoIDs map[*Job]string
 	// adult is set when the site rates the series 18+
 	adult bool
 	// chapters are the listed chapters of the group's run, every pass, and
