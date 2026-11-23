@@ -18,7 +18,7 @@ import { useI18n } from './i18n/react';
 import { jobFraction, jobShortStatus, jobStatus, summaryHeadline, summarySentence } from './format';
 import { AlertIcon, CheckIcon, ErrorIcon, FolderIcon, PackageIcon, RefreshIcon, SkipIcon, Spinner, TodoIcon, XIcon } from './icons';
 import { MaskedTitle, useMask } from './Masked';
-import { groupCounts, isActive, overallProgress, sizeText, summaryTone } from './run';
+import { groupCounts, isActive, overallProgress, summaryTone } from './run';
 import type { Group, Job, State, Summary } from './types';
 import { useVirtualList } from './virtual';
 
@@ -183,8 +183,8 @@ function GroupCountsLine({ group }: { group: Group }) {
       {cleanup != null && cleanup.removed > 0 && (
         <p className="muted">
           {cleanup.permanent
-            ? t('activity.cleanupPermanent', { count: cleanup.removed, size: sizeText(cleanup.bytes) })
-            : t('activity.cleanup', { count: cleanup.removed, size: sizeText(cleanup.bytes) })}
+            ? t('activity.cleanupPermanent', { count: cleanup.removed, size: cleanup.bytes })
+            : t('activity.cleanup', { count: cleanup.removed, size: cleanup.bytes })}
         </p>
       )}
       {cleanup != null && (cleanup.kept ?? 0) > 0 && (

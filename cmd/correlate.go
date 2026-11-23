@@ -72,16 +72,5 @@ func plural(n int, one, many string) string {
 	return many
 }
 
-// Bytes writes a size the way people read it: 912 KB, 1.4 GB
-func Bytes(n int64) string {
-	const unit = 1000
-	if n < unit {
-		return fmt.Sprintf("%d B", n)
-	}
-	div, exp := int64(unit), 0
-	for m := n / unit; m >= unit; m /= unit {
-		div *= unit
-		exp++
-	}
-	return fmt.Sprintf("%.1f %cB", float64(n)/float64(div), "kMGTPE"[exp])
-}
+// Bytes writes a size the way people read it: 912 kB, 1.4 GB
+func Bytes(n int64) string { return core.SizeText(n) }

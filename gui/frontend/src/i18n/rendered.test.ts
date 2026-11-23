@@ -305,7 +305,7 @@ function components({ state, chapters, selected, log }: Snapshot): Screen[] {
     file: 'DeleteSeriesDialog.tsx',
     name: 'DeleteSeriesDialog',
     element: createElement(DeleteSeriesDialog, {
-      load: async () => ({ title: 'T', dir: '/d', whole: true, files: 2, size: '1 kB' }),
+      load: async () => ({ title: 'T', dir: '/d', whole: true, files: 2, bytes: 1000 }),
       onDelete: later,
       onProgress: () => noop,
       onClose: noop,

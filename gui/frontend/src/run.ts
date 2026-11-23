@@ -64,21 +64,6 @@ export function groupCounts(group: Pick<Group, 'jobs' | 'run' | 'running'>): Gro
   return c;
 }
 
-/** A size in bytes the way people read it: 912 kB, 1.4 GB */
-export function sizeText(n: number): string {
-  if (n < 1000) {
-    return `${n} B`;
-  }
-  const units = 'kMGTPE';
-  let v = n / 1000;
-  let i = 0;
-  while (v >= 1000 && i < units.length - 1) {
-    v /= 1000;
-    i++;
-  }
-  return `${v.toFixed(1)} ${units[i]}B`;
-}
-
 export interface Overall {
   /** Rows (chapters, volumes or the one bundle) that reached an end state */
   finished: number;

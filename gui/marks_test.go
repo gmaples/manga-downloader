@@ -244,3 +244,32 @@ func TestDownloadCorrelatesTheFolder(t *testing.T) {
 		t.Error("no log line for the removed duplicate")
 	}
 }
+
+// One push works out the marks and the notes with one look at the folder
+func TestMarksAndNotesLookAtTheFolderOnce(t *testing.T) {
+	c, _, _ := newTestController(t, false, nil, chapters(3, 1)...)
+	if err := c.Load(testURL); err != nil {
+		t.Fatal(err)
+	}
+	calls := 0
+	saved := onDiskMarks
+	onDiskMarks = func() { calls++ }
+	t.Cleanup(func() { onDiskMarks = saved })
+
+	marks, notes := c.ChapterMarksAndNotes()
+	if calls != 1 {
+		t.Errorf("ChapterMarksAndNotes looked %d times, want 1", calls)
+	}
+	if want := c.ChapterMarks(); !slices.Equal(marks, want) {
+		t.Errorf("marks = %q, want ChapterMarks' %q", marks, want)
+	}
+	if want := c.ChapterNotes(); !slices.Equal(notes, want) {
+		t.Errorf("notes = %q, want ChapterNotes' %q", notes, want)
+	}
+
+	calls = 0
+	c.ChapterNotes()
+	if calls != 1 {
+		t.Errorf("ChapterNotes looked %d times, want 1", calls)
+	}
+}

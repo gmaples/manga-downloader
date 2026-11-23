@@ -83,8 +83,8 @@ export function DeleteSeriesDialog({ load, onDelete, onProgress, onClose }: Prop
         {info && (
           <p id="delete-series-text">
             {info.whole
-              ? t('chapters.delete.bodyWhole', { title: info.title, folder: info.dir, count: info.files, size: info.size })
-              : t('chapters.delete.bodyFiles', { title: info.title, folder: info.dir, count: info.files, size: info.size })}
+              ? t('chapters.delete.bodyWhole', { title: info.title, folder: info.dir, count: info.files, size: info.bytes })
+              : t('chapters.delete.bodyFiles', { title: info.title, folder: info.dir, count: info.files, size: info.bytes })}
           </p>
         )}
         {info?.permanent && <p className="error-text">{t('chapters.delete.permanentLine')}</p>}

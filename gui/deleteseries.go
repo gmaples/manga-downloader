@@ -24,8 +24,8 @@ type DeleteInfo struct {
 	// Whole is a series folder taken whole, the folder too
 	Whole bool `json:"whole"`
 	Files int  `json:"files"`
-	// Size is the files' size, written to read (1.4 GB)
-	Size string `json:"size"`
+	// Bytes is the files' size in bytes
+	Bytes int64 `json:"bytes"`
 	// Permanent is a folder on a drive with no Recycle Bin: the files would
 	// be deleted for good, so the window warns and DeleteSeries needs leave
 	Permanent bool `json:"permanent"`
@@ -65,7 +65,7 @@ func (c *Controller) DeleteInfo() (*DeleteInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &DeleteInfo{Title: c.series.Title, Dir: plan.Dir, Whole: plan.Whole, Files: len(plan.Names), Size: sizeText(plan.Bytes), Permanent: plan.Permanent}, nil
+	return &DeleteInfo{Title: c.series.Title, Dir: plan.Dir, Whole: plan.Whole, Files: len(plan.Names), Bytes: plan.Bytes, Permanent: plan.Permanent}, nil
 }
 
 // DeleteSeries moves the loaded series' files to the trash, planned again
@@ -87,7 +87,7 @@ func (c *Controller) DeleteSeries(permanentOK bool, progress func(core.DeletePro
 		return uiErr("errors.deletePermanentNotConfirmed", nil, nil)
 	}
 	title, url := c.series.Title, c.url
-	deleting := map[string]any{"title": title, "count": len(plan.Names), "size": sizeText(plan.Bytes), "folder": plan.Dir}
+	deleting := map[string]any{"title": title, "count": len(plan.Names), "size": core.Bytes(plan.Bytes), "folder": plan.Dir}
 	if plan.Permanent {
 		c.appendMsgLocked(LogInfo, msg("log.deletingForGood", deleting))
 	} else {
@@ -118,7 +118,7 @@ func (c *Controller) DeleteSeries(permanentOK bool, progress func(core.DeletePro
 		c.appendMsgLocked(LogWarn, msg("log.deleteFileFailed", map[string]any{"name": n, "reason": r.Failed[n].Error()}))
 	}
 	if len(r.Moved) > 0 {
-		c.appendMsgLocked(LogInfo, msg("log.deletedSeries", map[string]any{"title": title, "folder": plan.Dir, "count": len(r.Moved), "size": sizeText(r.Bytes)}))
+		c.appendMsgLocked(LogInfo, msg("log.deletedSeries", map[string]any{"title": title, "folder": plan.Dir, "count": len(r.Moved), "size": core.Bytes(r.Bytes)}))
 	}
 	if len(failed) > 0 {
 		c.appendMsgLocked(LogWarn, msg("log.deleteIncomplete", map[string]any{"count": len(failed)}))
