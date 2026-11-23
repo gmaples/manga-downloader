@@ -10,8 +10,9 @@ the build number is the app's version code. Add an entry here with each
 new build.
 
 This file, the README's "About this fork" section, `BUILD_GUIDELINES.md`,
-`handoff/` and `.github/workflows/fork-macos.yaml` (a manual macOS build, run
-from the Actions tab) belong to this fork only. Keep fork notes out of upstream's
+`handoff/`, `.github/workflows/fork-macos.yaml` (a manual macOS build, run
+from the Actions tab) and `.github/workflows/fork-windows.yaml` (Windows tests
+and repeated timing tests) belong to this fork only. Keep fork notes out of upstream's
 files (AGENTS.md, the workflows), so the feature commits can be offered to
 [elboletaire/manga-downloader](https://github.com/elboletaire/manga-downloader)
 as they are.

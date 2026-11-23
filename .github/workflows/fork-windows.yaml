@@ -1,0 +1,40 @@
+name: Fork Windows tests
+
+# This fork only, never offered upstream (see CHANGELOG.md): the packages with
+# Windows-only code (the Recycle Bin, file locks, elevation) and the ones they
+# feed, tested on Windows, plus repeated runs of the timing-based tests on
+# Linux, so a flaky one shows up here rather than in a release.
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    name: Windows
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v7
+    - uses: actions/setup-go@v7
+      with:
+        go-version: "1.26"
+        check-latest: true
+    - name: Vet
+      run: go vet -tags nodynamic ./...
+    - name: Test
+      run: go test -race -count=1 -tags nodynamic ./trash/... ./elevated/... ./core/... ./ratelimit/... ./packer/... ./downloader/...
+
+  repeated:
+    name: Timing tests, 5 runs
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v7
+    - uses: actions/setup-go@v7
+      with:
+        go-version: "1.26"
+        check-latest: true
+    - name: Test
+      run: go test -count=5 -tags nodynamic ./ratelimit/... ./downloader/... ./core/...

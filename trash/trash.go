@@ -20,6 +20,11 @@ var ErrNoRecycleBin = errors.New("this drive has no Recycle Bin")
 // variable only so tests, in any package, can stand in a drive without one.
 var HasRecycleBin = osHasRecycleBin
 
+// Move moves the files at paths, on drives with a Recycle Bin or trash, to
+// it, and puts the ones it couldn't move in failed. It's a variable only so
+// tests, in any package, can stand in a trash folder of their own.
+var Move = files
+
 // Files moves each file at paths (absolute paths) to the system's trash and
 // returns the paths it couldn't move, with the error. A file that's already
 // gone counts as moved. A file on a drive with no Recycle Bin isn't touched
@@ -46,7 +51,7 @@ func Files(paths []string) (failed map[string]error) {
 		}
 	}
 	if len(keep) > 0 {
-		files(keep, failed)
+		Move(keep, failed)
 	}
 	return failed
 }

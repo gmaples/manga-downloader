@@ -4,12 +4,15 @@ package core
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/elboletaire/manga-downloader/trash"
 )
 
 // writeAt writes a file holding data, last modified age ago
@@ -39,13 +42,25 @@ func names(t *testing.T, dir string) string {
 	return strings.Join(out, "|")
 }
 
-// trashIn points the trash at a temporary folder, as the freedesktop.org
-// trash of the test's system, and returns the folder files go to
+// trashIn points the trash at a temporary folder on every system, and
+// returns the folder files go to
 func trashIn(t *testing.T) string {
 	t.Helper()
-	data := t.TempDir()
-	t.Setenv("XDG_DATA_HOME", data)
-	return filepath.Join(data, "Trash", "files")
+	bin := filepath.Join(t.TempDir(), "Trash", "files")
+	if err := os.MkdirAll(bin, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	was := trash.Move
+	trash.Move = func(paths []string, failed map[string]error) {
+		for _, p := range paths {
+			err := os.Rename(p, filepath.Join(bin, filepath.Base(p)))
+			if err != nil && !errors.Is(err, os.ErrNotExist) {
+				failed[p] = err
+			}
+		}
+	}
+	t.Cleanup(func() { trash.Move = was })
+	return bin
 }
 
 // the same bytes under any name are one chapter, and a chapter number that's
