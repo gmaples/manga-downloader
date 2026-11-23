@@ -5,7 +5,6 @@ package ratelimit
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -100,25 +99,18 @@ func parseParallelLine(line string) (key string, n int, ok bool, err error) {
 // readParallel reads the learned levels' file in the book's folder
 func (b *Book) readParallel() {
 	path := filepath.Join(filepath.Dir(b.path), ParallelFileName)
-	data, err := os.ReadFile(path)
-	if err != nil {
-		if !os.IsNotExist(err) {
-			b.warn("%s: %s", ParallelFileName, err)
-		}
-		return
-	}
-	for i, line := range strings.Split(string(data), "\n") {
+	readLines(path, ParallelFileName, b.warn, func(line string, i int) {
 		key, n, ok, err := parseParallelLine(line)
 		if err != nil {
-			b.warn("%s line %d: %s (ignored)", ParallelFileName, i+1, err)
-			continue
+			b.warn("%s line %d: %s (ignored)", ParallelFileName, i, err)
+			return
 		}
 		if ok {
 			if _, seen := b.pars[key]; !seen {
 				b.pars[key] = n
 			}
 		}
-	}
+	})
 }
 
 // saveParallel writes the levels of the book's sites that changed since they

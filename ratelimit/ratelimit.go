@@ -106,29 +106,22 @@ func Open(dir string, warn, info func(format string, a ...any)) *Book {
 	b := &Book{path: filepath.Join(dir, FileName), warn: warn, info: info, gaps: map[string]time.Duration{}, pars: map[string]int{}, sites: map[string]*Site{}, mirrors: map[string][]string{}}
 	b.readParallel()
 	b.readMirrors()
-	data, err := os.ReadFile(b.path)
-	if err != nil {
-		if !os.IsNotExist(err) {
-			warn("%s: %s", FileName, err)
-		}
-		return b
-	}
-	for i, line := range strings.Split(string(data), "\n") {
+	readLines(b.path, FileName, warn, func(line string, n int) {
 		key, gap, ok, err := parseLine(line)
 		if err != nil {
-			warn("%s line %d: %s (ignored)", FileName, i+1, err)
-			continue
+			warn("%s line %d: %s (ignored)", FileName, n, err)
+			return
 		}
 		if !ok {
-			continue
+			return
 		}
 		// a save rewrites a site's first line, so that's the one read
 		if _, seen := b.gaps[key]; seen {
-			warn("%s line %d: %s is listed again; the first line is used", FileName, i+1, key)
-			continue
+			warn("%s line %d: %s is listed again; the first line is used", FileName, n, key)
+			return
 		}
 		b.gaps[key] = gap
-	}
+	})
 	return b
 }
 
