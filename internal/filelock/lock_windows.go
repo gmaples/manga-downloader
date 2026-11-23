@@ -1,14 +1,14 @@
-// Copyright (C) 2023-2026 Òscar Casajuana Alonso
-
-package browser
+// Package filelock is an OS file lock that the system lets go of when the
+// program stops, so a crash never leaves one behind
+package filelock
 
 import (
 	"golang.org/x/sys/windows"
 )
 
-// lockFile holds path open with no sharing until release is called or the
-// process ends, failing at once when another process has it open
-func lockFile(path string) (release func(), err error) {
+// TryLock holds path open with no sharing until release is called or the
+// process ends, failing at once when another holder has it open
+func TryLock(path string) (release func(), err error) {
 	p, err := windows.UTF16PtrFromString(path)
 	if err != nil {
 		return nil, err

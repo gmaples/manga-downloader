@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/elboletaire/manga-downloader/internal/filelock"
 )
 
 // profileSlots is how many saved profiles can be in use at once (the app and
@@ -49,7 +51,7 @@ func claimProfile() *profile {
 			return nil
 		}
 		// the lock file sits beside the profile, as Chrome owns its insides
-		release, err := lockFile(dir + ".lock")
+		release, err := filelock.TryLock(dir + ".lock")
 		if err != nil {
 			continue
 		}

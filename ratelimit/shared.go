@@ -3,13 +3,14 @@
 package ratelimit
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/elboletaire/manga-downloader/internal/filelock"
 )
 
 // Copies of the program running at once (two app windows, or the app and the
@@ -20,7 +21,9 @@ import (
 // any copy, reads and rewrites it under PaceLockName, so the copies' requests
 // together keep the gap, and a 429 one copy gets pauses them all. Each copy
 // still learns its own parallel level. The file is rewritten as the program
-// runs, and can be deleted when no copy is running.
+// runs, and can be deleted when no copy is running. PaceLockName is an OS
+// file lock (internal/filelock) that the system lets go of when a copy stops;
+// the file itself stays in the folder, which is normal.
 const (
 	PaceFileName = "site-pace.txt"
 	PaceLockName = "site-pace.lock"
@@ -31,9 +34,6 @@ var (
 	// paceLockWait is how long a copy tries for the lock before going on
 	// with its own pace alone
 	paceLockWait = 2 * time.Second
-	// paceLockStale is the age past which a lock was left by a copy that
-	// stopped while holding it, and is removed
-	paceLockStale = 10 * time.Second
 	// paceKeep is how long a site's past times stay in the file
 	paceKeep = time.Minute
 )
@@ -55,28 +55,20 @@ func (b *Book) pacePath() string {
 	return filepath.Join(filepath.Dir(b.path), PaceFileName)
 }
 
-// lockPace takes the shared pace's lock, a file made with O_EXCL, waiting up
-// to paceLockWait. A lock older than paceLockStale is removed.
+// lockPace takes the shared pace's lock, waiting up to paceLockWait. It's an
+// OS lock, so a copy that stops while holding it lets go of it.
 func lockPace(dir string) (unlock func(), err error) {
 	path := filepath.Join(dir, PaceLockName)
 	deadline := time.Now().Add(paceLockWait)
 	for {
-		f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
+		release, err := filelock.TryLock(path)
 		if err == nil {
-			f.Close()
-			return func() { os.Remove(path) }, nil
-		}
-		if !errors.Is(err, os.ErrExist) {
-			return nil, err
-		}
-		if fi, err := os.Stat(path); err == nil && time.Since(fi.ModTime()) > paceLockStale {
-			os.Remove(path)
-			continue
+			return release, nil
 		}
 		if time.Now().After(deadline) {
-			return nil, fmt.Errorf("%s is held by another copy", PaceLockName)
+			return nil, fmt.Errorf("%s is held by another copy: %w", PaceLockName, err)
 		}
-		time.Sleep(time.Millisecond)
+		time.Sleep(5 * time.Millisecond)
 	}
 }
 

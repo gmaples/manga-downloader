@@ -94,18 +94,14 @@ func TestPaceFile(t *testing.T) {
 		t.Errorf("read back %+v", got)
 	}
 
+	// a lock file a stopped copy left behind isn't held, so it's taken
 	lock := filepath.Join(dir, PaceLockName)
 	os.WriteFile(lock, nil, 0o644)
-	old := time.Now().Add(-2 * paceLockStale)
-	os.Chtimes(lock, old, old)
 	unlock, err := lockPace(dir)
 	if err != nil {
-		t.Fatalf("stale lock: %v", err)
+		t.Fatalf("left-behind lock file: %v", err)
 	}
 	unlock()
-	if _, err := os.Stat(lock); !os.IsNotExist(err) {
-		t.Errorf("lock left: %v", err)
-	}
 }
 
 // another copy's 429 restarts this copy's calm
