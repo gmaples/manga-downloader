@@ -1654,9 +1654,7 @@ func (e events) BundleStart(pages int64) {
 func (e events) Fetching(listed grabber.Filterable) {
 	c, g := e.c, e.g
 	c.mu.Lock()
-	c.flightSeq++
-	g.flightOf[listed] = &flight{seq: c.flightSeq, title: grabber.ChapterLabel(listed), tags: g.releaseTags(listed)}
-	g.started[chapKey(listed)] = true
+	g.trackFetching(c, listed)
 	// a bundle or a volume has its own row
 	if g.bundle == nil && g.listedVol[listed] == nil {
 		j := &Job{Title: grabber.ChapterLabel(listed), Tags: g.releaseTags(listed), Number: listed.GetNumber(), State: JobFetching, Key: chapKey(listed)}
@@ -1671,12 +1669,7 @@ func (e events) Fetching(listed grabber.Filterable) {
 func (e events) Fetched(listed grabber.Filterable, ch *grabber.Chapter) {
 	c, g := e.c, e.g
 	c.mu.Lock()
-	if f := g.flightOf[listed]; f != nil {
-		f.title, f.tags = grabber.ChapterLabel(ch), g.releaseTags(ch)
-		g.flights[ch] = f
-		delete(g.flightOf, listed)
-	}
-	g.listedOf[ch] = listed
+	g.trackFetched(listed, ch)
 	if j := g.fetching[listed]; j != nil {
 		// the fetched chapter's title can differ from the listing's
 		j.Title, j.Tags = grabber.ChapterLabel(ch), g.releaseTags(ch)
@@ -1690,10 +1683,8 @@ func (e events) Fetched(listed grabber.Filterable, ch *grabber.Chapter) {
 func (e events) FetchFailed(listed grabber.Filterable, err error) {
 	c, g := e.c, e.g
 	c.mu.Lock()
-	delete(g.flightOf, listed)
-	g.failed[chapKey(listed)] = true
+	g.trackFetchFailed(c, listed, err)
 	g.stats.failures = append(g.stats.failures, newFailure(g.releaseLabel(listed), err))
-	c.noteVPNLocked(g.siteKey, err)
 	if j := g.fetching[listed]; j != nil {
 		j.State = JobFailed
 		j.setReasonErr(err)
@@ -1712,10 +1703,8 @@ func (e events) FetchFailed(listed grabber.Filterable, err error) {
 func (e events) Skipped(ch *grabber.Chapter) {
 	c, g := e.c, e.g
 	c.mu.Lock()
-	delete(g.flights, ch)
+	g.trackSkipped(c, ch)
 	g.stats.skipped++
-	g.markDone(ch)
-	c.kickHistory()
 	if g.bundle == nil && g.chapVol[ch] == nil {
 		g.endRow(ch, JobSkipped, msg("job.reason.skipped", nil))
 	}
@@ -1731,16 +1720,11 @@ func (e events) Exists(listed grabber.Filterable, name string) {
 	c, g := e.c, e.g
 	c.mu.Lock()
 	g.stats.existing++
-	g.done[chapKey(listed)] = true
-	c.kickHistory()
+	g.trackExists(c, listed)
 	reason := msg("job.reason.exists", map[string]any{"name": name})
-	delete(g.flightOf, listed)
 	j := g.fetching[listed]
-	if ch, ok := listed.(*grabber.Chapter); ok {
-		delete(g.flights, ch)
-		if j == nil {
-			j = g.byChap[ch]
-		}
+	if ch, ok := listed.(*grabber.Chapter); j == nil && ok {
+		j = g.byChap[ch]
 	}
 	if j != nil {
 		j.State = JobSkipped
@@ -1760,8 +1744,7 @@ func (e events) Exists(listed grabber.Filterable, name string) {
 func (e events) FilenameFailed(ch *grabber.Chapter, err error) {
 	c, g := e.c, e.g
 	c.mu.Lock()
-	delete(g.flights, ch)
-	g.failed[g.keyOf(ch)] = true
+	g.trackFilenameFailed(ch)
 	reason := msg("job.reason.filename", map[string]any{"reason": err.Error()})
 	g.stats.failures = append(g.stats.failures, windowFailure(g.releaseLabel(ch), reason))
 	if g.bundle == nil {
@@ -1775,18 +1758,7 @@ func (e events) FilenameFailed(ch *grabber.Chapter, err error) {
 func (e events) Started(ch *grabber.Chapter) {
 	c, g := e.c, e.g
 	c.mu.Lock()
-	g.started[g.keyOf(ch)] = true
-	f := g.flights[ch]
-	if f == nil {
-		c.flightSeq++
-		f = &flight{seq: c.flightSeq, title: grabber.ChapterLabel(ch), tags: g.releaseTags(ch)}
-		g.flights[ch] = f
-	}
-	// a chapter packed on its own also counts its archive steps, as its row does
-	f.done, f.total = 0, ch.PagesCount*core.DownloadWeight
-	if g.bundle == nil && g.chapVol[ch] == nil {
-		f.total += ch.PagesCount * core.ArchiveWeight
-	}
+	g.trackStarted(c, ch)
 	if g.bundle != nil {
 		g.bundle.setStatus(msg("job.phase.downloadingLabel", map[string]any{"label": g.releaseLabel(ch)}))
 	} else if j := g.chapVol[ch]; j != nil {
@@ -1804,7 +1776,6 @@ func (e events) Started(ch *grabber.Chapter) {
 		g.jobs = append(g.jobs, j)
 		g.byChap[ch] = j
 	}
-	c.appendMsgLocked(LogInfo, msg("log.started", map[string]any{"label": g.releaseLabel(ch), "pages": ch.PagesCount}))
 	c.mu.Unlock()
 	c.emit()
 }
@@ -1812,9 +1783,7 @@ func (e events) Started(ch *grabber.Chapter) {
 func (e events) Page(ch *grabber.Chapter, idx int, err error) {
 	c, g := e.c, e.g
 	c.mu.Lock()
-	if f := g.flights[ch]; f != nil && err == nil && g.live(ch) {
-		f.done += core.DownloadWeight
-	}
+	g.trackPage(ch, err)
 	if err != nil {
 		c.appendMsgLocked(LogError, msg("log.errorPage", map[string]any{"page": idx + 1, "label": g.releaseLabel(ch), "reason": err.Error()}))
 	} else if j := g.jobFor(ch); j != nil && !j.Volume && g.live(ch) {
@@ -1830,9 +1799,7 @@ func (e events) DownloadFailed(ch *grabber.Chapter, err error) {
 	c, g := e.c, e.g
 	c.mu.Lock()
 	g.failedC[ch] = true
-	g.failed[g.keyOf(ch)] = true
-	delete(g.flights, ch)
-	c.noteVPNLocked(g.siteKey, err)
+	g.trackDownloadFailed(c, ch, err)
 	g.stats.failures = append(g.stats.failures, newFailure(g.releaseLabel(ch), err))
 	// a volume goes on with its other chapters
 	if j := g.byChap[ch]; j != nil && g.bundle == nil {
@@ -1852,9 +1819,7 @@ func (e events) DownloadFailed(ch *grabber.Chapter, err error) {
 func (e events) Archived(ch *grabber.Chapter) {
 	c, g := e.c, e.g
 	c.mu.Lock()
-	if f := g.flights[ch]; f != nil {
-		f.done += core.ArchiveWeight
-	}
+	g.trackArchived(ch)
 	if j := g.byChap[ch]; j != nil && g.bundle == nil && j.State != JobFailed {
 		j.Done += core.ArchiveWeight
 		advance(j)
@@ -1866,11 +1831,10 @@ func (e events) Archived(ch *grabber.Chapter) {
 func (e events) Packed(ch *grabber.Chapter, name string, err error) {
 	c, g := e.c, e.g
 	c.mu.Lock()
-	delete(g.flights, ch)
+	g.trackPacked(c, ch, err)
 	j := g.byChap[ch]
 	if err != nil {
 		reason := msg("job.reason.packing", map[string]any{"reason": err.Error()})
-		g.failed[g.keyOf(ch)] = true
 		g.stats.failures = append(g.stats.failures, windowFailure(g.releaseLabel(ch), reason))
 		if j != nil {
 			j.State = JobFailed
@@ -1879,8 +1843,6 @@ func (e events) Packed(ch *grabber.Chapter, name string, err error) {
 		c.appendMsgLocked(LogError, msg("log.packFailed", map[string]any{"label": g.releaseLabel(ch), "reason": err.Error()}))
 	} else {
 		g.stats.saved++
-		g.markDone(ch)
-		c.kickHistory()
 		if j != nil {
 			j.State = JobDone
 			// the skipped pages were never counted, so the bar is exact only now
@@ -1895,10 +1857,9 @@ func (e events) Packed(ch *grabber.Chapter, name string, err error) {
 func (e events) Downloaded(ch *grabber.Chapter) {
 	c, g := e.c, e.g
 	c.mu.Lock()
-	delete(g.flights, ch)
+	g.trackDownloaded(c, ch)
 	// the pages were counted as they came in; this only tallies the chapter
 	g.stats.saved++
-	c.noteVPNLocked(g.siteKey, nil)
 	c.mu.Unlock()
 	c.emit()
 }
@@ -1992,7 +1953,6 @@ func (e events) VolumePacked(v *core.Volume, name string, err error) {
 		}
 	case errors.Is(err, core.ErrSkippedVolume):
 		// its chapters were each counted as skipped already
-		g.markVolumeDone(v)
 		if j != nil {
 			j.State = JobSkipped
 			j.setReasonErr(err)
@@ -2000,7 +1960,6 @@ func (e events) VolumePacked(v *core.Volume, name string, err error) {
 	case errors.Is(err, core.ErrExists):
 		// its file is already there, so none of its chapters was fetched
 		g.stats.existing += len(v.Chapters)
-		g.markVolumeDone(v)
 		if j != nil {
 			j.State = JobSkipped
 			j.setReason(msg("job.reason.exists", map[string]any{"name": name}))
@@ -2015,7 +1974,6 @@ func (e events) VolumePacked(v *core.Volume, name string, err error) {
 		c.appendMsgLocked(LogError, msg("log.errorPacking", map[string]any{"label": label, "reason": err.Error()}))
 	default:
 		g.stats.volumes++
-		g.markVolumeDone(v)
 		if j != nil {
 			j.State = JobDone
 			j.Done = j.Total
@@ -2025,7 +1983,7 @@ func (e events) VolumePacked(v *core.Volume, name string, err error) {
 	if j != nil {
 		j.clearStatus()
 	}
-	c.kickHistory()
+	g.trackVolumePacked(c, v, err)
 	c.mu.Unlock()
 	c.emit()
 }
