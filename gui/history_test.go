@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -98,7 +99,11 @@ func TestHistoryRecordsDoneAndTodo(t *testing.T) {
 	waitFinished(t, c)
 
 	h := c.History()
-	want := []HistoryChapter{{Label: "Chapter 1", Done: true}, {Label: "Chapter 2"}, {Label: "Chapter 3", Done: true}}
+	want := []HistoryChapter{
+		{Label: "Chapter 1", Done: true},
+		{Label: "Chapter 2", ID: "2 | Chapter 2 | |"},
+		{Label: "Chapter 3", Done: true},
+	}
 	if len(h) != 1 || !h[0].Open || !reflect.DeepEqual(h[0].Chapters, want) {
 		t.Fatalf("history = %+v, want chapters %+v", h, want)
 	}
@@ -107,7 +112,8 @@ func TestHistoryRecordsDoneAndTodo(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(raw), "open: yes\ndone: Chapter 1\ntodo: Chapter 2\ndone: Chapter 3\n") {
+	// a todo line has its id under it; a done line doesn't
+	if !strings.Contains(string(raw), "open: yes\ndone: Chapter 1\ntodo: Chapter 2\ntodo-id: 2 | Chapter 2 | |\ndone: Chapter 3\n") {
 		t.Errorf("history.txt =\n%s", raw)
 	}
 }
@@ -227,5 +233,90 @@ func TestSixteenPlusIsNotMasked(t *testing.T) {
 	}
 	if c.Adult() {
 		t.Error("a 16+ title is masked")
+	}
+}
+
+// a todo line keeps its id on the line under it; a done line has none
+func TestHistoryRoundTripWithIDs(t *testing.T) {
+	in := []HistoryEntry{{Title: "T", URL: "https://example.com/manga/t", Open: true, Chapters: []HistoryChapter{
+		{Label: "Chapter 1", Done: true},
+		{Label: "Chapter 2 Old name", ID: "id:abc"},
+		{Label: "Chapter 3", ID: "3 | Chapter 3 | |"},
+		{Label: "Chapter 4"},
+	}}}
+	text := string(formatHistory(in))
+	if !strings.Contains(text, "done: Chapter 1\ntodo: Chapter 2 Old name\ntodo-id: id:abc\ntodo: Chapter 3\ntodo-id: 3 | Chapter 3 | |\ntodo: Chapter 4\n") {
+		t.Errorf("history.txt =\n%s", text)
+	}
+	if out := parseHistory(strings.NewReader(text)); !reflect.DeepEqual(out, in) {
+		t.Errorf("parsed back\n%+v\nwant\n%+v", out, in)
+	}
+}
+
+// a todo-id line counts only under a todo line that has none yet
+func TestParseHistoryTodoIDGoesUnderItsTodo(t *testing.T) {
+	text := `title: T
+url: https://example.com/manga/t
+todo-id: before any chapter
+done: Chapter 1
+todo-id: under a done line
+todo: Chapter 2
+todo-id: id:2
+todo-id: a second one
+`
+	got := parseHistory(strings.NewReader(text))
+	want := []HistoryChapter{{Label: "Chapter 1", Done: true}, {Label: "Chapter 2", ID: "id:2"}}
+	if len(got) != 1 || !reflect.DeepEqual(got[0].Chapters, want) {
+		t.Errorf("got %+v, want chapters %+v", got, want)
+	}
+}
+
+// the merge finds a chapter by its id, whatever its label is now, and gives
+// an old file's chapter the id the download knows
+func TestAddChaptersMatchesByID(t *testing.T) {
+	e := HistoryEntry{Chapters: []HistoryChapter{{Label: "Chapter 12 Old name", ID: "id:12"}, {Label: "Chapter 13"}}}
+	e.addChapters([]HistoryChapter{{Label: "Chapter 12 New name", Done: true, ID: "id:12"}, {Label: "Chapter 13", ID: "id:13"}})
+	// a done chapter keeps no id, as the file has none for it
+	want := []HistoryChapter{{Label: "Chapter 12 Old name", Done: true}, {Label: "Chapter 13", ID: "id:13"}}
+	if !reflect.DeepEqual(e.Chapters, want) {
+		t.Errorf("got %+v\nwant %+v", e.Chapters, want)
+	}
+}
+
+// a chapter the site renamed since the last session is still found by its id:
+// Resume selects it, and so does Restart
+func TestResumeFindsARenamedChapterByID(t *testing.T) {
+	url := "https://example.com/manga/test"
+	history := []HistoryEntry{{Title: "Test Series", URL: url, Open: true, Chapters: []HistoryChapter{
+		{Label: "Chapter 11", Done: true},
+		{Label: "Chapter 12 Old name", ID: "id:abc"},
+	}}}
+	listed := []fakeChapter{{number: 11, pages: 1, id: "eleven", title: "Eleven"}, {number: 12, pages: 1, id: "abc", title: "New name"}}
+
+	c, _, _ := newTestController(t, false, nil, listed...)
+	c.SetHistory("", history)
+	got, load, err := c.Resume(c.ResumeCandidate())
+	if err != nil || got != url || !load {
+		t.Fatalf("Resume = %q, %v, %v", got, load, err)
+	}
+	if err := c.Load(url); err != nil {
+		t.Fatal(err)
+	}
+	if sel := c.SelectedIndices(); !slices.Equal(sel, []int{1}) {
+		t.Errorf("Resume selected %v, want the renamed chapter [1]", sel)
+	}
+
+	c2, _, _ := newTestController(t, false, nil, listed...)
+	c2.SetHistory("", history)
+	g := c2.Groups()[0]
+	if _, _, err := c2.Restart(g.ID, ""); err != nil {
+		t.Fatal(err)
+	}
+	if err := c2.Load(url); err != nil {
+		t.Fatal(err)
+	}
+	waitIdle(t, c2)
+	if h := c2.History(); len(h) == 0 || len(h[0].Chapters) != 2 || !h[0].Chapters[1].Done {
+		t.Errorf("Restart didn't download the renamed chapter: history %+v", h)
 	}
 }

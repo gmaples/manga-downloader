@@ -31,6 +31,9 @@ type fakeChapter struct {
 	volume int
 	// locked lists the chapter as locked
 	locked bool
+	// id and title, when id is set, list the chapter with the site's own id
+	// and that title, as a site with chapter ids does
+	id, title string
 }
 
 // listing is a chapter as listed by the fake site
@@ -74,6 +77,10 @@ func (f *fakeSite) FetchTitle() (string, error) {
 func (f *fakeSite) FetchChapters() (grabber.Filterables, []error) {
 	out := grabber.Filterables{}
 	for _, c := range f.chapters {
+		if c.id != "" {
+			out = append(out, &grabber.Chapter{Number: c.number, Title: c.title, ID: c.id, Volume: c.volume, Locked: c.locked})
+			continue
+		}
 		out = append(out, listing{number: c.number, title: fmt.Sprintf("Chapter %g", c.number), volume: c.volume, locked: c.locked})
 	}
 	return out, nil

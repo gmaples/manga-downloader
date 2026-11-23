@@ -44,6 +44,16 @@ type HistoryEntry struct {
 type HistoryChapter struct {
 	Label string
 	Done  bool
+	// ID is a to-do chapter's historyID, which a rename of the chapter on
+	// the site doesn't change; "" once it's done, as history.txt writes it
+	// only under a todo line (so the history matches the file, see
+	// mergeHistory), and in a file written before it was kept
+	ID string
+}
+
+// historyID is chapKey as history.txt writes it: one line, no control characters
+func historyID(f grabber.Filterable) string {
+	return oneLine(strings.ReplaceAll(chapKey(f), "\x00", " | "))
 }
 
 // Todo counts the chapters not saved yet
@@ -58,18 +68,40 @@ func (e HistoryEntry) Todo() int {
 }
 
 // addChapters merges a download's chapters in: a chapter already listed keeps
-// its place and stays done once it was, a new one is added at the end
+// its place and stays done once it was, a new one is added at the end. A
+// chapter is matched by its ID when both sides have one, else by its label,
+// and keeps its ID only while it's to do.
 func (e *HistoryEntry) addChapters(chapters []HistoryChapter) {
-	at := map[string]int{}
+	at, atID := map[string]int{}, map[string]int{}
 	for i, ch := range e.Chapters {
 		at[ch.Label] = i
+		if ch.ID != "" {
+			atID[ch.ID] = i
+		}
 	}
 	for _, ch := range chapters {
-		if i, ok := at[ch.Label]; ok {
+		i, ok := atID[ch.ID]
+		if ch.ID == "" || !ok {
+			i, ok = at[ch.Label]
+			ok = ok && (e.Chapters[i].ID == "" || ch.ID == "")
+		}
+		if ok {
 			e.Chapters[i].Done = e.Chapters[i].Done || ch.Done
+			if e.Chapters[i].Done {
+				e.Chapters[i].ID = ""
+			} else if e.Chapters[i].ID == "" && ch.ID != "" {
+				e.Chapters[i].ID = ch.ID
+				atID[ch.ID] = i
+			}
 			continue
 		}
+		if ch.Done {
+			ch.ID = ""
+		}
 		at[ch.Label] = len(e.Chapters)
+		if ch.ID != "" {
+			atID[ch.ID] = len(e.Chapters)
+		}
 		e.Chapters = append(e.Chapters, ch)
 	}
 }
@@ -91,7 +123,8 @@ func historyPath(prefsPath string) string {
 const historyHeader = `# Manga Downloader history: the series you loaded or downloaded, newest first.
 # The app keeps the last 100 and rewrites this file as it runs, so edit it with the app closed.
 # open: yes shows the series in the Activity pane again at the next start.
-# done and todo are its chapters, one per line, as the Activity pane names them.
+# done and todo are its chapters, one per line, as the Activity pane names them;
+# todo-id under a todo line is the chapter's id, which finds it when the site renames it.
 `
 
 // formatHistory writes entries as history.txt: plain "key: value" lines, a
@@ -115,6 +148,9 @@ func formatHistory(entries []HistoryEntry) []byte {
 				key = "done"
 			}
 			b.WriteString(key + ": " + oneLine(ch.Label) + "\n")
+			if !ch.Done && ch.ID != "" {
+				b.WriteString("todo-id: " + oneLine(ch.ID) + "\n")
+			}
 		}
 	}
 	return b.Bytes()
@@ -175,6 +211,11 @@ func parseHistory(r io.Reader) []HistoryEntry {
 		case "done", "todo":
 			if value != "" {
 				cur.Chapters = append(cur.Chapters, HistoryChapter{Label: value, Done: key == "done"})
+			}
+		case "todo-id":
+			// the id of the todo line just above it, once
+			if n := len(cur.Chapters); n > 0 && value != "" && !cur.Chapters[n-1].Done && cur.Chapters[n-1].ID == "" {
+				cur.Chapters[n-1].ID = value
 			}
 		}
 	}
@@ -309,6 +350,7 @@ func (c *Controller) restoreLocked() {
 		c.lastID++
 		g.id = c.lastID
 		g.title, g.url, g.adult, g.restored = e.Title, e.URL, e.Adult, true
+		g.todoIDs = map[string]string{}
 		if e.Adult {
 			c.addAdultTitleLocked(e.Title)
 		}
@@ -319,6 +361,9 @@ func (c *Controller) restoreLocked() {
 				j.Total, j.Done = 1, 1
 			} else {
 				j.setReason(msg("job.reason.todo", nil))
+				if ch.ID != "" {
+					g.todoIDs[ch.Label] = ch.ID
+				}
 			}
 			g.jobs = append(g.jobs, j)
 		}
@@ -384,7 +429,7 @@ func (c *Controller) recordGroupLocked(g *group) {
 	var chapters []HistoryChapter
 	for _, chap := range g.chapters {
 		label := grabber.ChapterLabel(chap) + g.releaseTags(chap)
-		chapters = append(chapters, HistoryChapter{Label: label, Done: g.done[chapKey(chap)]})
+		chapters = append(chapters, HistoryChapter{Label: label, Done: g.done[chapKey(chap)], ID: historyID(chap)})
 	}
 	e := c.touchLocked(g.url, g.title, g.adult)
 	e.Open = true
@@ -495,11 +540,14 @@ func (c *Controller) Resume(id int) (url string, load bool, err error) {
 		return "", false, errBusy
 	}
 	c.resumeURL = g.url
-	c.resumeTodo = map[string]bool{}
+	c.resumeTodo, c.resumeIDs = map[string]bool{}, map[string]bool{}
 	c.resumeKeys, c.resumeStart = nil, false
 	for _, j := range g.jobs {
 		if j.State == JobTodo {
 			c.resumeTodo[j.Title] = true
+			if id := g.todoIDs[j.Title]; id != "" {
+				c.resumeIDs[id] = true
+			}
 		}
 	}
 	if c.series != nil && c.url == g.url && !c.filtersChanged() {
@@ -540,11 +588,11 @@ func (c *Controller) applyResumeLocked(url string) {
 	}
 	for i, chap := range c.series.Chapters {
 		label := grabber.ChapterLabel(chap) + core.ReleaseTags(chap, c.hasDuplicates, c.hasGroupDuplicates)
-		if (c.resumeTodo[label] || c.resumeKeys[chapKey(chap)]) && c.selectable(i) {
+		if (c.resumeTodo[label] || c.resumeKeys[chapKey(chap)] || c.resumeIDs[historyID(chap)]) && c.selectable(i) {
 			c.selected[i] = true
 		}
 	}
 	c.selGen++
 	c.startPending = c.resumeStart
-	c.resumeURL, c.resumeTodo, c.resumeKeys, c.resumeStart = "", nil, nil, false
+	c.resumeURL, c.resumeTodo, c.resumeKeys, c.resumeIDs, c.resumeStart = "", nil, nil, nil, false
 }

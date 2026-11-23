@@ -309,7 +309,10 @@ type Controller struct {
 	// resumeKeys are chapters by chapKey that Restart readied with
 	// resumeURL, and resumeStart has the load that selects them start them
 	// too (startPending, until FinishLoad starts it); see Restart
-	resumeKeys   map[string]bool
+	resumeKeys map[string]bool
+	// resumeIDs are chapters by historyID that Resume or Restart readied
+	// with resumeURL, next to resumeTodo's labels
+	resumeIDs    map[string]bool
 	resumeStart  bool
 	startPending bool
 	// adult is set when the site rates the loaded series 18+, and
@@ -386,6 +389,9 @@ type group struct {
 	// rows are the done and to-do chapters of the last session, and it
 	// downloads nothing
 	restored bool
+	// todoIDs are a restored group's to-do chapters' ids (historyID), by
+	// label, from the todo-id lines of history.txt
+	todoIDs map[string]string
 	// adult is set when the site rates the series 18+
 	adult bool
 	// chapters are the listed chapters of the group's run, every pass, and
@@ -856,7 +862,7 @@ func (c *Controller) FinishLoad(url string) error {
 	c.startPending = false
 	if err != nil && c.resumeURL == url {
 		// a restart whose series didn't load is dropped, not kept for a later load
-		c.resumeStart, c.resumeKeys = false, nil
+		c.resumeStart, c.resumeKeys, c.resumeIDs = false, nil, nil
 	}
 	c.mu.Unlock()
 	if prev != nil {

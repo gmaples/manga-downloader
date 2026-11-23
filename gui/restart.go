@@ -25,7 +25,7 @@ func (c *Controller) Restart(id int, key string) (url string, load bool, err err
 		c.mu.Unlock()
 		return "", false, errBusy
 	}
-	keys, labels := c.restartTargetsLocked(g, key)
+	keys, labels, ids := c.restartTargetsLocked(g, key)
 	if len(keys)+len(labels) == 0 {
 		c.mu.Unlock()
 		return "", false, uiErr("errors.nothingToRestart", nil, nil)
@@ -33,7 +33,7 @@ func (c *Controller) Restart(id int, key string) (url string, load bool, err err
 	if g.running {
 		g.forgetLocked(keys)
 	}
-	c.resumeURL, c.resumeTodo, c.resumeKeys, c.resumeStart = g.url, labels, keys, true
+	c.resumeURL, c.resumeTodo, c.resumeKeys, c.resumeIDs, c.resumeStart = g.url, labels, keys, ids, true
 	if c.series == nil || c.url != g.url || c.filtersChanged() {
 		c.mu.Unlock()
 		c.emit()
@@ -65,18 +65,22 @@ func (c *Controller) startRestart() {
 
 // restartTargetsLocked returns what Restart downloads again of group g, its
 // row key's chapter or with key "" all: a restored group's chapters to do,
-// by label, or another group's failed and cancelled chapters, by chapKey,
+// by label and by historyID when history.txt kept it, or another group's
+// failed and cancelled chapters, by chapKey,
 // leaving out those a newer download of the series took since. The caller
 // holds c.mu.
-func (c *Controller) restartTargetsLocked(g *group, key string) (keys, labels map[string]bool) {
-	keys, labels = map[string]bool{}, map[string]bool{}
+func (c *Controller) restartTargetsLocked(g *group, key string) (keys, labels, ids map[string]bool) {
+	keys, labels, ids = map[string]bool{}, map[string]bool{}, map[string]bool{}
 	if g.restored {
 		for _, j := range g.jobs {
 			if j.State == JobTodo && (key == "" || j.Key == key) {
 				labels[j.Title] = true
+				if id := g.todoIDs[j.Title]; id != "" {
+					ids[id] = true
+				}
 			}
 		}
-		return keys, labels
+		return keys, labels, ids
 	}
 	newer := c.newerGroupsLocked(g)
 	for _, chap := range g.chapters {
@@ -95,7 +99,7 @@ func (c *Controller) restartTargetsLocked(g *group, key string) (keys, labels ma
 			keys[k] = true
 		}
 	}
-	return keys, labels
+	return keys, labels, ids
 }
 
 // newerGroupsLocked returns the groups of g's series that started after it.
@@ -118,7 +122,7 @@ func (c *Controller) newerGroupsLocked(g *group) []*group {
 // restartInfoLocked fills st, group g's state, with what Restart would
 // download again: Unfinished, and Restart on the rows. The caller holds c.mu.
 func (c *Controller) restartInfoLocked(g *group, st *GroupState) {
-	keys, labels := c.restartTargetsLocked(g, "")
+	keys, labels, _ := c.restartTargetsLocked(g, "")
 	st.Unfinished = len(keys) + len(labels)
 	for i := range st.Jobs {
 		j := &st.Jobs[i]
