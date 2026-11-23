@@ -254,15 +254,17 @@ func TestWaitUnlisted(t *testing.T) {
 func TestWaitSitsOutTheCooldown(t *testing.T) {
 	shrink(t, time.Millisecond, time.Second, 60*time.Millisecond, 150*time.Millisecond)
 	s := Open(t.TempDir(), nil, nil).Site("x.org")
-	s.Hit(0, 0)
+	// the cooldown counts from the 429, so the clock starts before Hit,
+	// which writes the pace and rate limit files (slow on a busy disk)
 	start := time.Now()
+	s.Hit(0, 0)
 	s.Wait(context.Background())
 	s.Done(0, false)
 	if elapsed := time.Since(start); elapsed < 50*time.Millisecond {
 		t.Errorf("waited %v after a 429, want the 60ms cooldown", elapsed)
 	}
-	s.Hit(s.gen, time.Hour)
 	start = time.Now()
+	s.Hit(s.gen, time.Hour)
 	s.Wait(context.Background())
 	s.Done(0, false)
 	if elapsed := time.Since(start); elapsed < 140*time.Millisecond || elapsed > time.Second {
