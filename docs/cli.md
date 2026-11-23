@@ -299,9 +299,9 @@ run it from cron:
 0 6 * * * manga-downloader --skip-existing -o ~/Manga/Series "<series url>" all
 ~~~
 
-When chapters are packed one file each (not `--bundle`, not `--volumes`, not
-`--format raw`), it also tidies the folder first and recognises a chapter saved
-under another name:
+`--dedupe` (which turns `--skip-existing` on too) also tidies the folder first
+and recognises a chapter saved under another name, when chapters are packed one
+file each (not `--bundle`, not `--volumes`, not `--format raw`):
 
 - **The same bytes** under two names are one chapter: the older file is kept.
   Two names that give different chapter numbers are kept apart even then (a
@@ -451,6 +451,7 @@ the check.
 | `--jpeg-quality`      |       | JPEG quality of re-encoded pages (1-100); lower shrinks JPEG pages more | `90`           |
 | `--skip-pages`        |       | Pages to exclude from every chapter (`-1` is the last)         | none           |
 | `--skip-existing`     |       | Skip chapters, volumes or bundles already in the output folder | off            |
+| `--dedupe`            |       | Move duplicate chapter files to the trash first, and skip chapter numbers already there (implies `--skip-existing`) | off            |
 | `--age`               |       | Refuse titles a site rates above this age: `16` or `18`        | off            |
 | `--concurrency`       | `-c`  | Number of chapters downloaded at once (max 5)                  | 5              |
 | `--concurrency-pages` | `-C`  | Number of pages downloaded at once per chapter (max 10)        | 10             |

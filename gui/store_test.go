@@ -307,6 +307,17 @@ func TestLoadOptionsOldFileKeepsDefaults(t *testing.T) {
 	}
 }
 
+// the app dedupes whenever Skip existing is on: it has no option of its own
+func TestApplyOptionsSkipExistingDedupes(t *testing.T) {
+	for _, on := range []bool{true, false} {
+		s := defaultSettings()
+		applyOptions(s, OptionsDTO{SkipExisting: on})
+		if s.SkipExisting != on || s.Dedupe != on {
+			t.Errorf("SkipExisting %v: got SkipExisting %v Dedupe %v", on, s.SkipExisting, s.Dedupe)
+		}
+	}
+}
+
 func TestLoadOptionsMissingSkipExistingIsOff(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "gui.json")
 	if err := os.WriteFile(path, []byte(`{"format":"cbz"}`), 0600); err != nil {

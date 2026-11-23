@@ -205,7 +205,8 @@ func TestDownloadCorrelatesTheFolder(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if err := c.Configure(func(s *grabber.Settings) { s.SkipExisting = true }); err != nil {
+	// Skip existing on in the window sets both (see applyOptions)
+	if err := c.Configure(func(s *grabber.Settings) { s.SkipExisting, s.Dedupe = true, true }); err != nil {
 		t.Fatal(err)
 	}
 	if err := c.Load(testURL); err != nil {

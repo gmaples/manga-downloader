@@ -202,6 +202,8 @@ func applyOptions(s *grabber.Settings, o OptionsDTO) {
 	s.Compress = o.Compress
 	s.SkipPages = o.SkipPages
 	s.SkipExisting = o.SkipExisting
+	// the app dedupes whenever Skip existing is on (the CLI has --dedupe)
+	s.Dedupe = o.SkipExisting
 	s.FilenameTemplate = o.FilenameTemplate
 	s.BrowserVisible = o.BrowserVisible
 	s.SeriesFolders = o.SeriesFolders

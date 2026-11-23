@@ -76,6 +76,10 @@ type Settings struct {
 	// "Title [en]" (see core.FolderLanguage). Only read with SeriesFolders.
 	// Desktop app only: the CLI has no flag.
 	GuessLanguage bool
+	// Dedupe correlates the output folder before a download (see
+	// core.Series.Correlate): duplicate chapter files go to the trash and
+	// chapter numbers already there aren't downloaded. Implies SkipExisting.
+	Dedupe bool
 	// AgeCheck refuses titles a site rates above Age (see AgeAllows). Off,
 	// every title loads, whatever its rating.
 	AgeCheck bool

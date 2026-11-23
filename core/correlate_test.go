@@ -145,7 +145,7 @@ func TestCorrelateMissingFolder(t *testing.T) {
 	}
 }
 
-// with --skip-existing, a chapter whose number is in the folder under another
+// with --dedupe, a chapter whose number is in the folder under another
 // name isn't downloaded, and a number listed twice is downloaded once
 func TestDownloadSkipsNumbersInTheFolder(t *testing.T) {
 	trashIn(t)
@@ -156,6 +156,7 @@ func TestDownloadSkipsNumbersInTheFolder(t *testing.T) {
 	)
 	series, dir := newSeries(t, site, false)
 	site.Settings.SkipExisting = true
+	site.Settings.Dedupe = true
 	writeAt(t, dir, "Test Series 1 - Chapter 1 Old title [Sherlyn].cbz", "old", time.Hour)
 	rec := &recorder{}
 
@@ -181,6 +182,25 @@ func TestDownloadSkipsNumbersInTheFolder(t *testing.T) {
 		t.Errorf("chapter 1 fetched %d times, want none", n)
 	}
 	if got, want := names(t, dir), "Test Series 1 - Chapter 1 Old title [Sherlyn].cbz|Test Series 2 - Chapter 2 [Alpha].cbz"; got != want {
+		t.Errorf("folder:\n got %q\nwant %q", got, want)
+	}
+}
+
+// --skip-existing without --dedupe is upstream's: only the exact name is
+// skipped, nothing is correlated or removed, and a chapter whose number is
+// in the folder under another name is downloaded
+func TestSkipExistingWithoutDedupeKeepsDuplicates(t *testing.T) {
+	trashIn(t)
+	site := newFakeSite(t, fakeChapter{number: 1, pages: 1, title: "New title"})
+	series, dir := newSeries(t, site, false)
+	site.Settings.SkipExisting = true
+	writeAt(t, dir, "Test Series 1 - Chapter 1 Old title [Sherlyn].cbz", "a", 2*time.Hour)
+	writeAt(t, dir, "Test Series 1 - Chapter 1 Old title [Other].cbz", "a", time.Hour)
+	if _, err := series.Download(context.Background(), listed(site), nil, "", &recorder{}); err != nil {
+		t.Fatal(err)
+	}
+	want := "Test Series 1 - Chapter 1 Old title [Other].cbz|Test Series 1 - Chapter 1 Old title [Sherlyn].cbz|Test Series 1 - Chapter 1.cbz"
+	if got := names(t, dir); got != want {
 		t.Errorf("folder:\n got %q\nwant %q", got, want)
 	}
 }

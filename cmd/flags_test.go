@@ -2,7 +2,10 @@
 
 package cmd
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 // --skip-pages takes a negative position as its value, with or without "=",
 // since pflag reads a long flag's argument verbatim (see the flag's comment)
@@ -40,5 +43,28 @@ func TestSkipExistingFlag(t *testing.T) {
 	}
 	if !settings.SkipExisting {
 		t.Error("--skip-existing didn't set SkipExisting")
+	}
+}
+
+// --dedupe is off unless given, and --skip-existing's help is upstream's
+// again: dedupe is its own flag
+func TestDedupeFlag(t *testing.T) {
+	flags := rootCmd.Flags()
+	t.Cleanup(func() {
+		settings.Dedupe = false
+		flags.Lookup("dedupe").Changed = false
+	})
+
+	if settings.Dedupe {
+		t.Fatal("Dedupe is on before the flag")
+	}
+	if err := flags.Parse([]string{"--dedupe"}); err != nil {
+		t.Fatal(err)
+	}
+	if !settings.Dedupe {
+		t.Error("--dedupe didn't set Dedupe")
+	}
+	if usage := flags.Lookup("skip-existing").Usage; strings.Contains(usage, "duplicate") {
+		t.Errorf("--skip-existing still mentions duplicates: %q", usage)
 	}
 }
