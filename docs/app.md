@@ -61,8 +61,8 @@ button, *Load* and *Settings*. (To open on the full window instead, turn off
    language alone (Ukrainian Ї Є Ґ, Russian Ы Э Ъ, kana, Hangul); mixed languages are
    `[mul]`, and otherwise no tag is added; it needs *Series folders*), *Skip existing files* (chapters already in the folder aren't
    downloaded again), *Age check* with *I am over* 16 or 18 (titles a site
-   rates above that age aren't loaded; off, every title loads; for now only
-   zenko.online publishes a rating), the format (CBZ, CBR, Folder or EPUB; EPUB adds a *Reading
+   rates above that age aren't loaded; off, every title loads; for now
+   zenko.online and senkuro.com publish a rating), the format (CBZ, CBR, Folder or EPUB; EPUB adds a *Reading
    direction*) and *Pack as*: *Chapters* (a file each), *Merged* (a chapter's
    parts in one file), *Volumes* (a file per volume) or *One file* (everything
    together). Under *Pages*, *Convert to JPEG* ticks *AVIF* (on by default,
@@ -249,7 +249,7 @@ its page in your browser, and its site the site's home page; *Load* beside it
 puts the series in the URL box and loads it, as the drop-down does. Clear there
 empties the list.
 
-A title the site rates 18+ (zenko.online gives a rating) shows as
+A title the site rates 18+ (zenko.online and senkuro.com give a rating) shows as
 *[Adult Title]* until you click it, which shows it until the app closes. The
 log always writes *[Adult Title]* for it, in file and folder names too.
 
